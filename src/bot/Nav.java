@@ -75,11 +75,10 @@ public class Nav {
                 MapLocation tile = rc.getLocation().translate(dx, dy);
                 costs[i][j] = tile.distanceSquaredTo(target) * INITIAL_COST_MULTIPLIER;
 
-                // NOTE: as long as this is always below min(sensor_r^2) we don't need to catch this!
-                movement_costs[i][j] = PASSABILITY_SCALE_FACTOR / rc.sensePassability(tile);
-
-                if (rc.isLocationOccupied(tile))
+                if (rc.isLocationOccupied(tile) || !rc.onTheMap(tile))
                     costs[i][j] = movement_costs[i][j] = Double.MAX_VALUE;
+                else // NOTE: as long as this is always below min(sensor_r^2) we don't need to catch this!
+                    movement_costs[i][j] = PASSABILITY_SCALE_FACTOR / rc.sensePassability(tile);
             }
         }
 
@@ -108,7 +107,7 @@ public class Nav {
         Direction ret = null;
         for (Direction dir : Direction.allDirections()) {
             double cost = costs[c + dir.dy][c + dir.dx];
-            if (cost < minCost) {
+            if (cost < minCost && cost < 1 << 20) {
                 minCost = cost;
                 ret = dir;
             }
