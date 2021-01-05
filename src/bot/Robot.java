@@ -1,6 +1,9 @@
 package bot;
 
 import battlecode.common.*;
+import bot.Communication.*;
+import static bot.Communication.encode;
+import static bot.Communication.decode;
 
 abstract class Robot {
     static RobotController rc = null;
