@@ -1,6 +1,9 @@
 package bot;
 
 import battlecode.common.GameActionException;
+import bot.Communication.*;
+import static bot.Communication.encode;
+import static bot.Communication.decode;
 
 public class Politician extends Robot{
     @Override

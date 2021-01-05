@@ -33,5 +33,6 @@ battlecode-scaffold.iws
 
 access.txt
 
-# Omkar's Virtual Environment
+# User-specific stuff
 venv/
+.vscode/
