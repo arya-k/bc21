@@ -34,8 +34,10 @@ public class Nav {
      */
     static boolean tick() throws GameActionException {
         // TODO: higher level planning
+        // TODO: check if we can see that the target is off the map
+        
         Direction dir = goTo(goalPos);
-        if (rc_.canMove(dir)) {
+        if (dir != null && rc_.canMove(dir)) {
             rc_.move(dir);
             return true;
         }
@@ -60,8 +62,6 @@ public class Nav {
      * @return the direction to move in, null if this method fails.
      */
     private static Direction goTo(MapLocation target) throws GameActionException {
-        // TODO: check if we can see that the target is off the map
-
         RobotController rc = rc_; // move into local scope
 
         double[][] costs = new double[NAV_GRID_SIZE][NAV_GRID_SIZE];
@@ -75,14 +75,12 @@ public class Nav {
                 MapLocation tile = rc.getLocation().translate(dx, dy);
                 costs[i][j] = tile.distanceSquaredTo(target) * INITIAL_COST_MULTIPLIER;
 
-                if (rc.isLocationOccupied(tile) || !rc.onTheMap(tile))
+                if (!rc.onTheMap(tile) || rc.isLocationOccupied(tile))
                     costs[i][j] = movement_costs[i][j] = Double.MAX_VALUE;
                 else // NOTE: as long as this is always below min(sensor_r^2) we don't need to catch this!
                     movement_costs[i][j] = PASSABILITY_SCALE_FACTOR / rc.sensePassability(tile);
             }
         }
-
-//        System.out.println("finished grid: " + Clock.getBytecodeNum() + ", " + rc.getRoundNum());
 
         for (int iter = 0; iter < NAV_ITERATIONS; iter++) {
             for (int y = 0; y < NAV_GRID_SIZE; y++) {
@@ -99,8 +97,6 @@ public class Nav {
             }
         }
 
-//        System.out.println("finished iteration: " + Clock.getBytecodeNum() + ", " + rc.getRoundNum());
-
         // Return the minimum direction to move in
         double minCost = Double.MAX_VALUE;
         int c = (NAV_GRID_SIZE / 2);
@@ -113,7 +109,6 @@ public class Nav {
             }
         }
 
-//        System.out.println("finished calculation: " + Clock.getBytecodeNum() + ", " + rc.getRoundNum());
         return ret;
     }
 
