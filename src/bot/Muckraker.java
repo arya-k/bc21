@@ -2,24 +2,26 @@ package bot;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
-import bot.Communication.*;
-import static bot.Communication.encode;
-import static bot.Communication.decode;
+import battlecode.common.MapLocation;
 
-public class Muckraker extends Robot{
+public class Muckraker extends Robot {
+
+    static MapLocation goalPos;
+
     @Override
-    void onAwake() throws GameActionException {
-
+    void onAwake() {
+        Nav.init(Muckraker.rc); // Initialize the nav
+        goalPos = rc.getLocation().translate(3, 3);
+        Nav.setGoal(goalPos);
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        if(rc.isReady()) {
-            Direction toMove = Direction.allDirections()[(int) (Math.random() * 8)];
-            while(!rc.canMove(toMove)) {
-                toMove =  Direction.allDirections()[(int) (Math.random() * 8)];
-            }
-            rc.move(toMove);
+        Nav.tick();
+
+        // early stopping
+        if (rc.getLocation().distanceSquaredTo(goalPos) == 0) {
+            rc.resign();
         }
     }
 }
