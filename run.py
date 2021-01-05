@@ -3,6 +3,9 @@
 import argparse
 import itertools
 import multiprocessing
+import re
+import subprocess
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from random import shuffle
@@ -41,8 +44,12 @@ def get_players() -> List[str]:
     """ Returns a list of all players we can use """
     global PLAYERS
     if PLAYERS is None:
-        # TODO: this
-        PLAYERS = ["bot", "sprint", "seeding"]
+        raw_output = subprocess.check_output(["./gradlew", "listPlayers"]).decode(
+            "utf-8"
+        )
+        PLAYERS = [
+            line[8:] for line in raw_output.splitlines() if line.startswith("PLAYER: ")
+        ]
     return PLAYERS
 
 
@@ -50,8 +57,10 @@ def get_maps() -> List[str]:
     """ Returns a list of all maps that we can play on """
     global MAPS
     if MAPS is None:
-        # TODO: this
-        MAPS = ["star", "square", "triangle"]
+        raw_output = subprocess.check_output(["./gradlew", "listMaps"]).decode("utf-8")
+        MAPS = [
+            line[5:] for line in raw_output.splitlines() if line.startswith("MAP: ")
+        ]
     return MAPS
 
 
@@ -72,19 +81,71 @@ def tournament_pairings(teamA, teamB, maps, games_per_match) -> List[Pairing]:
 
 def run_match(pairing: Pairing) -> Result:
     """ Runs the match, returning the result. """
-    # TODO: this
-    if VERBOSE:
-        tqdm.write("Verbose enabled!")
-    return Result(pairing.a, pairing.b, pairing.m, "A", "/dev/null")
+
+    def _execute(cmd: str):
+        popen = subprocess.Popen(
+            cmd,
+            bufsize=-1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,  # you can make this None
+            universal_newlines=False,
+        )
+        while True:
+            b = popen.stdout.readline()
+            if b == b"":
+                break
+            else:
+                yield b.decode("utf-8")
+
+        popen.stdout.close()
+        return_code = popen.wait()
+
+        if return_code:
+            raise subprocess.CalledProcessError(return_code, cmd)
+
+    tqdm.write(f"Starting {pairing.a} vs {pairing.b} on {pairing.m}")
+
+    replay = f"{pairing.a}-vs-{pairing.b}-on-{pairing.m}-at-{time.time():.0f}.bc21"
+    gen = _execute(
+        [
+            "./gradlew",
+            "run",
+            f"-PteamA={pairing.a}",
+            f"-PteamB={pairing.b}",
+            f"-Pmaps={pairing.m}",
+            f"-Preplay=matches/{replay}",
+        ]
+    )
+
+    winRegex = re.compile(r"bot \(([AB])\) wins \(round (\d+)\)")
+    # reasonRegex = re.compile(r"Reason: The winning team won ([^\n\.]+)")
+
+    ret = Result(pairing.a, pairing.b, pairing.m, "T", replay)
+    for line in gen:
+        if VERBOSE:  # and "@@@" in line:
+            tqdm.write(line, end="")
+
+        win = winRegex.search(line)
+        if win is not None:
+            # reason = reasonRegex.search(next(gen))
+
+            winningTeam = win.group(1)
+            # round = int(win.group(2))
+            # reason = reason.group(1)
+            ret = Result(pairing.a, pairing.b, pairing.m, winningTeam, replay)
+    return ret
 
 
 def run_matches(teamA, teamB, maps, games_per_match=1, stats=True) -> List[Result]:
     """ Runs all the matches, returning results. Order is NOT guaranteed. """
     pairings = tournament_pairings(teamA, teamB, maps, games_per_match)
 
-    # TODO: maybe find the server jar here?
+    # build in advance
+    assert not subprocess.run(
+        ["./gradlew", "build"], stdout=subprocess.DEVNULL
+    ).returncode
 
-    cores = multiprocessing.cpu_count()
+    cores = min(multiprocessing.cpu_count(), 20)
     print("\033[93m" + f"Running {len(pairings)} matches on {cores} cores." + "\033[0m")
 
     results = []
@@ -177,7 +238,7 @@ def print_winrate_by_map(bot, maps, results: List[Result]):
 
 
 def print_stats(teamA, teamB, maps, results):
-    """ Prints the stats in various digestible formats """
+    """ Prints aggregate stats in various formats """
 
     if len(teamA) == 1 or len(teamB) == 1:
         bot = teamA[0] if len(teamA) == 1 else teamB[0]
@@ -239,7 +300,6 @@ def main():
     global VERBOSE
     VERBOSE = args.verbose
 
-    print(f"teamA: {args.teamA}\nteamB: {args.teamB}\nmaps: {args.maps}\n")
     run_matches(args.teamA, args.teamB, args.maps, args.gamesPerMatch)
 
 
