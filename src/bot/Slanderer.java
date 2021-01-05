@@ -1,5 +1,6 @@
 package bot;
 
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import bot.Communication.*;
 import static bot.Communication.encode;
@@ -13,6 +14,12 @@ public class Slanderer extends Robot{
 
     @Override
     void onUpdate() throws GameActionException {
-
+        if(rc.isReady()) {
+            Direction toMove = Direction.allDirections()[(int) (Math.random() * 8)];
+            while(!rc.canMove(toMove)) {
+                toMove =  Direction.allDirections()[(int) (Math.random() * 8)];
+            }
+            rc.move(toMove);
+        }
     }
 }
