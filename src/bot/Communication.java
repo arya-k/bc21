@@ -19,7 +19,7 @@ public class Communication {
         int[] data = new int[2];
         Label label;
         int acc;
-        switch (flag % 12) {
+        switch (flag % 4096) {
             case 0:
                 label = Label.ONE_COORD;
                 acc = flag / 4096;

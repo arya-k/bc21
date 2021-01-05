@@ -118,7 +118,7 @@ public class Communication {{
         int[] data = new int[{max(len(c.bit_list) for c in commands)}];
         Label label;
         int acc;
-        switch (flag % {header_len}) {{
+        switch (flag % {2 ** header_len}) {{
 {decode}
             default:
                 throw new RuntimeException("Attempting to decode an invalid flag");
