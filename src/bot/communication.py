@@ -23,6 +23,10 @@ commands = [
 
 BITS = 24
 
+import random
+
+MASK = random.randint(5, 2 ** 24)
+
 
 def bit_mirror(x, bits):
     j = 0
@@ -70,7 +74,7 @@ for c in commands:
     )
     encode_block = f"""
             case {c.name}:
-                return 1 + ({sum_expr if sum_expr else 0}) * {2 ** c.header_len} + {c.header};
+                return {MASK} ^ (1 + ({sum_expr if sum_expr else 0}) * {2 ** c.header_len} + {c.header});
     """
     encode_blocks.append(encode_block)
 
@@ -114,6 +118,7 @@ public class Communication {{
     }}
 
     public static Message decode(int flag) {{
+        flag ^= {MASK}
         flag--;
         int[] data = new int[{max(len(c.bit_list) for c in commands)}];
         Label label;

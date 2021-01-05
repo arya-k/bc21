@@ -17,6 +17,7 @@ public strictfp class RobotPlayer {
                 case MUCKRAKER:            robot = new Muckraker();           break;
             }
             robot.onAwake();
+            robot.onUpdate();
         } catch (Exception e) {
             System.out.println("Exception in " + rc.getType());
             e.printStackTrace();
