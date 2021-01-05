@@ -14,7 +14,9 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
-        for (int i = 20; i > 0; i--) {
+        System.out.println("Starting influence: " + rc.getInfluence());
+        System.out.println("Starting conviction: " + rc.getConviction());
+        for (int i = 10; i > 0; i--) {
             if (rc.isReady() && rc.getInfluence() > 3) {
                 Direction toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
                 while (!rc.canBuildRobot(RobotType.MUCKRAKER, toBuild, 3)) {
@@ -26,14 +28,28 @@ public class EnlightenmentCenter extends Robot {
             }
             Clock.yield();
         }
-        if (rc.isReady() && rc.getInfluence() > 20) {
-            Direction toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-            while (!rc.canBuildRobot(RobotType.SLANDERER, toBuild, 20)) {
-                toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-            }
-            System.out.println("Building slanderer at " + rc.getLocation().add(toBuild) + "!");
-            rc.buildRobot(RobotType.SLANDERER, toBuild, 20);
+        System.out.println("Influence after all muckrakers: " + rc.getInfluence());
+        System.out.println("Conviction after all muckrakers: " + rc.getConviction());
+        while (!(rc.isReady() && rc.getInfluence() > 50)) {
+            Clock.yield();
         }
+        Direction toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
+        while (!rc.canBuildRobot(RobotType.POLITICIAN, toBuild, 50)) {
+            toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
+        }
+        System.out.println("Building politician at " + rc.getLocation().add(toBuild) + "!");
+        rc.buildRobot(RobotType.POLITICIAN, toBuild, 50);
+
+        while (!(rc.isReady() && rc.getInfluence() > 40)) {
+            Clock.yield();
+        }
+        toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
+        while (!rc.canBuildRobot(RobotType.SLANDERER, toBuild, 40)) {
+            toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
+        }
+        System.out.println("Building slanderer at " + rc.getLocation().add(toBuild) + "!");
+        rc.buildRobot(RobotType.SLANDERER, toBuild, 40);
+
     }
 
     void setExploreFlag(Direction dir) throws GameActionException {

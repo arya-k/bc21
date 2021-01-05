@@ -17,7 +17,7 @@ public class Muckraker extends Robot {
         switch (command.label) {
             case EXPLORE:
                 Direction dir = Muckraker.directions[command.data[0]];
-                goalPos = rc.getLocation().translate(4*dir.dx, 4*dir.dy);
+                goalPos = rc.getLocation().translate(25,  0);
                 break;
             default:
                 goalPos = rc.getLocation().translate(3, 3);

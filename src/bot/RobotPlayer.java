@@ -1,21 +1,21 @@
 package bot;
 
-import battlecode.common.*;
+import battlecode.common.RobotController;
+import battlecode.common.RobotType;
 
 @SuppressWarnings("unused")
 public strictfp class RobotPlayer {
+
+    static RobotType myType;
 
     @SuppressWarnings("unused")
     public static void run(RobotController rc) {
         Robot robot = null;
         try {
             Robot.init(rc);
-            switch (rc.getType()) {
-                case ENLIGHTENMENT_CENTER: robot = new EnlightenmentCenter(); break;
-                case POLITICIAN:           robot = new Politician();          break;
-                case SLANDERER:            robot = new Slanderer();           break;
-                case MUCKRAKER:            robot = new Muckraker();           break;
-            }
+            RobotType currType = rc.getType();
+            robot = getRobot(currType);
+            myType = currType;
             robot.onAwake();
             robot.onUpdate();
         } catch (Exception e) {
@@ -25,13 +25,33 @@ public strictfp class RobotPlayer {
 
         while (true) {
             try {
-                while(true) {
+                while (true) {
                     robot.onUpdate();
+                    RobotType currType = rc.getType();
+                    if(currType != myType) {
+                        robot = getRobot(currType);
+                        robot.onAwake();
+                        myType = currType;
+                    }
                 }
             } catch (Exception e) {
                 System.out.println("Exception in " + rc.getType());
                 e.printStackTrace();
             }
         }
+    }
+
+    private static Robot getRobot(RobotType currType) {
+        switch (currType) {
+            case ENLIGHTENMENT_CENTER:
+                return new EnlightenmentCenter();
+            case POLITICIAN:
+                return new Politician();
+            case SLANDERER:
+                return new Slanderer();
+            case MUCKRAKER:
+                return new Muckraker();
+        }
+        return null;
     }
 }
