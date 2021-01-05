@@ -10,8 +10,8 @@ class Command:
 ########################################
 
 commands = [
+    Command("EXPLORE", [3]),
     Command("ONE_COORD", [6]),
-    Command("ONE_COORD_TWO", [6]),
     Command("TWO_COORDS", [6, 6]),
     Command("HELLO", []),
     Command("GOODBYE", []),

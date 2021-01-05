@@ -2,7 +2,7 @@ package bot;
 
 public class Communication {
     public enum Label {
-        ONE_COORD, ONE_COORD_TWO, TWO_COORDS, HELLO, GOODBYE
+        EXPLORE, ONE_COORD, TWO_COORDS, HELLO, GOODBYE
     }
     public static class Message {
         Label label;
@@ -15,19 +15,19 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 14459348;
+        flag ^= 7403698;
         flag--;
         int[] data = new int[2];
         Label label;
         int acc;
         switch (flag % 4096) {
             case 0:
-                label = Label.ONE_COORD;
+                label = Label.EXPLORE;
                 acc = flag / 4096;
-                data[0] = acc % 64;
+                data[0] = acc % 8;
                 break;
             case 2048:
-                label = Label.ONE_COORD_TWO;
+                label = Label.ONE_COORD;
                 acc = flag / 4096;
                 data[0] = acc % 64;
                 break;
@@ -52,16 +52,16 @@ public class Communication {
 
     public static int encode(Message message) {
         switch (message.label) {
+            case EXPLORE:
+                return 7403698 ^ (1 + (message.data[0] * 1) * 4096 + 0);
             case ONE_COORD:
-                return 14459348 ^ (1 + (message.data[0] * 1) * 4096 + 0);
-            case ONE_COORD_TWO:
-                return 14459348 ^ (1 + (message.data[0] * 1) * 4096 + 2048);
+                return 7403698 ^ (1 + (message.data[0] * 1) * 4096 + 2048);
             case TWO_COORDS:
-                return 14459348 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 1024);
+                return 7403698 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 1024);
             case HELLO:
-                return 14459348 ^ (1 + (0) * 4096 + 3072);
+                return 7403698 ^ (1 + (0) * 4096 + 3072);
             case GOODBYE:
-                return 14459348 ^ (1 + (0) * 4096 + 512);
+                return 7403698 ^ (1 + (0) * 4096 + 512);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

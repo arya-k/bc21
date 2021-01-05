@@ -2,25 +2,32 @@ package bot;
 
 import battlecode.common.*;
 
+import bot.Communication.*;
+import static bot.Communication.encode;
+import static bot.Communication.decode;
 
 public class Muckraker extends Robot {
 
     static MapLocation goalPos;
 
     @Override
-    void onAwake() {
+    void onAwake() throws GameActionException {
+        Message command = decode(rc.getFlag(Muckraker.centerID));
         Nav.init(Muckraker.rc); // Initialize the nav
-        goalPos = rc.getLocation().translate(100, 0);
+        switch (command.label) {
+            case EXPLORE:
+                Direction dir = Muckraker.directions[command.data[0]];
+                goalPos = rc.getLocation().translate(4*dir.dx, 4*dir.dy);
+                break;
+            default:
+                goalPos = rc.getLocation().translate(3, 3);
+        }
         Nav.setGoal(goalPos);
+
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        // early stopping
-        if (rc.getLocation().distanceSquaredTo(goalPos) == 0) {
-//            rc.resign();
-        }
-
         // check if action possible
         if (rc.isReady()) {
             // get all enemy nearby robots
@@ -34,10 +41,11 @@ public class Muckraker extends Robot {
                 }
             }
             // otherwise move
-            Nav.tick();
+            if (rc.getLocation().distanceSquaredTo(goalPos) != 0) {
+                Nav.tick();
+            }
+            Clock.yield();
+            return;
         }
-
-        // end turn
-        Clock.yield();
     }
 }
