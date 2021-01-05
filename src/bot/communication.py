@@ -118,7 +118,7 @@ public class Communication {{
     }}
 
     public static Message decode(int flag) {{
-        flag ^= {MASK}
+        flag ^= {MASK};
         flag--;
         int[] data = new int[{max(len(c.bit_list) for c in commands)}];
         Label label;

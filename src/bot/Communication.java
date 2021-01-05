@@ -15,7 +15,7 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 3745752
+        flag ^= 14459348;
         flag--;
         int[] data = new int[2];
         Label label;
@@ -53,15 +53,15 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case ONE_COORD:
-                return 3745752 ^ (1 + (message.data[0] * 1) * 4096 + 0);
+                return 14459348 ^ (1 + (message.data[0] * 1) * 4096 + 0);
             case ONE_COORD_TWO:
-                return 3745752 ^ (1 + (message.data[0] * 1) * 4096 + 2048);
+                return 14459348 ^ (1 + (message.data[0] * 1) * 4096 + 2048);
             case TWO_COORDS:
-                return 3745752 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 1024);
+                return 14459348 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 1024);
             case HELLO:
-                return 3745752 ^ (1 + (0) * 4096 + 3072);
+                return 14459348 ^ (1 + (0) * 4096 + 3072);
             case GOODBYE:
-                return 3745752 ^ (1 + (0) * 4096 + 512);
+                return 14459348 ^ (1 + (0) * 4096 + 512);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }
