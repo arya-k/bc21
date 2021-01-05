@@ -32,3 +32,6 @@ battlecode-scaffold.iws
 .settings/
 
 access.txt
+
+# Omkar's Virtual Environment
+venv/
