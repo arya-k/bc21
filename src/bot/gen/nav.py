@@ -8,7 +8,7 @@ Generates a GOTO with unrolled loops, of a specified size...
 
 
 NAV_GRID_SIZE = 5
-NAV_ITERATIONS = 3
+NAV_ITERATIONS = 2
 
 HALF_SIZE = NAV_GRID_SIZE // 2
 DIRS = list(zip([0, 1, 1, 1, 0, -1, -1, -1], [1, 1, 0, -1, -1, -1, 0, 1]))
