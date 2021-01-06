@@ -8,7 +8,7 @@ Generates a GOTO with unrolled loops, of a specified size...
 
 
 NAV_GRID_SIZE = 5
-NAV_ITERATIONS = 3
+NAV_ITERATIONS = 2
 
 HALF_SIZE = NAV_GRID_SIZE // 2
 DIRS = list(zip([0, 1, 1, 1, 0, -1, -1, -1], [1, 1, 0, -1, -1, -1, 0, 1]))
@@ -29,6 +29,14 @@ def grid_locations():
     for y in range(NAV_GRID_SIZE):
         for x in range(NAV_GRID_SIZE):
             yield y, x
+
+def adjacent(y, x):
+    """ Generator to get all neighbors within the bounds of the nav grid """
+    for offset in DIRS:
+        _x, _y = x + offset[0], y + offset[1]
+        if 0 <= _x < NAV_GRID_SIZE and 0 <= _y < NAV_GRID_SIZE:
+            yield _y, _x
+
 
 
 code = f"""
@@ -66,19 +74,14 @@ code += """
     NAV_ITERATIONS
 )
 
-
-def adjacent(y, x):
-    for offset in DIRS:
-        _x, _y = x + offset[0], y + offset[1]
-        if 0 <= _x < NAV_GRID_SIZE and 0 <= _y < NAV_GRID_SIZE:
-            yield _y, _x
-
-
-# TODO: see if an if statement or a ternary expression would be better here!
-
 for y, x in grid_locations():
-    for _y, _x in adjacent(y, x):
-        code += f"cost_{y}_{x} = Math.min(cost_{_y}_{_x} + move_cost_{y}_{x}, cost_{y}_{x});\n"
+    neighbors = list(adjacent(y, x))
+
+    min_expr = f"Math.min(cost_{neighbors[0][0]}_{neighbors[0][1]}, cost_{y}_{x} - move_cost_{y}_{x})"
+    for adj_y, adj_x in neighbors[1:]:
+        min_expr = f"Math.min(cost_{adj_y}_{adj_x}, {min_expr})"
+
+    code += f"cost_{y}_{x} = {min_expr} + move_cost_{y}_{x};\n"
 code += "}\n"
 
 
@@ -95,7 +98,7 @@ for i, (name, offset) in enumerate(zip(DIRNAMES, DIRS)):
     minCostUpdate = f"minCost = {costString};" if i != 7 else ""
 
     code += f"""
-    if ({costString} < minCost && {costString} < 1 << 20) {{
+    if ({costString} < minCost && {costString} < {1 << 30}) {{
         {minCostUpdate}
         ret = Direction.{name};
     }}"""
