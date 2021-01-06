@@ -14,8 +14,8 @@ commands = [
     Command("SPEECH", []),
     Command("ONE_COORD", [6]),
     Command("TWO_COORDS", [6, 6]),
-    Command("HELLO", []),
-    Command("GOODBYE", []),
+    Command("ATTACK", []),
+    Command("DEFEND", []),
 ]
 
 #########################################
@@ -144,5 +144,5 @@ public class Communication {{
 import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(dir_path, "Communication.java"), "w") as f:
+with open(os.path.join(dir_path, "..", "Communication.java"), "w") as f:
     print(code, file=f)

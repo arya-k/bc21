@@ -10,7 +10,7 @@ public class Politician extends Robot {
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
-        if (assignment != null && assignment.label == Communication.Label.HELLO) {
+        if (assignment != null && assignment.label == Communication.Label.DEFEND) {
             goalPos = rc.getLocation().translate((int) (Math.random() * 5) + 1, (int) (Math.random() * 5) + 1);
         } else {
             goalPos = rc.getLocation().translate(25, 0);
@@ -29,7 +29,7 @@ public class Politician extends Robot {
             case EXPLORE:
                 exploreBehavior(fromOrdinal(assignment.data[0]));
                 break;
-            case HELLO:
+            case DEFEND:
                 defendBehavior();
                 break;
             default:

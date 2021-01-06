@@ -2,7 +2,7 @@ package bot;
 
 public class Communication {
     public enum Label {
-        EXPLORE, SPEECH, ONE_COORD, TWO_COORDS, HELLO, GOODBYE
+        EXPLORE, SPEECH, ONE_COORD, TWO_COORDS, ATTACK, DEFEND
     }
     public static class Message {
         Label label;
@@ -15,7 +15,7 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 97483;
+        flag ^= 4241054;
         flag--;
         int[] data = new int[2];
         Label label;
@@ -42,10 +42,10 @@ public class Communication {
                 data[1] = acc % 64;
                 break;
             case 512:
-                label = Label.HELLO;
+                label = Label.ATTACK;
                 break;
             case 2560:
-                label = Label.GOODBYE;
+                label = Label.DEFEND;
                 break;
             default:
                 throw new RuntimeException("Attempting to decode an invalid flag");
@@ -56,17 +56,17 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 97483 ^ (1 + (message.data[0] * 1) * 4096 + 0);
+                return 4241054 ^ (1 + (message.data[0] * 1) * 4096 + 0);
             case SPEECH:
-                return 97483 ^ (1 + (0) * 4096 + 2048);
+                return 4241054 ^ (1 + (0) * 4096 + 2048);
             case ONE_COORD:
-                return 97483 ^ (1 + (message.data[0] * 1) * 4096 + 1024);
+                return 4241054 ^ (1 + (message.data[0] * 1) * 4096 + 1024);
             case TWO_COORDS:
-                return 97483 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 3072);
-            case HELLO:
-                return 97483 ^ (1 + (0) * 4096 + 512);
-            case GOODBYE:
-                return 97483 ^ (1 + (0) * 4096 + 2560);
+                return 4241054 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 3072);
+            case ATTACK:
+                return 4241054 ^ (1 + (0) * 4096 + 512);
+            case DEFEND:
+                return 4241054 ^ (1 + (0) * 4096 + 2560);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

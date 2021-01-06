@@ -27,10 +27,10 @@ public class EnlightenmentCenter extends Robot {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 3, exploreMessage(dir)), LOW);
         }
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), LOW);
-        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), LOW);
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, defendMessage()), LOW);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), LOW);
         for(int i=3; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
         }
     }
 
@@ -95,20 +95,20 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), MED);
-        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), MED);
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, defendMessage()), MED);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), MED);
         for(int i=3; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
         }
     }
 
-    Message goodbyeMessage() throws GameActionException {
+    Message attackMessage() throws GameActionException {
         int[] data = {};
-        return new Message(Label.GOODBYE, data);
+        return new Message(Label.ATTACK, data);
     }
 
-    Message helloMessage() throws GameActionException {
+    Message defendMessage() throws GameActionException {
         int[] data = {};
-        return new Message(Label.HELLO, data);
+        return new Message(Label.DEFEND, data);
     }
 }
