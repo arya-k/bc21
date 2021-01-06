@@ -15,7 +15,7 @@ public class Politician extends Robot {
         } else {
             goalPos = rc.getLocation().translate(25, 0);
         }
-        Nav.setGoal(goalPos);
+        Nav.doGoTo(goalPos);
     }
 
     @Override
@@ -80,7 +80,8 @@ public class Politician extends Robot {
                 System.out.println("GIVING SPEECH IN DEFENSE");
             } else {
                 // otherwise move
-                Nav.tick();
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         }
 
@@ -98,7 +99,8 @@ public class Politician extends Robot {
                 rc.empower(9);
             } else {
                 // otherwise move
-                Nav.tick();
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         }
 

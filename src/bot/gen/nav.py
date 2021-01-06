@@ -7,21 +7,20 @@ Generates a GOTO with unrolled loops, of a specified size...
 # TODO: see if iteratively adding directions is better
 
 
-NAV_GRID_SIZE = 5
-NAV_ITERATIONS = 2
+NAV_GRID_SIZE = 7
+NAV_ITERATIONS = 3
 
 HALF_SIZE = NAV_GRID_SIZE // 2
-DIRS = list(zip([0, 1, 1, 1, 0, -1, -1, -1], [1, 1, 0, -1, -1, -1, 0, 1]))
-DIRNAMES = [
-    "EAST",
-    "NORTHEAST",
-    "NORTH",
-    "NORTHWEST",
-    "WEST",
-    "SOUTHWEST",
-    "SOUTH",
-    "SOUTHEAST",
-]
+DIRS = {
+    "EAST": (0, 1),
+    "NORTHEAST": (1, 1),
+    "NORTH": (1, 0),
+    "NORTHWEST": (1, -1),
+    "WEST": (0, -1),
+    "SOUTHWEST": (-1, -1),
+    "SOUTH": (-1, 0),
+    "SOUTHEAST": (-1, 1),
+}
 
 
 def grid_locations():
@@ -30,13 +29,12 @@ def grid_locations():
         for x in range(NAV_GRID_SIZE):
             yield y, x
 
+
 def adjacent(y, x):
     """ Generator to get all neighbors within the bounds of the nav grid """
-    for offset in DIRS:
-        _x, _y = x + offset[0], y + offset[1]
-        if 0 <= _x < NAV_GRID_SIZE and 0 <= _y < NAV_GRID_SIZE:
-            yield _y, _x
-
+    for dy, dx in DIRS.values():
+        if 0 <= y + dy < NAV_GRID_SIZE and 0 <= x + dx < NAV_GRID_SIZE:
+            yield y + dy, x + dx
 
 
 code = f"""
@@ -81,8 +79,8 @@ for y, x in grid_locations():
     for adj_y, adj_x in neighbors[1:]:
         min_expr = f"Math.min(cost_{adj_y}_{adj_x}, {min_expr})"
 
-    code += f"cost_{y}_{x} = {min_expr} + move_cost_{y}_{x};\n"
-code += "}\n"
+    code += f"        cost_{y}_{x} = {min_expr} + move_cost_{y}_{x};\n"
+code += "    }\n"
 
 
 # minimum direction
@@ -93,18 +91,17 @@ code += """
     double minCost = Double.MAX_VALUE;
 """
 
-for i, (name, offset) in enumerate(zip(DIRNAMES, DIRS)):
-    costString = f"cost_{HALF_SIZE + offset[0]}_{HALF_SIZE + offset[1]}"
-    minCostUpdate = f"minCost = {costString};" if i != 7 else ""
+for i, (name, (dx, dy)) in enumerate(DIRS.items()):
+    costString = f"cost_{HALF_SIZE + dx}_{HALF_SIZE + dy}"
+    minCostUpdate = f"minCost = {costString};\n        " if i != 7 else ""
 
     code += f"""
-    if ({costString} < minCost && {costString} < {1 << 30}) {{
-        {minCostUpdate}
-        ret = Direction.{name};
+    if ({costString} < minCost) {{
+        {minCostUpdate}ret = Direction.{name};
     }}"""
 
-code += """
-    return ret;
-}"""
+code += f"""
+    return minCost > {1 << 30} ? null : ret;
+}}"""
 
 print(code)

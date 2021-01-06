@@ -12,13 +12,14 @@ public class Slanderer extends Robot {
     void onAwake() throws GameActionException {
         Nav.init(Slanderer.rc); // Initialize the nav
         goalPos = rc.getLocation().translate(0, 100);
-        Nav.setGoal(goalPos);
+        Nav.doGoTo(goalPos);
     }
 
     @Override
     void onUpdate() throws GameActionException {
         if (rc.isReady()) {
-            Nav.tick();
+            Direction move = Nav.tick();
+            if (move != null && rc.canMove(move)) rc.move(move);
         }
         Clock.yield();
     }

@@ -1,8 +1,9 @@
 package bot;
 
 import battlecode.common.*;
-import bot.Communication.*;
-import static bot.Communication.encode;
+import bot.Communication.Label;
+import bot.Communication.Message;
+
 import static bot.Communication.decode;
 
 abstract class Robot {
@@ -38,10 +39,11 @@ abstract class Robot {
 
     static Direction nextStep;
 
-    public static void exploreDir(Direction dir) throws GameActionException {
+    public static void exploreDir(Direction dir) throws GameActionException { // This will have to be reworked, sorry :(
         if (rc.isReady()) {
             if (nextStep == null || !rc.canMove(nextStep)) {
-                nextStep = Nav.goInDir(dir);
+                Nav.doGoInDir(dir);
+                nextStep = Nav.tick();
             }
             if (nextStep != null && rc.canMove(nextStep)) {
                 rc.move(nextStep);
@@ -49,7 +51,8 @@ abstract class Robot {
                 Clock.yield();
             }
         } else {
-            nextStep = Nav.goInDir(dir);
+            Nav.doGoInDir(dir);
+            nextStep = Nav.tick();
             Clock.yield();
         }
     }
