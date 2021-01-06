@@ -17,6 +17,23 @@ public class Politician extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        if (assignment == null) {
+            defaultBehavior();
+            return;
+        }
+
+        switch (assignment.label) {
+            case EXPLORE:
+                exploreDir(fromOrdinal(assignment.data[0]));
+                break;
+            default:
+                defaultBehavior();
+                break;
+        }
+
+    }
+
+    void defaultBehavior() throws GameActionException {
         if (rc.isReady()) {
             // get all enemy nearby robots
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
