@@ -18,7 +18,7 @@ public class Politician extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         if (rc.isReady()) {
-            // get all enemy nearby robots
+            // get all enemy nearby robots, might be better to manually filter
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
             RobotInfo[] allies = rc.senseNearbyRobots(9, rc.getTeam());
             // if there are two enemies nearby, give speech
