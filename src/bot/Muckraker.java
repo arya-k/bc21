@@ -8,17 +8,31 @@ import static bot.Communication.decode;
 
 public class Muckraker extends Robot {
 
-    static MapLocation goalPos;
-    static RobotInfo[] nearby;
+    static Direction exploreDir;
 
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Muckraker.rc); // Initialize the nav
+        if (assignment == null) {
+            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
+            Nav.doGoTo(goalPos);
+        }
+
+        switch (assignment.label) {
+            case EXPLORE:
+            case LATCH:
+                exploreDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(exploreDir);
+                break;
+            default:
+                MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
+                Nav.doGoTo(goalPos);
+                break;
+        }
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        nearby = rc.senseNearbyRobots();
         if (assignment == null) {
             defaultBehavior();
             return;
@@ -26,10 +40,10 @@ public class Muckraker extends Robot {
 
         switch (assignment.label) {
             case EXPLORE:
-                exploreBehavior(fromOrdinal(assignment.data[0]));
+                exploreBehavior();
                 break;
             case LATCH:
-                latchBehavior(fromOrdinal(assignment.data[0]));
+                latchBehavior();
                 break;
             default:
                 defaultBehavior();
@@ -37,19 +51,26 @@ public class Muckraker extends Robot {
         }
     }
 
-    void exploreBehavior(Direction dir) throws GameActionException {
+    void exploreBehavior() throws GameActionException {
         for (RobotInfo info : rc.senseNearbyRobots()) {
             if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(exploreMessage(dir)));
+                rc.setFlag(encode(exploreMessage(exploreDir)));
                 assignment = null;
                 onUpdate();
                 return;
             }
         }
-        exploreDir(dir);
+        Direction move = Nav.tick();
+        if (move != null && rc.canMove(move)) rc.move(move);
+        if (move == null) {
+            assignment = null;
+            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
+            Nav.doGoTo(goalPos);
+        }
+        Clock.yield();
     }
 
-    void latchBehavior(Direction dir) throws GameActionException {
+    void latchBehavior() throws GameActionException {
         if (rc.isReady()) {
             RobotInfo kill = bestSlandererKill();
             if (kill != null) {
@@ -58,6 +79,7 @@ public class Muckraker extends Robot {
                 return;
             }
             //TODO actually do something here
+            //Waiting for the follow command to exist
         }
     }
 
@@ -71,7 +93,8 @@ public class Muckraker extends Robot {
                 Clock.yield();
                 return;
             }
-            // TODO move somewhere
+            Direction move = Nav.tick();
+            if (move != null && rc.canMove(move)) rc.move(move);
             Clock.yield();
         }
     }

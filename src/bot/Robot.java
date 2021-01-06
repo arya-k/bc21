@@ -11,12 +11,25 @@ abstract class Robot {
     static RobotType type = null;
     static int centerID;
     static Message assignment = null;
-    static final Direction[] directions = Direction.allDirections();
+    static MapLocation initLoc;
+
+    static final Direction[] directions = {
+            Direction.NORTH,
+            Direction.NORTHEAST,
+            Direction.EAST,
+            Direction.SOUTHEAST,
+            Direction.SOUTH,
+            Direction.SOUTHWEST,
+            Direction.WEST,
+            Direction.NORTHWEST,
+    };
 
 
     public static void init(RobotController rc) throws GameActionException {
         Robot.rc = rc;
         Robot.type = rc.getType();
+        Robot.initLoc = rc.getLocation();
+
         // find the EC
         if (Robot.type != RobotType.ENLIGHTENMENT_CENTER) {
             for (RobotInfo info : rc.senseNearbyRobots(2)) {
@@ -37,24 +50,8 @@ abstract class Robot {
 
     abstract void onUpdate() throws GameActionException;
 
-    static Direction nextStep;
-
-    public static void exploreDir(Direction dir) throws GameActionException { // This will have to be reworked, sorry :(
-        if (rc.isReady()) {
-            if (nextStep == null || !rc.canMove(nextStep)) {
-                Nav.doGoInDir(dir);
-                nextStep = Nav.tick();
-            }
-            if (nextStep != null && rc.canMove(nextStep)) {
-                rc.move(nextStep);
-                nextStep = null;
-                Clock.yield();
-            }
-        } else {
-            Nav.doGoInDir(dir);
-            nextStep = Nav.tick();
-            Clock.yield();
-        }
+    static Direction randomDirection() {
+        return directions[(int) (Math.random() * directions.length)];
     }
 
     public static Direction fromOrdinal(int ordinal) {

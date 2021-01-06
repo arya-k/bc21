@@ -110,8 +110,10 @@ public class Nav {
             case Nothing:
                 return null;
             case GoTo:
+                if (rc.getLocation() == goalPos) return null;
                 return goTo(goalPos);
             case GoInDir:
+                if (!rc.onTheMap(rc.getLocation().add(goalDir))) return null;
                 return goTo(rc.getLocation().translate(5 * goalDir.dx, 5 * goalDir.dy));
             case Follow:
             case Explore:

@@ -2,20 +2,38 @@ package bot;
 
 import battlecode.common.*;
 
+import static bot.Communication.Label.DEFEND;
 import static bot.Communication.encode;
 
 public class Politician extends Robot {
     static MapLocation goalPos;
 
+    static Direction exploreDir;
+
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
-        if (assignment != null && assignment.label == Communication.Label.DEFEND) {
-            goalPos = rc.getLocation().translate((int) (Math.random() * 5) + 1, (int) (Math.random() * 5) + 1);
-        } else {
-            goalPos = rc.getLocation().translate(25, 0);
+        if (assignment == null) {
+            exploreDir = randomDirection();
+            Nav.doGoInDir(exploreDir);
+            return;
         }
-        Nav.doGoTo(goalPos);
+
+        switch (assignment.label) {
+            case EXPLORE:
+                exploreDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(exploreDir);
+                break;
+            case DEFEND:
+                goalPos = initLoc.translate((int) (Math.random() * 3) + 1, (int) (Math.random() * 3) + 1);
+                Nav.doGoTo(goalPos);
+                break;
+            case ATTACK:
+                System.out.println(assignment.data.length);
+                exploreDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(exploreDir);
+                break;
+        }
     }
 
     @Override
@@ -48,7 +66,13 @@ public class Politician extends Robot {
                 return;
             }
         }
-        exploreDir(dir);
+        Direction move = Nav.tick();
+        if (move != null && rc.canMove(move)) rc.move(move);
+        if (move == null) {
+            assignment.label = DEFEND;
+            Nav.doGoTo(initLoc.translate((int) (Math.random() * 3) + 1, (int) (Math.random() * 3) + 1));
+        }
+        Clock.yield();
     }
 
     double speechEfficiency() throws GameActionException {

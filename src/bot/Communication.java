@@ -15,7 +15,7 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 8132648;
+        flag ^= 9232565;
         flag--;
         int[] data = new int[1];
         Label label;
@@ -33,6 +33,8 @@ public class Communication {
                 break;
             case 524288:
                 label = Label.ATTACK;
+                acc = flag / 2097152;
+                data[0] = acc % 8;
                 break;
             case 1572864:
                 label = Label.DEFEND;
@@ -46,13 +48,13 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 8132648 ^ (1 + (message.data[0] * 1) * 2097152 + 0);
+                return 9232565 ^ (1 + (message.data[0] * 1) * 2097152 + 0);
             case LATCH:
-                return 8132648 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 9232565 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case ATTACK:
-                return 8132648 ^ (1 + (0) * 2097152 + 524288);
+                return 9232565 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
             case DEFEND:
-                return 8132648 ^ (1 + (0) * 2097152 + 1572864);
+                return 9232565 ^ (1 + (0) * 2097152 + 1572864);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }
