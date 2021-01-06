@@ -10,7 +10,7 @@ abstract class Robot {
     static RobotType type = null;
     static int centerID;
     static Message assignment = null;
-    static final Direction[] directions = Direction.values();
+    static final Direction[] directions = Direction.allDirections();
 
 
     public static void init(RobotController rc) throws GameActionException {

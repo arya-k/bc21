@@ -11,9 +11,7 @@ class Command:
 
 commands = [
     Command("EXPLORE", [3]),
-    Command("SPEECH", []),
-    Command("ONE_COORD", [6]),
-    Command("TWO_COORDS", [6, 6]),
+    Command("LATCH", [3]),
     Command("ATTACK", []),
     Command("DEFEND", []),
 ]
@@ -26,7 +24,7 @@ BITS = 24
 
 import random
 
-MASK = random.randint(5, 2 ** 24)
+MASK = random.randint(5, 2 ** BITS)
 
 
 def bit_mirror(x, bits):

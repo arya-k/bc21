@@ -39,17 +39,13 @@ public class Politician extends Robot {
 
     }
 
-    static boolean seenDanger = false;
-
     void exploreBehavior(Direction dir) throws GameActionException {
-        if (!seenDanger) {
-            for (RobotInfo info : rc.senseNearbyRobots()) {
-                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    rc.setFlag(encode(exploreMessage(dir)));
-                    assignment = null;
-                    onUpdate();
-                    return;
-                }
+        for (RobotInfo info : rc.senseNearbyRobots()) {
+            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                rc.setFlag(encode(exploreMessage(dir)));
+                assignment = null;
+                onUpdate();
+                return;
             }
         }
         exploreDir(dir);

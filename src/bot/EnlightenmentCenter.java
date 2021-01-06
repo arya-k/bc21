@@ -18,12 +18,12 @@ public class EnlightenmentCenter extends Robot {
     static UnitBuild prevUnit = null;
     static Direction prevDir = null;
 
-    static Direction[] dangerDirs = new Direction[8];
-    static int dangerDirSize = 0;
+    static boolean[] dangerDirs = new boolean[8];
 
     @Override
     void onAwake() throws GameActionException {
         for (Direction dir : Robot.directions) {
+            if (dir == Direction.CENTER) continue;
             pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 3, exploreMessage(dir)), LOW);
         }
@@ -55,12 +55,13 @@ public class EnlightenmentCenter extends Robot {
             int flag = rc.getFlag(id);
             if (flag != 0) {
                 Message message = decode(flag);
-                dangerDirs[dangerDirSize++] = fromOrdinal(message.data[0]);
+                dangerDirs[message.data[0]] = true;
                 exploringIds.remove(id);
             }
         }
-        for (int i = 0; i < dangerDirSize; i++) {
-            System.out.println("DANGEROUS: " + dangerDirs[i]);
+        for (int i = 0; i < 8; i++) {
+            if (!dangerDirs[i]) continue;
+            System.out.println("DANGEROUS: " + fromOrdinal(i));
         }
 
         boolean empty = pq.isEmpty();

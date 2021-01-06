@@ -2,7 +2,7 @@ package bot;
 
 public class Communication {
     public enum Label {
-        EXPLORE, SPEECH, ONE_COORD, TWO_COORDS, ATTACK, DEFEND
+        EXPLORE, LATCH, ATTACK, DEFEND
     }
     public static class Message {
         Label label;
@@ -15,36 +15,26 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 4241054;
+        flag ^= 8132648;
         flag--;
-        int[] data = new int[2];
+        int[] data = new int[1];
         Label label;
         int acc;
-        switch (flag % 4096) {
+        switch (flag % 2097152) {
             case 0:
                 label = Label.EXPLORE;
-                acc = flag / 4096;
+                acc = flag / 2097152;
                 data[0] = acc % 8;
                 break;
-            case 2048:
-                label = Label.SPEECH;
+            case 1048576:
+                label = Label.LATCH;
+                acc = flag / 2097152;
+                data[0] = acc % 8;
                 break;
-            case 1024:
-                label = Label.ONE_COORD;
-                acc = flag / 4096;
-                data[0] = acc % 64;
-                break;
-            case 3072:
-                label = Label.TWO_COORDS;
-                acc = flag / 4096;
-                data[0] = acc % 64;
-                acc = acc / 64;
-                data[1] = acc % 64;
-                break;
-            case 512:
+            case 524288:
                 label = Label.ATTACK;
                 break;
-            case 2560:
+            case 1572864:
                 label = Label.DEFEND;
                 break;
             default:
@@ -56,17 +46,13 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 4241054 ^ (1 + (message.data[0] * 1) * 4096 + 0);
-            case SPEECH:
-                return 4241054 ^ (1 + (0) * 4096 + 2048);
-            case ONE_COORD:
-                return 4241054 ^ (1 + (message.data[0] * 1) * 4096 + 1024);
-            case TWO_COORDS:
-                return 4241054 ^ (1 + (message.data[0] * 1 + message.data[1] * 64) * 4096 + 3072);
+                return 8132648 ^ (1 + (message.data[0] * 1) * 2097152 + 0);
+            case LATCH:
+                return 8132648 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case ATTACK:
-                return 4241054 ^ (1 + (0) * 4096 + 512);
+                return 8132648 ^ (1 + (0) * 2097152 + 524288);
             case DEFEND:
-                return 4241054 ^ (1 + (0) * 4096 + 2560);
+                return 8132648 ^ (1 + (0) * 2097152 + 1572864);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

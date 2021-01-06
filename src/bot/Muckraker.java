@@ -9,45 +9,86 @@ import static bot.Communication.decode;
 public class Muckraker extends Robot {
 
     static MapLocation goalPos;
+    static RobotInfo[] nearby;
 
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Muckraker.rc); // Initialize the nav
-        if (assignment != null) {
-            switch (assignment.label) {
-                case EXPLORE:
-                    Direction dir = Muckraker.directions[assignment.data[0]];
-                    goalPos = rc.getLocation().translate(25,  0);
-                    break;
-                default:
-                    goalPos = rc.getLocation().translate(3, 3);
-            }
-        } else {
-            goalPos = rc.getLocation().translate(3, 3);
-        }
-        Nav.setGoal(goalPos);
     }
 
     @Override
     void onUpdate() throws GameActionException {
+        nearby = rc.senseNearbyRobots();
+        if (assignment == null) {
+            defaultBehavior();
+            return;
+        }
+
+        switch (assignment.label) {
+            case EXPLORE:
+                exploreBehavior(fromOrdinal(assignment.data[0]));
+                break;
+            case LATCH:
+                latchBehavior(fromOrdinal(assignment.data[0]));
+                break;
+            default:
+                defaultBehavior();
+                break;
+        }
+    }
+
+    void exploreBehavior(Direction dir) throws GameActionException {
+        for (RobotInfo info : rc.senseNearbyRobots()) {
+            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                rc.setFlag(encode(exploreMessage(dir)));
+                assignment = null;
+                onUpdate();
+                return;
+            }
+        }
+        exploreDir(dir);
+    }
+
+    void latchBehavior(Direction dir) throws GameActionException {
+        if (rc.isReady()) {
+            RobotInfo kill = bestSlandererKill();
+            if (kill != null) {
+                rc.expose(kill.getLocation());
+                Clock.yield();
+                return;
+            }
+            //TODO actually do something here
+        }
+    }
+
+    void defaultBehavior() throws GameActionException {
         // check if action possible
         if (rc.isReady()) {
             // get all enemy nearby robots
-            RobotInfo[] neighbors = rc.senseNearbyRobots(12, rc.getTeam().opponent());
-            for (RobotInfo neighbor : neighbors) {
-                // expose first slanderer found
-                if (neighbor.getType() == RobotType.SLANDERER) {
-                    rc.expose(neighbor.getLocation());
-                    Clock.yield();
-                    return;
+            RobotInfo kill = bestSlandererKill();
+            if (kill != null) {
+                rc.expose(kill.getLocation());
+                Clock.yield();
+                return;
+            }
+            // TODO move somewhere
+            Clock.yield();
+        }
+    }
+
+    RobotInfo bestSlandererKill() {
+        RobotInfo[] neighbors = rc.senseNearbyRobots(12, rc.getTeam().opponent());
+        RobotInfo best = null;
+        int bestInfluence = 0;
+        for (RobotInfo info : neighbors) {
+            if (info.getType() == RobotType.SLANDERER) {
+                int influence = info.getInfluence();
+                if (influence > bestInfluence) {
+                    bestInfluence = influence;
+                    best = info;
                 }
             }
-            // otherwise move
-            if (rc.getLocation().distanceSquaredTo(goalPos) != 0) {
-                Nav.tick();
-            }
-            Clock.yield();
-            return;
         }
+        return best;
     }
 }
