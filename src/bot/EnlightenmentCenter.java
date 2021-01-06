@@ -24,6 +24,7 @@ public class EnlightenmentCenter extends Robot {
     void onAwake() throws GameActionException {
         for (Direction dir : Robot.directions) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 2, exploreMessage(dir)), MED);
         }
         pq.push(new UnitBuild(RobotType.SLANDERER, 40, defendMessage()), LOW);
         pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), LOW);
@@ -102,19 +103,22 @@ public class EnlightenmentCenter extends Robot {
     }
 
     Message attackMessage() throws GameActionException {
-        int ix = (int) (Math.random() * 8);
-        int[] data = {ix};
-        for (int i = 0; i < 8; i++) {
-            int j = (i + ix) % 8;
-            if (!dangerDirs[j]) continue;
-            data[0] = j;
-            break;
-        }
+        int[] data = {randomDangerDir().ordinal()};
         return new Message(Label.ATTACK, data);
     }
 
     Message defendMessage() throws GameActionException {
-        int[] data = {};
+        int[] data = {randomDangerDir().ordinal()};
         return new Message(Label.DEFEND, data);
+    }
+
+    Direction randomDangerDir() {
+        int ix = (int) (Math.random() * 8);
+        for (int i = 0; i < 8; i++) {
+            int j = (i + ix) % 8;
+            if (!dangerDirs[j]) continue;
+            return fromOrdinal(j);
+        }
+        return fromOrdinal(ix);
     }
 }

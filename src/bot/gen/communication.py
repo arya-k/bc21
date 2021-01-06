@@ -13,7 +13,7 @@ commands = [
     Command("EXPLORE", [3]),
     Command("LATCH", [3]),
     Command("ATTACK", [3]),
-    Command("DEFEND", []),
+    Command("DEFEND", [3]),
 ]
 
 #########################################
