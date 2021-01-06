@@ -32,9 +32,10 @@ public class Nav {
         // TODO: check if we can see that the target is off the map
         // TODO: try more complex computation if we have more of a cool down?
 
-//        System.out.println("start: " + rc.getRoundNum() + " - " + Clock.getBytecodeNum());
+//        int startBC = Clock.getBytecodeNum();
         Direction dir = goTo5(goalPos);
-//        System.out.println("end: " + rc.getRoundNum() + " - " + Clock.getBytecodeNum());
+//        System.out.println("Bytes taken: " + (Clock.getBytecodeNum() - startBC));
+
         if (dir != null && rc.canMove(dir)) {
             rc.move(dir);
             return true;
@@ -251,185 +252,66 @@ public class Nav {
 
         // ITERATIVELY DETERMINE COSTS
         for (int iter = 3; --iter >= 0; ) {
-            cost_0_0 = Math.min(cost_1_0 + move_cost_0_0, cost_0_0);
-            cost_0_0 = Math.min(cost_1_1 + move_cost_0_0, cost_0_0);
-            cost_0_0 = Math.min(cost_0_1 + move_cost_0_0, cost_0_0);
-            cost_0_1 = Math.min(cost_1_1 + move_cost_0_1, cost_0_1);
-            cost_0_1 = Math.min(cost_1_2 + move_cost_0_1, cost_0_1);
-            cost_0_1 = Math.min(cost_0_2 + move_cost_0_1, cost_0_1);
-            cost_0_1 = Math.min(cost_0_0 + move_cost_0_1, cost_0_1);
-            cost_0_1 = Math.min(cost_1_0 + move_cost_0_1, cost_0_1);
-            cost_0_2 = Math.min(cost_1_2 + move_cost_0_2, cost_0_2);
-            cost_0_2 = Math.min(cost_1_3 + move_cost_0_2, cost_0_2);
-            cost_0_2 = Math.min(cost_0_3 + move_cost_0_2, cost_0_2);
-            cost_0_2 = Math.min(cost_0_1 + move_cost_0_2, cost_0_2);
-            cost_0_2 = Math.min(cost_1_1 + move_cost_0_2, cost_0_2);
-            cost_0_3 = Math.min(cost_1_3 + move_cost_0_3, cost_0_3);
-            cost_0_3 = Math.min(cost_1_4 + move_cost_0_3, cost_0_3);
-            cost_0_3 = Math.min(cost_0_4 + move_cost_0_3, cost_0_3);
-            cost_0_3 = Math.min(cost_0_2 + move_cost_0_3, cost_0_3);
-            cost_0_3 = Math.min(cost_1_2 + move_cost_0_3, cost_0_3);
-            cost_0_4 = Math.min(cost_1_4 + move_cost_0_4, cost_0_4);
-            cost_0_4 = Math.min(cost_0_3 + move_cost_0_4, cost_0_4);
-            cost_0_4 = Math.min(cost_1_3 + move_cost_0_4, cost_0_4);
-            cost_1_0 = Math.min(cost_2_0 + move_cost_1_0, cost_1_0);
-            cost_1_0 = Math.min(cost_2_1 + move_cost_1_0, cost_1_0);
-            cost_1_0 = Math.min(cost_1_1 + move_cost_1_0, cost_1_0);
-            cost_1_0 = Math.min(cost_0_1 + move_cost_1_0, cost_1_0);
-            cost_1_0 = Math.min(cost_0_0 + move_cost_1_0, cost_1_0);
-            cost_1_1 = Math.min(cost_2_1 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_2_2 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_1_2 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_0_2 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_0_1 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_0_0 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_1_0 + move_cost_1_1, cost_1_1);
-            cost_1_1 = Math.min(cost_2_0 + move_cost_1_1, cost_1_1);
-            cost_1_2 = Math.min(cost_2_2 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_2_3 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_1_3 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_0_3 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_0_2 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_0_1 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_1_1 + move_cost_1_2, cost_1_2);
-            cost_1_2 = Math.min(cost_2_1 + move_cost_1_2, cost_1_2);
-            cost_1_3 = Math.min(cost_2_3 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_2_4 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_1_4 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_0_4 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_0_3 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_0_2 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_1_2 + move_cost_1_3, cost_1_3);
-            cost_1_3 = Math.min(cost_2_2 + move_cost_1_3, cost_1_3);
-            cost_1_4 = Math.min(cost_2_4 + move_cost_1_4, cost_1_4);
-            cost_1_4 = Math.min(cost_0_4 + move_cost_1_4, cost_1_4);
-            cost_1_4 = Math.min(cost_0_3 + move_cost_1_4, cost_1_4);
-            cost_1_4 = Math.min(cost_1_3 + move_cost_1_4, cost_1_4);
-            cost_1_4 = Math.min(cost_2_3 + move_cost_1_4, cost_1_4);
-            cost_2_0 = Math.min(cost_3_0 + move_cost_2_0, cost_2_0);
-            cost_2_0 = Math.min(cost_3_1 + move_cost_2_0, cost_2_0);
-            cost_2_0 = Math.min(cost_2_1 + move_cost_2_0, cost_2_0);
-            cost_2_0 = Math.min(cost_1_1 + move_cost_2_0, cost_2_0);
-            cost_2_0 = Math.min(cost_1_0 + move_cost_2_0, cost_2_0);
-            cost_2_1 = Math.min(cost_3_1 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_3_2 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_2_2 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_1_2 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_1_1 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_1_0 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_2_0 + move_cost_2_1, cost_2_1);
-            cost_2_1 = Math.min(cost_3_0 + move_cost_2_1, cost_2_1);
-            cost_2_2 = Math.min(cost_3_2 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_3_3 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_2_3 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_1_3 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_1_2 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_1_1 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_2_1 + move_cost_2_2, cost_2_2);
-            cost_2_2 = Math.min(cost_3_1 + move_cost_2_2, cost_2_2);
-            cost_2_3 = Math.min(cost_3_3 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_3_4 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_2_4 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_1_4 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_1_3 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_1_2 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_2_2 + move_cost_2_3, cost_2_3);
-            cost_2_3 = Math.min(cost_3_2 + move_cost_2_3, cost_2_3);
-            cost_2_4 = Math.min(cost_3_4 + move_cost_2_4, cost_2_4);
-            cost_2_4 = Math.min(cost_1_4 + move_cost_2_4, cost_2_4);
-            cost_2_4 = Math.min(cost_1_3 + move_cost_2_4, cost_2_4);
-            cost_2_4 = Math.min(cost_2_3 + move_cost_2_4, cost_2_4);
-            cost_2_4 = Math.min(cost_3_3 + move_cost_2_4, cost_2_4);
-            cost_3_0 = Math.min(cost_4_0 + move_cost_3_0, cost_3_0);
-            cost_3_0 = Math.min(cost_4_1 + move_cost_3_0, cost_3_0);
-            cost_3_0 = Math.min(cost_3_1 + move_cost_3_0, cost_3_0);
-            cost_3_0 = Math.min(cost_2_1 + move_cost_3_0, cost_3_0);
-            cost_3_0 = Math.min(cost_2_0 + move_cost_3_0, cost_3_0);
-            cost_3_1 = Math.min(cost_4_1 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_4_2 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_3_2 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_2_2 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_2_1 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_2_0 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_3_0 + move_cost_3_1, cost_3_1);
-            cost_3_1 = Math.min(cost_4_0 + move_cost_3_1, cost_3_1);
-            cost_3_2 = Math.min(cost_4_2 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_4_3 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_3_3 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_2_3 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_2_2 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_2_1 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_3_1 + move_cost_3_2, cost_3_2);
-            cost_3_2 = Math.min(cost_4_1 + move_cost_3_2, cost_3_2);
-            cost_3_3 = Math.min(cost_4_3 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_4_4 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_3_4 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_2_4 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_2_3 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_2_2 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_3_2 + move_cost_3_3, cost_3_3);
-            cost_3_3 = Math.min(cost_4_2 + move_cost_3_3, cost_3_3);
-            cost_3_4 = Math.min(cost_4_4 + move_cost_3_4, cost_3_4);
-            cost_3_4 = Math.min(cost_2_4 + move_cost_3_4, cost_3_4);
-            cost_3_4 = Math.min(cost_2_3 + move_cost_3_4, cost_3_4);
-            cost_3_4 = Math.min(cost_3_3 + move_cost_3_4, cost_3_4);
-            cost_3_4 = Math.min(cost_4_3 + move_cost_3_4, cost_3_4);
-            cost_4_0 = Math.min(cost_4_1 + move_cost_4_0, cost_4_0);
-            cost_4_0 = Math.min(cost_3_1 + move_cost_4_0, cost_4_0);
-            cost_4_0 = Math.min(cost_3_0 + move_cost_4_0, cost_4_0);
-            cost_4_1 = Math.min(cost_4_2 + move_cost_4_1, cost_4_1);
-            cost_4_1 = Math.min(cost_3_2 + move_cost_4_1, cost_4_1);
-            cost_4_1 = Math.min(cost_3_1 + move_cost_4_1, cost_4_1);
-            cost_4_1 = Math.min(cost_3_0 + move_cost_4_1, cost_4_1);
-            cost_4_1 = Math.min(cost_4_0 + move_cost_4_1, cost_4_1);
-            cost_4_2 = Math.min(cost_4_3 + move_cost_4_2, cost_4_2);
-            cost_4_2 = Math.min(cost_3_3 + move_cost_4_2, cost_4_2);
-            cost_4_2 = Math.min(cost_3_2 + move_cost_4_2, cost_4_2);
-            cost_4_2 = Math.min(cost_3_1 + move_cost_4_2, cost_4_2);
-            cost_4_2 = Math.min(cost_4_1 + move_cost_4_2, cost_4_2);
-            cost_4_3 = Math.min(cost_4_4 + move_cost_4_3, cost_4_3);
-            cost_4_3 = Math.min(cost_3_4 + move_cost_4_3, cost_4_3);
-            cost_4_3 = Math.min(cost_3_3 + move_cost_4_3, cost_4_3);
-            cost_4_3 = Math.min(cost_3_2 + move_cost_4_3, cost_4_3);
-            cost_4_3 = Math.min(cost_4_2 + move_cost_4_3, cost_4_3);
-            cost_4_4 = Math.min(cost_3_4 + move_cost_4_4, cost_4_4);
-            cost_4_4 = Math.min(cost_3_3 + move_cost_4_4, cost_4_4);
-            cost_4_4 = Math.min(cost_4_3 + move_cost_4_4, cost_4_4);
+            cost_0_0 = Math.min(cost_0_1, Math.min(cost_1_1, Math.min(cost_1_0, cost_0_0 - move_cost_0_0))) + move_cost_0_0;
+            cost_0_1 = Math.min(cost_1_0, Math.min(cost_0_0, Math.min(cost_0_2, Math.min(cost_1_2, Math.min(cost_1_1, cost_0_1 - move_cost_0_1))))) + move_cost_0_1;
+            cost_0_2 = Math.min(cost_1_1, Math.min(cost_0_1, Math.min(cost_0_3, Math.min(cost_1_3, Math.min(cost_1_2, cost_0_2 - move_cost_0_2))))) + move_cost_0_2;
+            cost_0_3 = Math.min(cost_1_2, Math.min(cost_0_2, Math.min(cost_0_4, Math.min(cost_1_4, Math.min(cost_1_3, cost_0_3 - move_cost_0_3))))) + move_cost_0_3;
+            cost_0_4 = Math.min(cost_1_3, Math.min(cost_0_3, Math.min(cost_1_4, cost_0_4 - move_cost_0_4))) + move_cost_0_4;
+            cost_1_0 = Math.min(cost_0_0, Math.min(cost_0_1, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_2_0, cost_1_0 - move_cost_1_0))))) + move_cost_1_0;
+            cost_1_1 = Math.min(cost_2_0, Math.min(cost_1_0, Math.min(cost_0_0, Math.min(cost_0_1, Math.min(cost_0_2, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_2_1, cost_1_1 - move_cost_1_1)))))))) + move_cost_1_1;
+            cost_1_2 = Math.min(cost_2_1, Math.min(cost_1_1, Math.min(cost_0_1, Math.min(cost_0_2, Math.min(cost_0_3, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_2_2, cost_1_2 - move_cost_1_2)))))))) + move_cost_1_2;
+            cost_1_3 = Math.min(cost_2_2, Math.min(cost_1_2, Math.min(cost_0_2, Math.min(cost_0_3, Math.min(cost_0_4, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_2_3, cost_1_3 - move_cost_1_3)))))))) + move_cost_1_3;
+            cost_1_4 = Math.min(cost_2_3, Math.min(cost_1_3, Math.min(cost_0_3, Math.min(cost_0_4, Math.min(cost_2_4, cost_1_4 - move_cost_1_4))))) + move_cost_1_4;
+            cost_2_0 = Math.min(cost_1_0, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_3_0, cost_2_0 - move_cost_2_0))))) + move_cost_2_0;
+            cost_2_1 = Math.min(cost_3_0, Math.min(cost_2_0, Math.min(cost_1_0, Math.min(cost_1_1, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_3_1, cost_2_1 - move_cost_2_1)))))))) + move_cost_2_1;
+            cost_2_2 = Math.min(cost_3_1, Math.min(cost_2_1, Math.min(cost_1_1, Math.min(cost_1_2, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_3_2, cost_2_2 - move_cost_2_2)))))))) + move_cost_2_2;
+            cost_2_3 = Math.min(cost_3_2, Math.min(cost_2_2, Math.min(cost_1_2, Math.min(cost_1_3, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_3_3, cost_2_3 - move_cost_2_3)))))))) + move_cost_2_3;
+            cost_2_4 = Math.min(cost_3_3, Math.min(cost_2_3, Math.min(cost_1_3, Math.min(cost_1_4, Math.min(cost_3_4, cost_2_4 - move_cost_2_4))))) + move_cost_2_4;
+            cost_3_0 = Math.min(cost_2_0, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_4_0, cost_3_0 - move_cost_3_0))))) + move_cost_3_0;
+            cost_3_1 = Math.min(cost_4_0, Math.min(cost_3_0, Math.min(cost_2_0, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_4_1, cost_3_1 - move_cost_3_1)))))))) + move_cost_3_1;
+            cost_3_2 = Math.min(cost_4_1, Math.min(cost_3_1, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_4_2, cost_3_2 - move_cost_3_2)))))))) + move_cost_3_2;
+            cost_3_3 = Math.min(cost_4_2, Math.min(cost_3_2, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_4_4, Math.min(cost_4_3, cost_3_3 - move_cost_3_3)))))))) + move_cost_3_3;
+            cost_3_4 = Math.min(cost_4_3, Math.min(cost_3_3, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_4_4, cost_3_4 - move_cost_3_4))))) + move_cost_3_4;
+            cost_4_0 = Math.min(cost_3_0, Math.min(cost_3_1, Math.min(cost_4_1, cost_4_0 - move_cost_4_0))) + move_cost_4_0;
+            cost_4_1 = Math.min(cost_4_0, Math.min(cost_3_0, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_4_2, cost_4_1 - move_cost_4_1))))) + move_cost_4_1;
+            cost_4_2 = Math.min(cost_4_1, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_4_3, cost_4_2 - move_cost_4_2))))) + move_cost_4_2;
+            cost_4_3 = Math.min(cost_4_2, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_4_4, cost_4_3 - move_cost_4_3))))) + move_cost_4_3;
+            cost_4_4 = Math.min(cost_4_3, Math.min(cost_3_3, Math.min(cost_3_4, cost_4_4 - move_cost_4_4))) + move_cost_4_4;
         }
 
         // DETERMINING MIN COST DIRECTION
         Direction ret = null;
         double minCost = Double.MAX_VALUE;
 
-        if (cost_2_3 < minCost && cost_2_3 < 1 << 20) {
+        if (cost_2_3 < minCost && cost_2_3 < 1073741824) {
             minCost = cost_2_3;
             ret = Direction.EAST;
         }
-        if (cost_3_3 < minCost && cost_3_3 < 1 << 20) {
+        if (cost_3_3 < minCost && cost_3_3 < 1073741824) {
             minCost = cost_3_3;
             ret = Direction.NORTHEAST;
         }
-        if (cost_3_2 < minCost && cost_3_2 < 1 << 20) {
+        if (cost_3_2 < minCost && cost_3_2 < 1073741824) {
             minCost = cost_3_2;
             ret = Direction.NORTH;
         }
-        if (cost_3_1 < minCost && cost_3_1 < 1 << 20) {
+        if (cost_3_1 < minCost && cost_3_1 < 1073741824) {
             minCost = cost_3_1;
             ret = Direction.NORTHWEST;
         }
-        if (cost_2_1 < minCost && cost_2_1 < 1 << 20) {
+        if (cost_2_1 < minCost && cost_2_1 < 1073741824) {
             minCost = cost_2_1;
             ret = Direction.WEST;
         }
-        if (cost_1_1 < minCost && cost_1_1 < 1 << 20) {
+        if (cost_1_1 < minCost && cost_1_1 < 1073741824) {
             minCost = cost_1_1;
             ret = Direction.SOUTHWEST;
         }
-        if (cost_1_2 < minCost && cost_1_2 < 1 << 20) {
+        if (cost_1_2 < minCost && cost_1_2 < 1073741824) {
             minCost = cost_1_2;
             ret = Direction.SOUTH;
         }
-        if (cost_1_3 < minCost && cost_1_3 < 1 << 20) {
+        if (cost_1_3 < minCost && cost_1_3 < 1073741824) {
 
             ret = Direction.SOUTHEAST;
         }
