@@ -1,16 +1,16 @@
 package bot;
 
-class CustomQueue {
-    int[] elements = new int[1024];
+public class UnitBuildQueue {
+    UnitBuild[] elements = new UnitBuild[64];
     int mask = 1023;
     public int head;
     public int tail;
 
-    public CustomQueue(){
+    public UnitBuildQueue(){
 
     }
 
-    public void addLast(int e) {
+    public void push(UnitBuild e) {
         elements[tail & mask] = e;
         if (tail++ - head == mask)
             doubleCapacity();
@@ -24,8 +24,12 @@ class CustomQueue {
         return head == tail;
     }
 
-    public int pollFirst() {
+    public UnitBuild pop() {
         return elements[head++ & mask];
+    }
+
+    public UnitBuild peek() {
+        return elements[head & mask];
     }
 
     private void doubleCapacity() {
@@ -38,7 +42,7 @@ class CustomQueue {
         int newCapacity = n << 1;
         if (newCapacity < 0)
             throw new IllegalStateException("Sorry, deque too big");
-        int[] a = new int[newCapacity];
+        UnitBuild[] a = (UnitBuild[]) new Object[newCapacity];
         System.arraycopy(elements, p, a, 0, r);
         System.arraycopy(elements, 0, a, r, p);
         elements = a;

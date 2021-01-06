@@ -11,6 +11,7 @@ class Command:
 
 commands = [
     Command("EXPLORE", [3]),
+    Command("SPEECH", []),
     Command("ONE_COORD", [6]),
     Command("TWO_COORDS", [6, 6]),
     Command("HELLO", []),

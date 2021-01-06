@@ -9,20 +9,54 @@ abstract class Robot {
     static RobotController rc = null;
     static RobotType type = null;
     static int centerID;
-    static Direction[] directions = Direction.values();
+    static Message assignment = null;
+    static final Direction[] directions = Direction.values();
+
 
     public static void init(RobotController rc) throws GameActionException {
         Robot.rc = rc;
         Robot.type = rc.getType();
         // find the EC
-        for (RobotInfo info : rc.senseNearbyRobots(2)) {
-            if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
-                Robot.centerID = info.getID();
+        if (Robot.type != RobotType.ENLIGHTENMENT_CENTER) {
+            for (RobotInfo info : rc.senseNearbyRobots(2)) {
+                if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
+                    Robot.centerID = info.getID();
+                    Robot.assignment = decode(rc.getFlag(Robot.centerID));
+                    System.out.println("Found assignment!");
+                    break;
+                }
             }
+            if (Robot.assignment == null)
+                System.out.println("Didnt find assignment!");
         }
+
     }
 
     abstract void onAwake() throws GameActionException;
 
     abstract void onUpdate() throws GameActionException;
+
+    static Direction nextStep;
+
+    public static void exploreDir(Direction dir) throws GameActionException {
+        if (rc.isReady()) {
+            if (nextStep == null || !rc.canMove(nextStep)) {
+                nextStep = Nav.goInDir(dir);
+            }
+            if (nextStep != null && rc.canMove(nextStep)) {
+                rc.move(nextStep);
+                nextStep = null;
+                Clock.yield();
+                return;
+            }
+        } else {
+            nextStep = Nav.goInDir(dir);
+            Clock.yield();
+            return;
+        }
+    }
+
+    public static Direction fromOrdinal(int ordinal) {
+        return Robot.directions[ordinal];
+    }
 }

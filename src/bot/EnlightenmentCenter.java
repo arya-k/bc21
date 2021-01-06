@@ -1,6 +1,8 @@
 package bot;
 
 import bot.Communication.*;
+import static bot.Communication.encode;
+import static bot.Communication.decode;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -8,53 +10,61 @@ import battlecode.common.GameActionException;
 import battlecode.common.RobotType;
 
 public class EnlightenmentCenter extends Robot {
+
+    static UnitBuildDPQueue pq = new UnitBuildDPQueue(3);
+    static final int LOW = 2;
+    static final int MED = 1;
+    static final int HIGH = 0;
+
+    static UnitBuild nextUnit = null;
+
+
+
     @Override
     void onAwake() throws GameActionException {
+        for (Direction dir : Robot.directions) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), LOW);
+        }
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        System.out.println("Starting influence: " + rc.getInfluence());
-        System.out.println("Starting conviction: " + rc.getConviction());
-        for (int i = 10; i > 0; i--) {
-            if (rc.isReady() && rc.getInfluence() > 3) {
-                Direction toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-                while (!rc.canBuildRobot(RobotType.MUCKRAKER, toBuild, 3)) {
-                    toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-                }
-                System.out.println("Building muckraker at " + rc.getLocation().add(toBuild) + "!");
-                setExploreFlag(toBuild);
-                rc.buildRobot(RobotType.MUCKRAKER, toBuild, 3);
-            }
-            Clock.yield();
+        System.out.println("Influence: " + rc.getInfluence());
+        boolean empty = pq.isEmpty();
+        if (empty) {
+            refillQueue();
         }
-        System.out.println("Influence after all muckrakers: " + rc.getInfluence());
-        System.out.println("Conviction after all muckrakers: " + rc.getConviction());
-        while (!(rc.isReady() && rc.getInfluence() > 50)) {
-            Clock.yield();
+        if (nextUnit == null && !empty) {
+            nextUnit = pq.pop();
         }
-        Direction toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-        while (!rc.canBuildRobot(RobotType.POLITICIAN, toBuild, 50)) {
-            toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-        }
-        System.out.println("Building politician at " + rc.getLocation().add(toBuild) + "!");
-        rc.buildRobot(RobotType.POLITICIAN, toBuild, 50);
 
-        while (!(rc.isReady() && rc.getInfluence() > 40)) {
-            Clock.yield();
+        if (nextUnit != null && nextUnit.influence <= rc.getInfluence() && rc.isReady()) {
+            // build a unit
+            System.out.println("Trying to build a " + nextUnit.type);
+            Direction buildDir = null;
+            for (Direction dir : Robot.directions) {
+                if (rc.canBuildRobot(nextUnit.type, dir, nextUnit.influence)) {
+                    buildDir = dir;
+                    break;
+                }
+            }
+            if (buildDir != null) {
+                rc.setFlag(encode(nextUnit.message));
+                rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+                nextUnit = null;
+            }
         }
-        toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-        while (!rc.canBuildRobot(RobotType.SLANDERER, toBuild, 40)) {
-            toBuild = Direction.allDirections()[(int) (Math.random() * 8)];
-        }
-        System.out.println("Building slanderer at " + rc.getLocation().add(toBuild) + "!");
-        rc.buildRobot(RobotType.SLANDERER, toBuild, 40);
+
+        Clock.yield();
 
     }
 
-    void setExploreFlag(Direction dir) throws GameActionException {
+    void refillQueue() {
+        return;
+    }
+
+    Message exploreMessage(Direction dir) throws GameActionException {
         int[] data = {dir.ordinal()};
-        int flag = Communication.encode(new Message(Label.EXPLORE, data));
-        this.rc.setFlag(flag);
+        return new Message(Label.EXPLORE, data);
     }
 }

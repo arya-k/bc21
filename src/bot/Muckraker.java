@@ -12,18 +12,20 @@ public class Muckraker extends Robot {
 
     @Override
     void onAwake() throws GameActionException {
-        Message command = decode(rc.getFlag(Muckraker.centerID));
         Nav.init(Muckraker.rc); // Initialize the nav
-        switch (command.label) {
-            case EXPLORE:
-                Direction dir = Muckraker.directions[command.data[0]];
-                goalPos = rc.getLocation().translate(25,  0);
-                break;
-            default:
-                goalPos = rc.getLocation().translate(3, 3);
+        if (assignment != null) {
+            switch (assignment.label) {
+                case EXPLORE:
+                    Direction dir = Muckraker.directions[assignment.data[0]];
+                    goalPos = rc.getLocation().translate(25,  0);
+                    break;
+                default:
+                    goalPos = rc.getLocation().translate(3, 3);
+            }
+        } else {
+            goalPos = rc.getLocation().translate(3, 3);
         }
         Nav.setGoal(goalPos);
-
     }
 
     @Override
