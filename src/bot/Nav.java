@@ -43,8 +43,8 @@ public class Nav {
     }
 
     static Direction goInDir(Direction dir) throws GameActionException{
-        if (rc_.onTheMap(rc_.adjacentLocation(dir))) {
-            Direction moveDir = goTo(rc_.getLocation().translate(5*dir.dx, 5*dir.dy));
+        if (rc.onTheMap(rc.adjacentLocation(dir))) {
+            Direction moveDir = goTo5(rc.getLocation().translate(5*dir.dx, 5*dir.dy));
             return moveDir;
         }
         return null;
