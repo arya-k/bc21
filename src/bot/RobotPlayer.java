@@ -29,7 +29,9 @@ public strictfp class RobotPlayer {
                     robot.onUpdate();
                     RobotType currType = rc.getType();
                     if(currType != myType) {
+                        int currCenter = robot.centerID;
                         robot = getRobot(currType);
+                        robot.centerID = currCenter;
                         robot.onAwake();
                         myType = currType;
                     }

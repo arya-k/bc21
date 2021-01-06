@@ -2,7 +2,7 @@ package bot;
 
 public class UnitBuildQueue {
     UnitBuild[] elements = new UnitBuild[64];
-    int mask = 1023;
+    int mask = 63;
     public int head;
     public int tail;
 

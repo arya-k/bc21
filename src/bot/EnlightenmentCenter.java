@@ -24,7 +24,13 @@ public class EnlightenmentCenter extends Robot {
     @Override
     void onAwake() throws GameActionException {
         for (Direction dir : Robot.directions) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), LOW);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 3, exploreMessage(dir)), LOW);
+        }
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), LOW);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), LOW);
+        for(int i=3; i>0; i--) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
         }
     }
 
@@ -42,15 +48,19 @@ public class EnlightenmentCenter extends Robot {
         }
         // iterate through exploring robot ids
         for (int id : exploringIds.getKeys()) {
+            if (!rc.canGetFlag(id)) {
+                exploringIds.remove(id);
+                continue;
+            }
             int flag = rc.getFlag(id);
             if (flag != 0) {
                 Message message = decode(flag);
                 dangerDirs[dangerDirSize++] = fromOrdinal(message.data[0]);
                 exploringIds.remove(id);
-                for (int i = 0; i < dangerDirSize; i++) {
-                    System.out.println("DANGEROUS: " + dangerDirs[i]);
-                }
             }
+        }
+        for (int i = 0; i < dangerDirSize; i++) {
+            System.out.println("DANGEROUS: " + dangerDirs[i]);
         }
 
         boolean empty = pq.isEmpty();
@@ -84,7 +94,21 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void refillQueue() {
-        return;
+    void refillQueue() throws GameActionException {
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), MED);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), MED);
+        for(int i=3; i>0; i--) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
+        }
+    }
+
+    Message goodbyeMessage() throws GameActionException {
+        int[] data = {};
+        return new Message(Label.GOODBYE, data);
+    }
+
+    Message helloMessage() throws GameActionException {
+        int[] data = {};
+        return new Message(Label.HELLO, data);
     }
 }

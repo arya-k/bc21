@@ -8,7 +8,7 @@ import static bot.Communication.decode;
 abstract class Robot {
     static RobotController rc = null;
     static RobotType type = null;
-    static int centerID;
+    public static int centerID;
     static Message assignment = null;
     static final Direction[] directions = Direction.values();
 
@@ -47,12 +47,10 @@ abstract class Robot {
                 rc.move(nextStep);
                 nextStep = null;
                 Clock.yield();
-                return;
             }
         } else {
             nextStep = Nav.goInDir(dir);
             Clock.yield();
-            return;
         }
     }
 
