@@ -8,7 +8,7 @@ import static bot.Communication.decode;
 abstract class Robot {
     static RobotController rc = null;
     static RobotType type = null;
-    public static int centerID;
+    static int centerID;
     static Message assignment = null;
     static final Direction[] directions = Direction.values();
 
