@@ -59,4 +59,9 @@ abstract class Robot {
     public static Direction fromOrdinal(int ordinal) {
         return Robot.directions[ordinal];
     }
+
+    Message exploreMessage(Direction dir) throws GameActionException {
+        int[] data = {dir.ordinal()};
+        return new Message(Label.EXPLORE, data);
+    }
 }

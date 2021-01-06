@@ -1,9 +1,8 @@
 package bot;
 
-import battlecode.common.Clock;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
+import battlecode.common.*;
+
+import static bot.Communication.encode;
 
 public class Politician extends Robot {
     static MapLocation goalPos;
@@ -24,13 +23,27 @@ public class Politician extends Robot {
 
         switch (assignment.label) {
             case EXPLORE:
-                exploreDir(fromOrdinal(assignment.data[0]));
+                exploreBehavior(fromOrdinal(assignment.data[0]));
                 break;
             default:
                 defaultBehavior();
                 break;
         }
 
+    }
+
+    static boolean seenDanger = false;
+
+    void exploreBehavior(Direction dir) throws GameActionException {
+        if (!seenDanger) {
+            for (RobotInfo info : rc.senseNearbyRobots()) {
+                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                    rc.setFlag(encode(exploreMessage(dir)));
+                    seenDanger = true;
+                }
+            }
+        }
+        exploreDir(dir);
     }
 
     void defaultBehavior() throws GameActionException {
