@@ -1,6 +1,6 @@
 package bot;
 
-public class UnitBuildDPQueue<T> {
+public class UnitBuildDPQueue {
     UnitBuildQueue[] queues;
     int index;
     int levels;
@@ -22,7 +22,7 @@ public class UnitBuildDPQueue<T> {
 
     public UnitBuild pop() {
         UnitBuild item = queues[index].pop();
-        while (queues[index].isEmpty() && index != levels) {
+        while (index != levels && queues[index].isEmpty()) {
             index++;
         }
         return item;

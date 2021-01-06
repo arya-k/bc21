@@ -23,7 +23,13 @@ public class EnlightenmentCenter extends Robot {
     @Override
     void onAwake() throws GameActionException {
         for (Direction dir : Robot.directions) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), LOW);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 3, exploreMessage(dir)), LOW);
+        }
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), LOW);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), LOW);
+        for(int i=3; i>0; i--) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
         }
     }
 
@@ -59,8 +65,22 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void refillQueue() {
-        return;
+    void refillQueue() throws GameActionException {
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, helloMessage()), MED);
+        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, helloMessage()), MED);
+        for(int i=3; i>0; i--) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, goodbyeMessage()), LOW);
+        }
+    }
+
+    Message goodbyeMessage() throws GameActionException {
+        int[] data = {};
+        return new Message(Label.GOODBYE, data);
+    }
+
+    Message helloMessage() throws GameActionException {
+        int[] data = {};
+        return new Message(Label.HELLO, data);
     }
 
     Message exploreMessage(Direction dir) throws GameActionException {

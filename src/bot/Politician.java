@@ -11,14 +11,18 @@ public class Politician extends Robot {
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
-        goalPos = rc.getLocation().translate(100, 0);
+        if (assignment != null && assignment.label == Communication.Label.HELLO) {
+            goalPos = rc.getLocation().translate((int) (Math.random() * 5) + 1, (int) (Math.random() * 5) + 1);
+        } else {
+            goalPos = rc.getLocation().translate(25, 0);
+        }
         Nav.setGoal(goalPos);
     }
 
     @Override
     void onUpdate() throws GameActionException {
         if (assignment == null) {
-            defaultBehavior();
+            attackBehavior();
             return;
         }
 
@@ -26,14 +30,34 @@ public class Politician extends Robot {
             case EXPLORE:
                 exploreDir(fromOrdinal(assignment.data[0]));
                 break;
+            case HELLO:
+                defendBehavior();
+                break;
             default:
-                defaultBehavior();
+                attackBehavior();
                 break;
         }
 
     }
 
-    void defaultBehavior() throws GameActionException {
+    void defendBehavior() throws GameActionException {
+        if (rc.isReady()) {
+            // get all enemy nearby robots
+            RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
+            if (enemies.length > 0) {
+                rc.empower(9);
+                System.out.println("GIVING SPEECH IN DEFENSE");
+            } else {
+                // otherwise move
+                Nav.tick();
+            }
+        }
+
+        // end turn
+        Clock.yield();
+    }
+
+    void attackBehavior() throws GameActionException {
         if (rc.isReady()) {
             // get all enemy nearby robots, might be better to manually filter
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
