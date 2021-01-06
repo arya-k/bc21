@@ -38,11 +38,9 @@ public class Politician extends Robot {
             // get all enemy nearby robots, might be better to manually filter
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
             RobotInfo[] allies = rc.senseNearbyRobots(9, rc.getTeam());
-            // if there are two enemies nearby, give speech
-            if (enemies.length > 2 || allies.length > 7) {
+            // if there are two enemies nearby, empower
+            if (enemies.length > 2 || allies.length > 6) {
                 rc.empower(9);
-                System.out.println("GIVING SPEECH");
-                // rc.resign();
             } else {
                 // otherwise move
                 Nav.tick();
