@@ -31,12 +31,13 @@ public class EnlightenmentCenter extends Robot {
         }
         for (Direction dir : Robot.directions) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
-            pq.push(new UnitBuild(RobotType.MUCKRAKER, 2, exploreMessage(dir)), MED);
         }
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, defendMessage()), LOW);
-        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), LOW);
         for(int i=3; i>0; i--) {
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 10, attackMessage()), LOW);
             pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
+        }
+        for (int i = 10; --i > 0; ) {
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, hideMessage()), LOW);
         }
     }
 
@@ -111,10 +112,15 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
-        pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), MED);
-        for(int i=3; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
+        switch(rc.getRoundNum() % 50) {
+            case 0:
+                for (int i = 3; --i > 0; ) {
+                    pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
+                }
+                break;
+            default:
+                pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, attackMessage()), LOW);
+                break;
         }
     }
 
@@ -149,7 +155,7 @@ public class EnlightenmentCenter extends Robot {
         return new Message(Label.ATTACK, data);
     }
 
-    Message defendMessage() throws GameActionException {
+    Message defendECMessage() throws GameActionException {
         int[] data = {bestDangerDir().ordinal()};
         return new Message(Label.DEFEND, data);
     }

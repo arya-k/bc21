@@ -2,10 +2,6 @@ package bot;
 
 import battlecode.common.*;
 
-import bot.Communication.*;
-import static bot.Communication.encode;
-import static bot.Communication.decode;
-
 public class Muckraker extends Robot {
 
     static Direction commandDir;
@@ -20,6 +16,8 @@ public class Muckraker extends Robot {
         switch (assignment.label) {
             case EXPLORE:
             case LATCH:
+            case HIDE:
+            case ATTACK:
                 commandDir = fromOrdinal(assignment.data[0]);
                 Nav.doGoInDir(commandDir);
                 break;
@@ -43,6 +41,10 @@ public class Muckraker extends Robot {
             case LATCH:
                 latchBehavior();
                 break;
+            case HIDE:
+                hideBehavior();
+                break;
+            case ATTACK:
             default:
                 defaultBehavior();
                 break;
@@ -52,12 +54,20 @@ public class Muckraker extends Robot {
     void exploreBehavior() throws GameActionException {
         exploreLogic(commandDir);
     }
-    
+
     @Override
     void reassignDefault() {
         assignment = null;
         MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
         Nav.doGoTo(goalPos);
+    }
+
+    void reassignDefault(boolean setGoal) {
+        assignment = null;
+        if(setGoal) {
+            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
+            Nav.doGoTo(goalPos);
+        }
     }
 
     void latchBehavior() throws GameActionException {
@@ -73,6 +83,39 @@ public class Muckraker extends Robot {
         }
     }
 
+    void hideBehavior() throws GameActionException {
+        if (Nav.currentGoal != Nav.NavGoal.GoTo) {
+            RobotInfo[] allies = rc.senseNearbyRobots(25, rc.getTeam());
+            RobotInfo closest_slanderer = null;
+            MapLocation myLocation = rc.getLocation();
+            for (RobotInfo info : allies) {
+                if (info.getType() == RobotType.SLANDERER) {
+                    if (closest_slanderer == null || info.getLocation().distanceSquaredTo(myLocation) < closest_slanderer.getLocation().distanceSquaredTo(myLocation)) {
+                        closest_slanderer = info;
+                    }
+                }
+            }
+            if (closest_slanderer != null) {
+                MapLocation target = closest_slanderer.getLocation();
+                Direction opposite = commandDir.opposite();
+                for (int i = 3; --i > 0; ) {
+                    target = target.translate(opposite.dx * (int) (Math.random() + 0.5), opposite.dy * (int) (Math.random() + 0.5));
+                }
+                Nav.doGoTo(target);
+            }
+        }
+
+        if (rc.isReady()) {
+            Direction move = Nav.tick();
+            if(move == null || move == Direction.CENTER) {
+                reassignDefault(false);
+            }
+            else if (move != null && rc.canMove(move)) rc.move(move);
+
+        }
+        Clock.yield();
+    }
+
     void defaultBehavior() throws GameActionException {
         // check if action possible
         if (rc.isReady()) {
@@ -80,6 +123,11 @@ public class Muckraker extends Robot {
             RobotInfo kill = bestSlandererKill();
             if (kill != null) {
                 rc.expose(kill.getLocation());
+                Clock.yield();
+                return;
+            }
+            if(Math.random() < 0.1) {
+                Nav.doGoInDir(commandDir);
                 Clock.yield();
                 return;
             }
