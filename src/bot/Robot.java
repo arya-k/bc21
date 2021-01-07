@@ -62,4 +62,13 @@ abstract class Robot {
         int[] data = {dir.ordinal()};
         return new Message(Label.EXPLORE, data);
     }
+
+    /**
+     * Utility function to log the bytecodes used, accounting for the rounds possibly ticking over.
+     */
+    static void logBytecodeUse(int startRound, int startBC) {
+        int limit = rc.getType().bytecodeLimit;
+        int byteCount = (limit - startBC) + (rc.getRoundNum() - startRound - 1) * limit + Clock.getBytecodeNum();
+        System.out.println("@@@Bytecodes used: " + byteCount);
+    }
 }

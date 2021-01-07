@@ -6,7 +6,6 @@ Generates a GOTO with unrolled loops, of a specified size...
 
 # TODO: see if iteratively adding directions is better
 
-
 NAV_GRID_SIZE = 7
 NAV_ITERATIONS = 3
 
@@ -52,42 +51,38 @@ code += """
 for i, (y, x) in enumerate(grid_locations()):
     code += """
     {init}tile = rc_.getLocation().translate({dx}, {dy});
-    double cost_{y}_{x} = tile.distanceSquaredTo(target) * INITIAL_COST_MULTIPLIER;
+    double cost_{y}_{x} = tile.distanceSquaredTo(target);
     double move_cost_{y}_{x} = Double.MAX_VALUE;
     if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
         cost_{y}_{x} = Double.MAX_VALUE;
     else
-        move_cost_{y}_{x} = PASSABILITY_SCALE_FACTOR / rc_.sensePassability(tile);""".format(
+        move_cost_{y}_{x} = 1 / rc_.sensePassability(tile);""".format(
         x=x, y=y, dy=y - HALF_SIZE, dx=x - HALF_SIZE, init="" if i else "MapLocation "
     )
 
 
 # Iterative cost determination
 
-code += """
+for iter in range(NAV_ITERATIONS):
+    code += f"\n    // iteration {iter+1}\n"
+    for y, x in grid_locations():
+        # tighten the circle of updated grid items...
+        if not (
+            (iter <= y < NAV_GRID_SIZE - iter) and (iter <= x < NAV_GRID_SIZE - iter)
+        ):
+            continue
+        neighbors = list(adjacent(y, x))
+        min_expr = f"Math.min(cost_{neighbors[0][0]}_{neighbors[0][1]}, cost_{y}_{x} - move_cost_{y}_{x})"
+        for adj_y, adj_x in neighbors[1:]:
+            min_expr = f"Math.min(cost_{adj_y}_{adj_x}, {min_expr})"
 
-    // ITERATIVELY DETERMINE COSTS
-    for (int iter={}; --iter>=0;) {{
-""".format(
-    NAV_ITERATIONS
-)
-
-for y, x in grid_locations():
-    neighbors = list(adjacent(y, x))
-
-    min_expr = f"Math.min(cost_{neighbors[0][0]}_{neighbors[0][1]}, cost_{y}_{x} - move_cost_{y}_{x})"
-    for adj_y, adj_x in neighbors[1:]:
-        min_expr = f"Math.min(cost_{adj_y}_{adj_x}, {min_expr})"
-
-    code += f"        cost_{y}_{x} = {min_expr} + move_cost_{y}_{x};\n"
-code += "    }\n"
-
+        code += f"    cost_{y}_{x} = {min_expr} + move_cost_{y}_{x};\n"
 
 # minimum direction
 
 code += """
     // DETERMINING MIN COST DIRECTION
-    Direction ret = null;
+    Direction ret = Direction.CENTER;
     double minCost = Double.MAX_VALUE;
 """
 
@@ -101,7 +96,7 @@ for i, (name, (dx, dy)) in enumerate(DIRS.items()):
     }}"""
 
 code += f"""
-    return minCost > {1 << 30} ? null : ret;
+    return minCost > {1 << 30} ? Direction.CENTER : ret;
 }}"""
 
 print(code)
