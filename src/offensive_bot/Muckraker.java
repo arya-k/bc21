@@ -1,4 +1,4 @@
-package bot;
+package offensive_bot;
 
 import battlecode.common.*;
 

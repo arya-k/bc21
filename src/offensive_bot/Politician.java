@@ -1,9 +1,8 @@
-package bot;
+package offensive_bot;
 
 import battlecode.common.*;
 
-import static bot.Communication.Label.DEFEND;
-import static bot.Communication.encode;
+import static offensive_bot.Communication.Label.DEFEND;
 
 public class Politician extends Robot {
 

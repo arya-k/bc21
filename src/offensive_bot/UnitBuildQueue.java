@@ -1,4 +1,4 @@
-package bot;
+package offensive_bot;
 
 public class UnitBuildQueue {
     UnitBuild[] elements = new UnitBuild[64];

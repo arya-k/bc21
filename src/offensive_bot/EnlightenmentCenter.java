@@ -1,9 +1,11 @@
-package bot;
+package offensive_bot;
 
 import battlecode.common.*;
-import bot.Communication.*;
-import static bot.Communication.encode;
-import static bot.Communication.decode;
+import offensive_bot.Communication.Label;
+import offensive_bot.Communication.Message;
+
+import static offensive_bot.Communication.decode;
+import static offensive_bot.Communication.encode;
 
 public class EnlightenmentCenter extends Robot {
 
@@ -41,27 +43,6 @@ public class EnlightenmentCenter extends Robot {
         }
     }
 
-    void lowPriorityLogging() {
-        // only log low priority info every 100 rounds
-        if (rc.getRoundNum() % 100 != 0) {
-            return;
-        }
-
-        System.out.println("Influence: " + rc.getInfluence());
-        for (int i = 0; i < 8; i++) {
-            if (!dangerDirs[i]) continue;
-            System.out.println("DANGEROUS: " + fromOrdinal(i));
-        }
-        for (Direction dir : Direction.cardinalDirections()) {
-            int ord = dir.ordinal();
-            if (edgeOffsets[ord] == 100) continue;
-            System.out.println(dir + " offset " + edgeOffsets[ord]);
-        }
-        for (Direction dir : directions) {
-            System.out.println("safety of " + dir + " = " + directionSafety[dir.ordinal()]);
-        }
-    }
-
     @Override
     void onUpdate() throws GameActionException {
 
@@ -76,8 +57,6 @@ public class EnlightenmentCenter extends Robot {
         }
 
         processFlags();
-
-        lowPriorityLogging();
 
         // queue the next unit to build
         boolean empty = pq.isEmpty();

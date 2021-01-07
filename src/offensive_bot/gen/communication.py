@@ -104,7 +104,7 @@ encode = "\n".join(s for s in encode.splitlines() if s.strip())
 decode = "\n".join(decode_blocks)
 decode = "\n".join(s for s in decode.splitlines() if s.strip())
 
-code = f"""package bot;
+code = f"""package offensive_bot;
 
 public class Communication {{
     public enum Label {{

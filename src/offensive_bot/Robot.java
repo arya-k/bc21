@@ -1,13 +1,11 @@
-package bot;
+package offensive_bot;
 
 import battlecode.common.*;
-import bot.Communication.Label;
-import bot.Communication.Message;
+import offensive_bot.Communication.Label;
+import offensive_bot.Communication.Message;
 
-import java.util.Map;
-
-import static bot.Communication.decode;
-import static bot.Communication.encode;
+import static offensive_bot.Communication.decode;
+import static offensive_bot.Communication.encode;
 
 abstract class Robot {
     static RobotController rc = null;

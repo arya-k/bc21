@@ -1,4 +1,4 @@
-package bot;
+package offensive_bot;
 
 public class IterableIdSet {
     private int size = 0;

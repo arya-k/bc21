@@ -1,4 +1,4 @@
-package bot;
+package offensive_bot;
 
 public class Communication {
     public enum Label {
