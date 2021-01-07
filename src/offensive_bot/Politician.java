@@ -52,6 +52,9 @@ public class Politician extends Robot {
     }
 
     void exploreBehavior() throws GameActionException {
+        if (!rc.onTheMap(rc.getLocation().add(fromOrdinal(assignment.data[0])))) {
+            rc.empower(0);
+        }
         exploreLogic(commandDir);
     }
     @Override
