@@ -171,7 +171,7 @@ public class Nav {
 //        int startRound = rc.getRoundNum(); // TODO: remove this eventually...
 //        int startBC = Clock.getBytecodeNum();
 
-        Direction dir = goTo7(target);
+        Direction dir = goTo5(target);
 
 //        Robot.logBytecodeUse(startRound, startBC);
 

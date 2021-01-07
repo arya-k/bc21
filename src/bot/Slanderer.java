@@ -6,21 +6,44 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 
 public class Slanderer extends Robot {
-    static MapLocation goalPos;
+
+    static Direction commandDir;
 
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Slanderer.rc); // Initialize the nav
-        goalPos = rc.getLocation().translate(0, 100);
-        Nav.doGoTo(goalPos);
+        if (assignment == null) {
+            reassignDefault();
+        }
+
+        switch (assignment.label) {
+            case HIDE:
+                commandDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(commandDir);
+                break;
+        }
+    }
+
+    @Override
+    void reassignDefault() {
+        int[] data = {randomDirection().ordinal()};
+        assignment = new Communication.Message(Communication.Label.HIDE, data);
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        if (rc.isReady()) {
-            Direction move = Nav.tick();
-            if (move != null && rc.canMove(move)) rc.move(move);
+        switch (assignment.label) {
+            case HIDE:
+                hideBehavior();
+                break;
+            default:
+                Clock.yield();
         }
-        Clock.yield();
+    }
+
+    void hideBehavior() throws GameActionException {
+        Direction move = Nav.tick();
+        if (move != null && rc.canMove(move)) rc.move(move);
+        //TODO run from enemies
     }
 }

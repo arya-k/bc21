@@ -16,6 +16,7 @@ commands = [
     Command("LATCH", [3]),
     Command("ATTACK", [3]),
     Command("DEFEND", [3]),
+    Command("HIDE", [3]),
 ]
 
 #########################################

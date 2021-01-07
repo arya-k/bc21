@@ -21,11 +21,13 @@ public class EnlightenmentCenter extends Robot {
     static boolean[] dangerDirs = new boolean[8];
     static boolean[] safeDirs = new boolean[8];
     static int[] edgeOffsets = new int[8]; // only the cardinal directions matter here.
+    static int[] directionSafety = new int[8]; // lower numbers are "safer"
 
     @Override
     void onAwake() throws GameActionException {
         for (int i = 0; i < 8; i++) {
             edgeOffsets[i] = 100; //default to an impossible value
+            directionSafety[i] = 200;
         }
         for (Direction dir : Robot.directions) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
@@ -39,7 +41,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void lowPriorityLogging() {
-        // only log every 100 rounds
+        // only log low priority info every 100 rounds
         if (rc.getRoundNum() % 100 != 0) {
             return;
         }
@@ -53,6 +55,9 @@ public class EnlightenmentCenter extends Robot {
             int ord = dir.ordinal();
             if (edgeOffsets[ord] == 100) continue;
             System.out.println(dir + " offset " + edgeOffsets[ord]);
+        }
+        for (Direction dir : directions) {
+            System.out.println("safety of " + dir + " = " + directionSafety[dir.ordinal()]);
         }
     }
 
@@ -106,7 +111,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, defendMessage()), MED);
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
         pq.push(new UnitBuild(RobotType.POLITICIAN, 50, defendMessage()), MED);
         for(int i=3; i>0; i--) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
@@ -131,6 +136,7 @@ public class EnlightenmentCenter extends Robot {
                     case SAFE_DIR_EDGE:
                         safeDirs[message.data[0]] = true;
                         edgeOffsets[message.data[1]] = message.data[2];
+                        updateDirSafety(message.data[1], message.data[2]);
                         break;
                 }
                 exploringIds.remove(id);
@@ -139,16 +145,21 @@ public class EnlightenmentCenter extends Robot {
     }
 
     Message attackMessage() throws GameActionException {
-        int[] data = {randomDangerDir().ordinal()};
+        int[] data = {bestDangerDir().ordinal()};
         return new Message(Label.ATTACK, data);
     }
 
     Message defendMessage() throws GameActionException {
-        int[] data = {randomDangerDir().ordinal()};
+        int[] data = {bestDangerDir().ordinal()};
         return new Message(Label.DEFEND, data);
     }
 
-    Direction randomDangerDir() {
+    Message hideMessage() {
+        int[] data = {bestSafeDir().ordinal()};
+        return new Message(Label.HIDE, data);
+    }
+
+    Direction bestDangerDir() {
         int ix = (int) (Math.random() * 8);
         for (int i = 0; i < 8; i++) {
             int j = (i + ix) % 8;
@@ -156,5 +167,25 @@ public class EnlightenmentCenter extends Robot {
             return fromOrdinal(j);
         }
         return fromOrdinal(ix);
+    }
+
+    Direction bestSafeDir() {
+        int min = 0;
+        for (int i = 1; i < 8; i++) {
+            if (directionSafety[min] > directionSafety[i])
+                min = i;
+        }
+        return fromOrdinal(min);
+    }
+
+    public static void updateDirSafety(int dir, int offset) {
+        directionSafety[0] = edgeOffsets[0] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
+        directionSafety[1] = edgeOffsets[0] + edgeOffsets[2];
+        directionSafety[2] = edgeOffsets[2] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
+        directionSafety[3] = edgeOffsets[2] + edgeOffsets[4];
+        directionSafety[4] = edgeOffsets[4] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
+        directionSafety[5] = edgeOffsets[4] + edgeOffsets[6];
+        directionSafety[6] = edgeOffsets[6] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
+        directionSafety[7] = edgeOffsets[0] + edgeOffsets[6];
     }
 }
