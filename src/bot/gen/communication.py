@@ -11,9 +11,11 @@ class Command:
 
 commands = [
     Command("EXPLORE", [3]),
+    Command("DANGER_DIR", [3]),
+    Command("SAFE_DIR_EDGE", [3, 3, 6]),
     Command("LATCH", [3]),
     Command("ATTACK", [3]),
-    Command("DEFEND", []),
+    Command("DEFEND", [3]),
 ]
 
 #########################################

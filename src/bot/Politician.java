@@ -8,30 +8,30 @@ import static bot.Communication.encode;
 public class Politician extends Robot {
     static MapLocation goalPos;
 
-    static Direction exploreDir;
+    static Direction commandDir;
 
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
         if (assignment == null) {
-            exploreDir = randomDirection();
-            Nav.doGoInDir(exploreDir);
+            commandDir = randomDirection();
+            Nav.doGoInDir(commandDir);
             return;
         }
 
         switch (assignment.label) {
             case EXPLORE:
-                exploreDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(exploreDir);
+                commandDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(commandDir);
                 break;
             case DEFEND:
-                goalPos = initLoc.translate((int) (Math.random() * 3) + 1, (int) (Math.random() * 3) + 1);
-                Nav.doGoTo(goalPos);
+                commandDir = fromOrdinal(assignment.data[0]);
+                reassignDefault(); // default is defense!
                 break;
             case ATTACK:
                 System.out.println(assignment.data.length);
-                exploreDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(exploreDir);
+                commandDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(commandDir);
                 break;
         }
     }
@@ -45,7 +45,7 @@ public class Politician extends Robot {
 
         switch (assignment.label) {
             case EXPLORE:
-                exploreBehavior(fromOrdinal(assignment.data[0]));
+                exploreBehavior();
                 break;
             case DEFEND:
                 defendBehavior();
@@ -57,22 +57,15 @@ public class Politician extends Robot {
 
     }
 
-    void exploreBehavior(Direction dir) throws GameActionException {
-        for (RobotInfo info : rc.senseNearbyRobots()) {
-            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(exploreMessage(dir)));
-                assignment = null;
-                onUpdate();
-                return;
-            }
-        }
-        Direction move = Nav.tick();
-        if (move != null && rc.canMove(move)) rc.move(move);
-        if (move == null) {
-            assignment.label = DEFEND;
-            Nav.doGoTo(initLoc.translate((int) (Math.random() * 3) + 1, (int) (Math.random() * 3) + 1));
-        }
-        Clock.yield();
+    void exploreBehavior() throws GameActionException {
+        exploreLogic(commandDir);
+    }
+    @Override
+    void reassignDefault() {
+        assignment.label = DEFEND;
+        Nav.doGoTo(initLoc.translate(
+                commandDir.dx*5 + (int) (Math.random() * 5) - 2,
+                commandDir.dx*5 + (int) (Math.random() * 5) - 2));
     }
 
     double speechEfficiency() throws GameActionException {
@@ -99,7 +92,7 @@ public class Politician extends Robot {
         if (rc.isReady()) {
             // get all enemy nearby robots
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-            if (enemies.length > 0 && speechEfficiency() > 0.5) {
+            if (enemies.length > 0 && speechEfficiency() > 0.4) {
                 rc.empower(9);
                 System.out.println("GIVING SPEECH IN DEFENSE");
             } else {
@@ -125,6 +118,9 @@ public class Politician extends Robot {
                 // otherwise move
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
+                if (move == null) {
+
+                }
             }
         }
 

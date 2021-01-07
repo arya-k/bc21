@@ -32,6 +32,8 @@ public strictfp class RobotPlayer {
 
         // This is the RobotController object. You use it to perform actions from this robot,
         // and to get information on its current status.
+        if (rc.getConviction() < 0)
+            System.out.println("NOOOO I HAVE NEGATIVE CONVICTION");
         RobotPlayer.rc = rc;
 
         turnCount = 0;
