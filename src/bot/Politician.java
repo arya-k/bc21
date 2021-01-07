@@ -26,8 +26,7 @@ public class Politician extends Robot {
                 break;
             case DEFEND:
                 commandDir = fromOrdinal(assignment.data[0]);
-                goalPos = initLoc.translate(commandDir.dx*4 + (int) (Math.random() * 5) - 2, commandDir.dx*4 + (int) (Math.random() * 5) - 2);
-                Nav.doGoTo(goalPos);
+                reassignDefault(); // default is defense!
                 break;
             case ATTACK:
                 System.out.println(assignment.data.length);
@@ -46,7 +45,7 @@ public class Politician extends Robot {
 
         switch (assignment.label) {
             case EXPLORE:
-                exploreBehavior(fromOrdinal(assignment.data[0]));
+                exploreBehavior();
                 break;
             case DEFEND:
                 defendBehavior();
@@ -58,24 +57,15 @@ public class Politician extends Robot {
 
     }
 
-    void exploreBehavior(Direction dir) throws GameActionException {
-        for (RobotInfo info : rc.senseNearbyRobots()) {
-            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(exploreMessage(dir)));
-                assignment = null;
-                onUpdate();
-                return;
-            }
-        }
-        Direction move = Nav.tick();
-        if (move != null && rc.canMove(move)) rc.move(move);
-        if (move == null) {
-            assignment.label = DEFEND;
-            Nav.doGoTo(initLoc.translate(
-                    commandDir.dx*4 + (int) (Math.random() * 5) - 2,
-                    commandDir.dx*4 + (int) (Math.random() * 5) - 2));
-        }
-        Clock.yield();
+    void exploreBehavior() throws GameActionException {
+        exploreLogic(commandDir);
+    }
+    @Override
+    void reassignDefault() {
+        assignment.label = DEFEND;
+        Nav.doGoTo(initLoc.translate(
+                commandDir.dx*5 + (int) (Math.random() * 5) - 2,
+                commandDir.dx*5 + (int) (Math.random() * 5) - 2));
     }
 
     double speechEfficiency() throws GameActionException {
@@ -102,7 +92,7 @@ public class Politician extends Robot {
         if (rc.isReady()) {
             // get all enemy nearby robots
             RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-            if (enemies.length > 0 && speechEfficiency() > 0.3) {
+            if (enemies.length > 0 && speechEfficiency() > 0.4) {
                 rc.empower(9);
                 System.out.println("GIVING SPEECH IN DEFENSE");
             } else {

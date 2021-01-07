@@ -2,7 +2,7 @@ package bot;
 
 public class Communication {
     public enum Label {
-        EXPLORE, LATCH, ATTACK, DEFEND
+        EXPLORE, DANGER_DIR, SAFE_DIR_EDGE, LATCH, ATTACK, DEFEND
     }
     public static class Message {
         Label label;
@@ -15,30 +15,44 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 13109080;
+        flag ^= 14808312;
         flag--;
-        int[] data = new int[1];
+        int[] data = new int[3];
         Label label;
         int acc;
-        switch (flag % 2097152) {
+        switch (flag % 4096) {
             case 0:
                 label = Label.EXPLORE;
-                acc = flag / 2097152;
+                acc = flag / 4096;
                 data[0] = acc % 8;
                 break;
-            case 1048576:
+            case 2048:
+                label = Label.DANGER_DIR;
+                acc = flag / 4096;
+                data[0] = acc % 8;
+                break;
+            case 1024:
+                label = Label.SAFE_DIR_EDGE;
+                acc = flag / 4096;
+                data[0] = acc % 8;
+                acc = acc / 8;
+                data[1] = acc % 8;
+                acc = acc / 8;
+                data[2] = acc % 64;
+                break;
+            case 3072:
                 label = Label.LATCH;
-                acc = flag / 2097152;
+                acc = flag / 4096;
                 data[0] = acc % 8;
                 break;
-            case 524288:
+            case 512:
                 label = Label.ATTACK;
-                acc = flag / 2097152;
+                acc = flag / 4096;
                 data[0] = acc % 8;
                 break;
-            case 1572864:
+            case 2560:
                 label = Label.DEFEND;
-                acc = flag / 2097152;
+                acc = flag / 4096;
                 data[0] = acc % 8;
                 break;
             default:
@@ -50,13 +64,17 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 13109080 ^ (1 + (message.data[0] * 1) * 2097152 + 0);
+                return 14808312 ^ (1 + (message.data[0] * 1) * 4096 + 0);
+            case DANGER_DIR:
+                return 14808312 ^ (1 + (message.data[0] * 1) * 4096 + 2048);
+            case SAFE_DIR_EDGE:
+                return 14808312 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 1024);
             case LATCH:
-                return 13109080 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 14808312 ^ (1 + (message.data[0] * 1) * 4096 + 3072);
             case ATTACK:
-                return 13109080 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
+                return 14808312 ^ (1 + (message.data[0] * 1) * 4096 + 512);
             case DEFEND:
-                return 13109080 ^ (1 + (message.data[0] * 1) * 2097152 + 1572864);
+                return 14808312 ^ (1 + (message.data[0] * 1) * 4096 + 2560);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

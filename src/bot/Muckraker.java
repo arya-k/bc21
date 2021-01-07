@@ -8,25 +8,23 @@ import static bot.Communication.decode;
 
 public class Muckraker extends Robot {
 
-    static Direction exploreDir;
+    static Direction commandDir;
 
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Muckraker.rc); // Initialize the nav
         if (assignment == null) {
-            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
-            Nav.doGoTo(goalPos);
+            reassignDefault();
         }
 
         switch (assignment.label) {
             case EXPLORE:
             case LATCH:
-                exploreDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(exploreDir);
+                commandDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(commandDir);
                 break;
             default:
-                MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
-                Nav.doGoTo(goalPos);
+                reassignDefault();
                 break;
         }
     }
@@ -52,22 +50,14 @@ public class Muckraker extends Robot {
     }
 
     void exploreBehavior() throws GameActionException {
-        for (RobotInfo info : rc.senseNearbyRobots()) {
-            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(exploreMessage(exploreDir)));
-                assignment = null;
-                onUpdate();
-                return;
-            }
-        }
-        Direction move = Nav.tick();
-        if (move != null && rc.canMove(move)) rc.move(move);
-        if (move == null) {
-            assignment = null;
-            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
-            Nav.doGoTo(goalPos);
-        }
-        Clock.yield();
+        exploreLogic(commandDir);
+    }
+    
+    @Override
+    void reassignDefault() {
+        assignment = null;
+        MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
+        Nav.doGoTo(goalPos);
     }
 
     void latchBehavior() throws GameActionException {
