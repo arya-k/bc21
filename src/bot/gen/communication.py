@@ -17,6 +17,7 @@ commands = [
     Command("ATTACK", [3]),
     Command("DEFEND", [3]),
     Command("HIDE", [3]),
+    Command('WALL_GAP', [7,7])
 ]
 
 #########################################
