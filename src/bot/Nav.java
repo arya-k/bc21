@@ -12,8 +12,7 @@ import battlecode.common.*;
  * <p>
  * If tick returns CENTER, it can't improve. If it returns `null`, nav has stopped trying for that goal.
  * <p>
- * Every round, if you want to make a move along a navigational goal, call Nav.tick(). Otherwise,
- * call Nav.update().
+ * Every round, if you want to make a move along a navigational goal, call Nav.tick().
  */
 public class Nav {
     // Constants:
@@ -61,8 +60,8 @@ public class Nav {
 
     /**
      * Replaces setGoal. Tells the robot to head to the given tile. Robot will
-     * stop this goal if it fails to make progress for FAILURE_TURNS turns, realizes the spot is off the map or occupied,
-     * or reaches the goal tile.
+     * stop this goal if it fails to make progress for FAILURE_TURNS turns, is adjacent to the goal
+     * and realizes is is impossible, or reaches the goal tile.
      */
     public static void doGoTo(MapLocation target) {
         currentGoal = NavGoal.GoTo;
@@ -99,14 +98,6 @@ public class Nav {
     }
 
     /**
-     * Calls nav utilities, planning for exploring the world around by noting visited chunks and edges found.
-     * CALL EITHER THIS, OR TICK, EVERY TURN.
-     */
-    public static void update() {
-        // TODO: this!
-    }
-
-    /**
      * Attempts to find a move that works towards the current goals. Could result in currentGoal being reset
      * to Nothing if the robot determines that no move could be made too many times.
      * <p>
@@ -116,16 +107,11 @@ public class Nav {
      * @return the direction of the move to make, or null.
      */
     public static Direction tick() throws GameActionException {
-        // TODO: higher level planning
-        // TODO: check if we can see that the target is off the map
-
-        update();
-
         switch (currentGoal) {
             case Nothing:
                 return null;
             case GoTo:
-                // Cancel goal because of lack of improvement
+                // update distance to goal
                 int newDistToGoal = rc.getLocation().distanceSquaredTo(goalPos);
                 if (newDistToGoal >= distToGoal) {
                     turnsSinceImprovement++;
@@ -134,17 +120,12 @@ public class Nav {
                     distToGoal = newDistToGoal;
                 }
 
-                if (turnsSinceImprovement >= FAILURE_TURNS) {
+                // failure conditions
+                if (turnsSinceImprovement >= FAILURE_TURNS || // lack of improvement
+                        rc.getLocation() == goalPos || // reached goal
+                        (distToGoal < 4 && !rc.canMove(rc.getLocation().directionTo(goalPos)))) { // adj and impossible
                     currentGoal = NavGoal.Nothing;
                 }
-
-                // Cancel because we have reached goal:
-                if (rc.getLocation() == goalPos) {
-                    System.out.println("@@@Cancelling nav goal because we have reached our destination");
-                    currentGoal = NavGoal.Nothing;
-                }
-
-                // Cancel because we are adjacent and it is impossible?
 
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
