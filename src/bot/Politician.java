@@ -70,8 +70,8 @@ public class Politician extends Robot {
                 commandDir.dy*5 + (int) (Math.random() * 5) - 2));
     }
 
-    double speechEfficiency() throws GameActionException {
-        RobotInfo[] nearbyRobots = rc.senseNearbyRobots(9);
+    double speechEfficiency(int range) {
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots(range);
         Team myTeam = rc.getTeam();
         Team opponent = myTeam.opponent();
         int numNearby = nearbyRobots.length;
@@ -82,7 +82,8 @@ public class Politician extends Robot {
         for(int i=numNearby-1; --i>=0;) {
             RobotInfo info = nearbyRobots[i];
             if(info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER) {
-                wastedInfluence += Math.max(perUnit - info.getConviction(), 0);
+                // TODO reconsider this
+                // wastedInfluence += Math.max(perUnit - info.getConviction(), 0);
             }
             else if (info.getTeam() == myTeam) {
                 wastedInfluence += Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
@@ -91,14 +92,33 @@ public class Politician extends Robot {
         return 1 - (wastedInfluence / usefulInfluence);
     }
 
+    /**
+     * Picks the most efficient speech radius. Returns -1 if no radius is better
+     * than the provided threshhold
+     *
+     * @param threshold the minimum speech efficiency to consider
+     * @return the best speech radius (-1 if no radius is good)
+     */
+    int getEfficientSpeech(double threshold) {
+        int bestRad = -1;
+        double bestEff = threshold;
+        for (int i = 2; i <= 9; i++) {
+            double efficiency = speechEfficiency(i);
+            if (efficiency > bestEff) {
+                bestEff = efficiency;
+                bestRad = i;
+            }
+        }
+        return bestRad;
+    }
+
     void defendBehavior() throws GameActionException {
         if (rc.isReady()) {
             // get all enemy nearby robots
-            RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-            double efficiency = speechEfficiency();
-            if (enemies.length > 0 && efficiency > 0.4) {
+            int radius = getEfficientSpeech(0.5);
+            if (radius != -1) {
                 System.out.println("GIVING SPEECH IN DEFENSE!");
-                rc.empower(9);
+                rc.empower(radius);
             } else {
                 // otherwise move
                 Direction move = Nav.tick();
@@ -112,12 +132,10 @@ public class Politician extends Robot {
 
     void attackBehavior() throws GameActionException {
         if (rc.isReady()) {
-            // get all enemy nearby robots, might be better to manually filter
-            RobotInfo[] enemies = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-            RobotInfo[] allies = rc.senseNearbyRobots(9, rc.getTeam());
-            // if there are two enemies nearby, empower
-            if ((enemies.length > 2 || allies.length > 6) && speechEfficiency() > 0.5) {
-                rc.empower(9);
+            int radius = getEfficientSpeech(0.8);
+            if (radius != -1) {
+                System.out.println("GIVING OFFENSIVE SPEECH!");
+                rc.empower(radius);
             } else {
                 // otherwise move
                 Direction move = Nav.tick();
