@@ -21,24 +21,23 @@ public class EnlightenmentCenter extends Robot {
     static boolean[] dangerDirs = new boolean[8];
     static boolean[] safeDirs = new boolean[8];
     static int[] edgeOffsets = new int[8]; // only the cardinal directions matter here.
-    static int[] directionSafety = new int[8]; // lower numbers are "safer"
+    static int[] directionOpenness = new int[8]; // lower numbers are "safer"
 
     @Override
     void onAwake() throws GameActionException {
         for (int i = 0; i < 8; i++) {
             edgeOffsets[i] = 100; //default to an impossible value
-            directionSafety[i] = 200;
+            directionOpenness[i] = 200;
         }
+
+        // initialize pq
         for (Direction dir : Robot.directions) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), MED);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), HIGH);
         }
         for(int i=3; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.MUCKRAKER, 10, attackMessage()), LOW);
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 50, attackMessage()), LOW);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
         }
-        for (int i = 10; --i > 0; ) {
-            pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, hideMessage()), LOW);
-        }
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
     }
 
     void lowPriorityLogging() {
@@ -58,7 +57,7 @@ public class EnlightenmentCenter extends Robot {
             System.out.println(dir + " offset " + edgeOffsets[ord]);
         }
         for (Direction dir : directions) {
-            System.out.println("safety of " + dir + " = " + directionSafety[dir.ordinal()]);
+            System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
         }
     }
 
@@ -112,15 +111,11 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        switch(rc.getRoundNum() % 50) {
-            case 0:
-                for (int i = 3; --i > 0; ) {
-                    pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
-                }
-                break;
-            default:
-                pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, attackMessage()), LOW);
-                break;
+        for (int i = 3; --i > 0; ) {
+            pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
+        }
+        for (int i = 10; --i > 0; ) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 100, defendECMessage()), MED);
         }
     }
 
@@ -142,7 +137,7 @@ public class EnlightenmentCenter extends Robot {
                     case SAFE_DIR_EDGE:
                         safeDirs[message.data[0]] = true;
                         edgeOffsets[message.data[1]] = message.data[2];
-                        updateDirSafety(message.data[1], message.data[2]);
+                        updateDirOpenness();
                         break;
                 }
                 exploringIds.remove(id);
@@ -156,7 +151,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     Message defendECMessage() throws GameActionException {
-        int[] data = {bestDangerDir().ordinal()};
+        int[] data = {randomFrontierDir().ordinal()};
         return new Message(Label.DEFEND, data);
     }
 
@@ -165,6 +160,11 @@ public class EnlightenmentCenter extends Robot {
         return new Message(Label.HIDE, data);
     }
 
+    /**
+     * computes a random dangerous direction, or a random direction if no
+     * dangerous ones exist
+     * @return a direction
+     */
     Direction bestDangerDir() {
         int ix = (int) (Math.random() * 8);
         for (int i = 0; i < 8; i++) {
@@ -175,23 +175,53 @@ public class EnlightenmentCenter extends Robot {
         return fromOrdinal(ix);
     }
 
+    /**
+     * returns a "safe" direction for slanderers to go. Is determined by
+     * directionOpenness (i.e. it will return a direction that is near an
+     * edge)
+     * @return a direction
+     */
     Direction bestSafeDir() {
         int min = 0;
         for (int i = 1; i < 8; i++) {
-            if (directionSafety[min] > directionSafety[i])
+            if (directionOpenness[min] > directionOpenness[i])
                 min = i;
         }
         return fromOrdinal(min);
     }
 
-    public static void updateDirSafety(int dir, int offset) {
-        directionSafety[0] = edgeOffsets[0] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
-        directionSafety[1] = edgeOffsets[0] + edgeOffsets[2];
-        directionSafety[2] = edgeOffsets[2] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
-        directionSafety[3] = edgeOffsets[2] + edgeOffsets[4];
-        directionSafety[4] = edgeOffsets[4] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
-        directionSafety[5] = edgeOffsets[4] + edgeOffsets[6];
-        directionSafety[6] = edgeOffsets[6] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
-        directionSafety[7] = edgeOffsets[0] + edgeOffsets[6];
+    /**
+     * returns a direction on the "frontier" of the EC. skews towards
+     * more dangerous and open directions
+     * @return a direction
+     */
+    Direction randomFrontierDir() {
+        int ix = (int) (Math.random() * 8);
+        int best = ix;
+        for (int i = 1; i < 8; i++) {
+            int j = (i + ix) % 8;
+            if (directionOpenness[j] > 2 * directionOpenness[best]) {
+                best = j;
+            } else if (3 * directionOpenness[j] > directionOpenness[best] && Math.random() < 0.3){
+                best = j;
+            } else if (dangerDirs[j] && Math.random() < 0.5) {
+                best = j;
+            }
+        }
+        return fromOrdinal(best);
+    }
+
+    /**
+     * updates directionOpenness based on new edge offset information.
+     */
+    public static void updateDirOpenness() {
+        directionOpenness[0] = edgeOffsets[0] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
+        directionOpenness[1] = edgeOffsets[0] + edgeOffsets[2];
+        directionOpenness[2] = edgeOffsets[2] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
+        directionOpenness[3] = edgeOffsets[2] + edgeOffsets[4];
+        directionOpenness[4] = edgeOffsets[4] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
+        directionOpenness[5] = edgeOffsets[4] + edgeOffsets[6];
+        directionOpenness[6] = edgeOffsets[6] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
+        directionOpenness[7] = edgeOffsets[0] + edgeOffsets[6];
     }
 }

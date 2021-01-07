@@ -3,7 +3,6 @@ package bot;
 import battlecode.common.*;
 
 import static bot.Communication.Label.DEFEND;
-import static bot.Communication.encode;
 
 public class Politician extends Robot {
 
@@ -65,9 +64,7 @@ public class Politician extends Robot {
             assignment = new Communication.Message(DEFEND, data);
         }
         assignment.label = DEFEND;
-        Nav.doGoTo(initLoc.translate(
-                commandDir.dx*5 + (int) (Math.random() * 5) - 2,
-                commandDir.dy*5 + (int) (Math.random() * 5) - 2));
+        Nav.doGoInDir(commandDir);
     }
 
     double speechEfficiency(int range) {
@@ -79,17 +76,18 @@ public class Politician extends Robot {
         double usefulInfluence =  rc.getInfluence() - 10;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;
-        for(int i=numNearby-1; --i>=0;) {
+        for(int i=0; i < numNearby; i++) {
             RobotInfo info = nearbyRobots[i];
             if(info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER) {
                 // TODO reconsider this
-                // wastedInfluence += Math.max(perUnit - info.getConviction(), 0);
-            }
-            else if (info.getTeam() == myTeam) {
-                wastedInfluence += Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
+                wastedInfluence += Math.max(perUnit - info.getConviction(), 0) / 2;
+            } else if (info.getTeam() == myTeam) {
+                double wasted = Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
+                wastedInfluence += wasted;
             }
         }
-        return 1 - (wastedInfluence / usefulInfluence);
+        double efficiency = 1 - (wastedInfluence / usefulInfluence);
+        return efficiency;
     }
 
     /**
@@ -109,23 +107,68 @@ public class Politician extends Robot {
                 bestRad = i;
             }
         }
+        if (bestEff > threshold) {
+            System.out.println(bestEff);
+        }
         return bestRad;
     }
 
+    static boolean stayGrounded = false;
+    static int reorientingMoves = -1;
     void defendBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            // get all enemy nearby robots
-            int radius = getEfficientSpeech(0.5);
-            if (radius != -1) {
-                System.out.println("GIVING SPEECH IN DEFENSE!");
-                rc.empower(radius);
-            } else {
-                // otherwise move
-                Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) rc.move(move);
+        if (!rc.isReady()) {
+            Clock.yield();
+            return;
+        }
+
+        // get all enemy nearby robots
+        int radius = getEfficientSpeech(0.5);
+        if (radius != -1) {
+            System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
+            rc.empower(radius);
+            Clock.yield();
+            return;
+        } else if (stayGrounded) {
+            // TODO some micro here? idk
+            Clock.yield();
+            return;
+        }
+
+        if (reorientingMoves <= 0) {
+            RobotInfo[] closeFriends = rc.senseNearbyRobots(9);
+            RobotInfo[] allFriends = rc.senseNearbyRobots();
+            if (closeFriends.length == 0) {
+                stayGrounded = true;
+                Clock.yield();
+                return;
+            } else if (allFriends.length == 1) {
+                int dy = 0;
+                int dx = 0;
+                for (RobotInfo info : allFriends) {
+                    dx += rc.getLocation().x - info.getLocation().x;
+                    dy += rc.getLocation().y - info.getLocation().y;
+                }
+                if (Math.abs(dx) < 3*Math.abs(dy))
+                    dx += (Math.random() < 0.5) ? -dy : dy;
+                else if (Math.abs(dy) < 3*Math.abs(dx))
+                    dy += (Math.random() < 0.5) ? -dx : dx;
+                else if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
+                    dx += (int) (Math.random() * 11) - 5;
+                    dy += (int) (Math.random() * 11) - 5;
+                }
+                Nav.doGoInDir(dx, dy);
             }
         }
 
+        // move
+        Direction move = Nav.tick();
+        if (reorientingMoves > 0) reorientingMoves--;
+        if (move != null && rc.canMove(move)) rc.move(move);
+        else if (move == null) {
+            reorientingMoves = 20;
+            commandDir = randomDirection();
+            Nav.doGoInDir(commandDir);
+        }
         // end turn
         Clock.yield();
     }

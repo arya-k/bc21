@@ -16,6 +16,7 @@ abstract class Robot {
     static MapLocation centerLoc;
     static Message assignment = null;
     static MapLocation initLoc;
+    static int firstTurn;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -30,6 +31,7 @@ abstract class Robot {
 
 
     public static void init(RobotController rc) throws GameActionException {
+        Robot.firstTurn = rc.getRoundNum();
         Robot.rc = rc;
         Robot.type = rc.getType();
         Robot.initLoc = rc.getLocation();
@@ -113,6 +115,10 @@ abstract class Robot {
     Message safeDirMessage(Direction commandDir, Direction edgeDir, int offset) {
         int[] data = {commandDir.ordinal(), edgeDir.ordinal(), offset};
         return new Message(Label.SAFE_DIR_EDGE, data);
+    }
+
+    static int roundsAlive() {
+        return rc.getRoundNum() - firstTurn;
     }
 
     /**

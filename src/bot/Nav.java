@@ -75,8 +75,12 @@ public class Nav {
      * progress for FAILURE_TURNS turns, or it realizes it has reached the end of the map.
      */
     public static void doGoInDir(Direction dir) {
-        currentGoal = NavGoal.GoInDir;
-        goalPos = rc.getLocation().translate(100 * dir.dx, 100 * dir.dy);
+        doGoInDir(dir.dx, dir.dy);
+    }
+
+    public static void doGoInDir(int dx, int dy) {
+        currentGoal = Nav.NavGoal.GoInDir;
+        goalPos = rc.getLocation().translate(100 * dx, 100 * dy);
 
         minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
