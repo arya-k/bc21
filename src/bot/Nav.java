@@ -20,7 +20,7 @@ public class Nav {
 
     // Variables:
     private static RobotController rc;
-    private static int distToGoal = 0;
+    private static int minDistToGoal = 0;
     private static int turnsSinceImprovement = 0;
 
     // State Machine:
@@ -34,7 +34,6 @@ public class Nav {
 
     public static NavGoal currentGoal = NavGoal.Nothing;
     private static MapLocation goalPos = null; // associated with GoTo
-    private static Direction goalDir = null; // associated with GoInDir
     private static int goalID = -1; // associated with follow
 
     /**
@@ -54,7 +53,7 @@ public class Nav {
     public static void doExplore() {
         currentGoal = NavGoal.Explore; // TODO: this
 
-        distToGoal = Integer.MAX_VALUE;
+        minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
     }
 
@@ -67,7 +66,7 @@ public class Nav {
         currentGoal = NavGoal.GoTo;
         goalPos = target;
 
-        distToGoal = Integer.MAX_VALUE;
+        minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
     }
 
@@ -77,9 +76,9 @@ public class Nav {
      */
     public static void doGoInDir(Direction dir) {
         currentGoal = NavGoal.GoInDir;
-        goalDir = dir;
+        goalPos = rc.getLocation().translate(100 * dir.dx, 100 * dir.dy);
 
-        distToGoal = Integer.MAX_VALUE;
+        minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
     }
 
@@ -93,8 +92,49 @@ public class Nav {
         currentGoal = NavGoal.Follow; // TODO: this
         goalID = targetID;
 
-        distToGoal = Integer.MAX_VALUE;
+        minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
+    }
+
+    /**
+     * Avoid moving in the directions of danger. Apart from that, works exactly like tick.
+     * <p>
+     * Returns CENTER if no improvement is possible this turn. Returns null if nav has given up.
+     *
+     * @param dangerDirs list of directions where enemies have been spotted. If an enemy has
+     *                   been spotted in that direction, set bit# dir.toOrdinal() to 1.
+     * @return the best direction to move in.
+     */
+    public static Direction tick(int dangerDirs) throws GameActionException {
+        // TODO: this
+        switch (currentGoal) {
+            case Nothing:
+                return null;
+            case GoTo:
+            case GoInDir:
+                // update distance to goal
+                int newDistToGoal = rc.getLocation().distanceSquaredTo(goalPos);
+                if (newDistToGoal < minDistToGoal) {
+                    turnsSinceImprovement = 0;
+                    minDistToGoal = newDistToGoal;
+                } else {
+                    turnsSinceImprovement++;
+                }
+
+                // failure conditions
+                if (turnsSinceImprovement >= FAILURE_TURNS || // lack of improvement
+                        rc.getLocation() == goalPos || // reached goal
+                        (newDistToGoal < 4 && !rc.canMove(rc.getLocation().directionTo(goalPos)))) { // adj and impossible
+                    currentGoal = NavGoal.Nothing;
+                }
+
+                return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
+
+            case Follow:
+            case Explore:
+                throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
+        }
+        return null; // should never get here!
     }
 
     /**
@@ -107,36 +147,7 @@ public class Nav {
      * @return the direction of the move to make, or null.
      */
     public static Direction tick() throws GameActionException {
-        switch (currentGoal) {
-            case Nothing:
-                return null;
-            case GoTo:
-                // update distance to goal
-                int newDistToGoal = rc.getLocation().distanceSquaredTo(goalPos);
-                if (newDistToGoal >= distToGoal) {
-                    turnsSinceImprovement++;
-                } else {
-                    turnsSinceImprovement = 0;
-                    distToGoal = newDistToGoal;
-                }
-
-                // failure conditions
-                if (turnsSinceImprovement >= FAILURE_TURNS || // lack of improvement
-                        rc.getLocation() == goalPos || // reached goal
-                        (distToGoal < 4 && !rc.canMove(rc.getLocation().directionTo(goalPos)))) { // adj and impossible
-                    currentGoal = NavGoal.Nothing;
-                }
-
-                return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
-
-            case GoInDir:
-                if (!rc.onTheMap(rc.getLocation().add(goalDir))) return null;
-                return goTo(rc.getLocation().translate(5 * goalDir.dx, 5 * goalDir.dy));
-            case Follow:
-            case Explore:
-                throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
-        }
-        return null; // should never get here!
+        return tick(0);
     }
 
     /**
@@ -158,7 +169,6 @@ public class Nav {
 
         return dir;
     }
-
 
     private static Direction goTo5(MapLocation target) throws GameActionException {
         /* AUTOGENERATED with `nav.py`, with params NAV_GRID_SIZE=5, NAV_ITERATIONS=2 */
@@ -250,13 +260,9 @@ public class Nav {
             cost_2_1 = Double.MAX_VALUE;
         else
             move_cost_2_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, 0);
+        tile = rc_.getLocation();
         double cost_2_2 = tile.distanceSquaredTo(target);
-        double move_cost_2_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_2 = Double.MAX_VALUE;
-        else
-            move_cost_2_2 = 1 / rc_.sensePassability(tile);
+        double move_cost_2_2 = 1 / rc_.sensePassability(tile);
         tile = rc_.getLocation().translate(1, 0);
         double cost_2_3 = tile.distanceSquaredTo(target);
         double move_cost_2_3 = Double.MAX_VALUE;
@@ -381,7 +387,7 @@ public class Nav {
 
         // DETERMINING MIN COST DIRECTION
         Direction ret = Direction.CENTER;
-        double minCost = Double.MAX_VALUE;
+        double minCost = cost_2_2;
 
         if (cost_2_3 < minCost) {
             minCost = cost_2_3;
@@ -414,483 +420,6 @@ public class Nav {
         if (cost_1_3 < minCost) {
             ret = Direction.SOUTHEAST;
         }
-        return minCost > 1073741824 ? Direction.CENTER : ret;
-    }
-
-
-    private static Direction goTo7(MapLocation target) throws GameActionException {
-        /* AUTOGENERATED with `nav.py`, with params NAV_GRID_SIZE=7, NAV_ITERATIONS=3 */
-
-        RobotController rc_ = rc; // move into local scope
-
-        // POPULATE COSTS AND MOVEMENT COSTS
-        MapLocation tile = rc_.getLocation().translate(-3, -3);
-        double cost_0_0 = tile.distanceSquaredTo(target);
-        double move_cost_0_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_0 = Double.MAX_VALUE;
-        else
-            move_cost_0_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, -3);
-        double cost_0_1 = tile.distanceSquaredTo(target);
-        double move_cost_0_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_1 = Double.MAX_VALUE;
-        else
-            move_cost_0_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, -3);
-        double cost_0_2 = tile.distanceSquaredTo(target);
-        double move_cost_0_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_2 = Double.MAX_VALUE;
-        else
-            move_cost_0_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, -3);
-        double cost_0_3 = tile.distanceSquaredTo(target);
-        double move_cost_0_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_3 = Double.MAX_VALUE;
-        else
-            move_cost_0_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, -3);
-        double cost_0_4 = tile.distanceSquaredTo(target);
-        double move_cost_0_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_4 = Double.MAX_VALUE;
-        else
-            move_cost_0_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, -3);
-        double cost_0_5 = tile.distanceSquaredTo(target);
-        double move_cost_0_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_5 = Double.MAX_VALUE;
-        else
-            move_cost_0_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, -3);
-        double cost_0_6 = tile.distanceSquaredTo(target);
-        double move_cost_0_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_0_6 = Double.MAX_VALUE;
-        else
-            move_cost_0_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, -2);
-        double cost_1_0 = tile.distanceSquaredTo(target);
-        double move_cost_1_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_0 = Double.MAX_VALUE;
-        else
-            move_cost_1_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, -2);
-        double cost_1_1 = tile.distanceSquaredTo(target);
-        double move_cost_1_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_1 = Double.MAX_VALUE;
-        else
-            move_cost_1_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, -2);
-        double cost_1_2 = tile.distanceSquaredTo(target);
-        double move_cost_1_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_2 = Double.MAX_VALUE;
-        else
-            move_cost_1_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, -2);
-        double cost_1_3 = tile.distanceSquaredTo(target);
-        double move_cost_1_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_3 = Double.MAX_VALUE;
-        else
-            move_cost_1_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, -2);
-        double cost_1_4 = tile.distanceSquaredTo(target);
-        double move_cost_1_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_4 = Double.MAX_VALUE;
-        else
-            move_cost_1_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, -2);
-        double cost_1_5 = tile.distanceSquaredTo(target);
-        double move_cost_1_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_5 = Double.MAX_VALUE;
-        else
-            move_cost_1_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, -2);
-        double cost_1_6 = tile.distanceSquaredTo(target);
-        double move_cost_1_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_1_6 = Double.MAX_VALUE;
-        else
-            move_cost_1_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, -1);
-        double cost_2_0 = tile.distanceSquaredTo(target);
-        double move_cost_2_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_0 = Double.MAX_VALUE;
-        else
-            move_cost_2_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, -1);
-        double cost_2_1 = tile.distanceSquaredTo(target);
-        double move_cost_2_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_1 = Double.MAX_VALUE;
-        else
-            move_cost_2_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, -1);
-        double cost_2_2 = tile.distanceSquaredTo(target);
-        double move_cost_2_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_2 = Double.MAX_VALUE;
-        else
-            move_cost_2_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, -1);
-        double cost_2_3 = tile.distanceSquaredTo(target);
-        double move_cost_2_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_3 = Double.MAX_VALUE;
-        else
-            move_cost_2_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, -1);
-        double cost_2_4 = tile.distanceSquaredTo(target);
-        double move_cost_2_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_4 = Double.MAX_VALUE;
-        else
-            move_cost_2_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, -1);
-        double cost_2_5 = tile.distanceSquaredTo(target);
-        double move_cost_2_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_5 = Double.MAX_VALUE;
-        else
-            move_cost_2_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, -1);
-        double cost_2_6 = tile.distanceSquaredTo(target);
-        double move_cost_2_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_2_6 = Double.MAX_VALUE;
-        else
-            move_cost_2_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, 0);
-        double cost_3_0 = tile.distanceSquaredTo(target);
-        double move_cost_3_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_0 = Double.MAX_VALUE;
-        else
-            move_cost_3_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, 0);
-        double cost_3_1 = tile.distanceSquaredTo(target);
-        double move_cost_3_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_1 = Double.MAX_VALUE;
-        else
-            move_cost_3_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, 0);
-        double cost_3_2 = tile.distanceSquaredTo(target);
-        double move_cost_3_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_2 = Double.MAX_VALUE;
-        else
-            move_cost_3_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, 0);
-        double cost_3_3 = tile.distanceSquaredTo(target);
-        double move_cost_3_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_3 = Double.MAX_VALUE;
-        else
-            move_cost_3_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, 0);
-        double cost_3_4 = tile.distanceSquaredTo(target);
-        double move_cost_3_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_4 = Double.MAX_VALUE;
-        else
-            move_cost_3_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, 0);
-        double cost_3_5 = tile.distanceSquaredTo(target);
-        double move_cost_3_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_5 = Double.MAX_VALUE;
-        else
-            move_cost_3_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, 0);
-        double cost_3_6 = tile.distanceSquaredTo(target);
-        double move_cost_3_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_3_6 = Double.MAX_VALUE;
-        else
-            move_cost_3_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, 1);
-        double cost_4_0 = tile.distanceSquaredTo(target);
-        double move_cost_4_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_0 = Double.MAX_VALUE;
-        else
-            move_cost_4_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, 1);
-        double cost_4_1 = tile.distanceSquaredTo(target);
-        double move_cost_4_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_1 = Double.MAX_VALUE;
-        else
-            move_cost_4_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, 1);
-        double cost_4_2 = tile.distanceSquaredTo(target);
-        double move_cost_4_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_2 = Double.MAX_VALUE;
-        else
-            move_cost_4_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, 1);
-        double cost_4_3 = tile.distanceSquaredTo(target);
-        double move_cost_4_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_3 = Double.MAX_VALUE;
-        else
-            move_cost_4_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, 1);
-        double cost_4_4 = tile.distanceSquaredTo(target);
-        double move_cost_4_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_4 = Double.MAX_VALUE;
-        else
-            move_cost_4_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, 1);
-        double cost_4_5 = tile.distanceSquaredTo(target);
-        double move_cost_4_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_5 = Double.MAX_VALUE;
-        else
-            move_cost_4_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, 1);
-        double cost_4_6 = tile.distanceSquaredTo(target);
-        double move_cost_4_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_4_6 = Double.MAX_VALUE;
-        else
-            move_cost_4_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, 2);
-        double cost_5_0 = tile.distanceSquaredTo(target);
-        double move_cost_5_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_0 = Double.MAX_VALUE;
-        else
-            move_cost_5_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, 2);
-        double cost_5_1 = tile.distanceSquaredTo(target);
-        double move_cost_5_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_1 = Double.MAX_VALUE;
-        else
-            move_cost_5_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, 2);
-        double cost_5_2 = tile.distanceSquaredTo(target);
-        double move_cost_5_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_2 = Double.MAX_VALUE;
-        else
-            move_cost_5_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, 2);
-        double cost_5_3 = tile.distanceSquaredTo(target);
-        double move_cost_5_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_3 = Double.MAX_VALUE;
-        else
-            move_cost_5_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, 2);
-        double cost_5_4 = tile.distanceSquaredTo(target);
-        double move_cost_5_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_4 = Double.MAX_VALUE;
-        else
-            move_cost_5_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, 2);
-        double cost_5_5 = tile.distanceSquaredTo(target);
-        double move_cost_5_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_5 = Double.MAX_VALUE;
-        else
-            move_cost_5_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, 2);
-        double cost_5_6 = tile.distanceSquaredTo(target);
-        double move_cost_5_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_5_6 = Double.MAX_VALUE;
-        else
-            move_cost_5_6 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-3, 3);
-        double cost_6_0 = tile.distanceSquaredTo(target);
-        double move_cost_6_0 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_0 = Double.MAX_VALUE;
-        else
-            move_cost_6_0 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-2, 3);
-        double cost_6_1 = tile.distanceSquaredTo(target);
-        double move_cost_6_1 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_1 = Double.MAX_VALUE;
-        else
-            move_cost_6_1 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(-1, 3);
-        double cost_6_2 = tile.distanceSquaredTo(target);
-        double move_cost_6_2 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_2 = Double.MAX_VALUE;
-        else
-            move_cost_6_2 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(0, 3);
-        double cost_6_3 = tile.distanceSquaredTo(target);
-        double move_cost_6_3 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_3 = Double.MAX_VALUE;
-        else
-            move_cost_6_3 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(1, 3);
-        double cost_6_4 = tile.distanceSquaredTo(target);
-        double move_cost_6_4 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_4 = Double.MAX_VALUE;
-        else
-            move_cost_6_4 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(2, 3);
-        double cost_6_5 = tile.distanceSquaredTo(target);
-        double move_cost_6_5 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_5 = Double.MAX_VALUE;
-        else
-            move_cost_6_5 = 1 / rc_.sensePassability(tile);
-        tile = rc_.getLocation().translate(3, 3);
-        double cost_6_6 = tile.distanceSquaredTo(target);
-        double move_cost_6_6 = Double.MAX_VALUE;
-        if (!rc_.onTheMap(tile) || rc_.isLocationOccupied(tile))
-            cost_6_6 = Double.MAX_VALUE;
-        else
-            move_cost_6_6 = 1 / rc_.sensePassability(tile);
-        // iteration 1
-        cost_0_0 = Math.min(cost_1_0, Math.min(cost_1_1, Math.min(cost_0_1, cost_0_0 - move_cost_0_0))) + move_cost_0_0;
-        cost_0_1 = Math.min(cost_0_0, Math.min(cost_1_0, Math.min(cost_1_1, Math.min(cost_1_2, Math.min(cost_0_2, cost_0_1 - move_cost_0_1))))) + move_cost_0_1;
-        cost_0_2 = Math.min(cost_0_1, Math.min(cost_1_1, Math.min(cost_1_2, Math.min(cost_1_3, Math.min(cost_0_3, cost_0_2 - move_cost_0_2))))) + move_cost_0_2;
-        cost_0_3 = Math.min(cost_0_2, Math.min(cost_1_2, Math.min(cost_1_3, Math.min(cost_1_4, Math.min(cost_0_4, cost_0_3 - move_cost_0_3))))) + move_cost_0_3;
-        cost_0_4 = Math.min(cost_0_3, Math.min(cost_1_3, Math.min(cost_1_4, Math.min(cost_1_5, Math.min(cost_0_5, cost_0_4 - move_cost_0_4))))) + move_cost_0_4;
-        cost_0_5 = Math.min(cost_0_4, Math.min(cost_1_4, Math.min(cost_1_5, Math.min(cost_1_6, Math.min(cost_0_6, cost_0_5 - move_cost_0_5))))) + move_cost_0_5;
-        cost_0_6 = Math.min(cost_0_5, Math.min(cost_1_5, Math.min(cost_1_6, cost_0_6 - move_cost_0_6))) + move_cost_0_6;
-        cost_1_0 = Math.min(cost_0_1, Math.min(cost_0_0, Math.min(cost_2_0, Math.min(cost_2_1, Math.min(cost_1_1, cost_1_0 - move_cost_1_0))))) + move_cost_1_0;
-        cost_1_1 = Math.min(cost_0_2, Math.min(cost_0_1, Math.min(cost_0_0, Math.min(cost_1_0, Math.min(cost_2_0, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_1_2, cost_1_1 - move_cost_1_1)))))))) + move_cost_1_1;
-        cost_1_2 = Math.min(cost_0_3, Math.min(cost_0_2, Math.min(cost_0_1, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_1_3, cost_1_2 - move_cost_1_2)))))))) + move_cost_1_2;
-        cost_1_3 = Math.min(cost_0_4, Math.min(cost_0_3, Math.min(cost_0_2, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_1_4, cost_1_3 - move_cost_1_3)))))))) + move_cost_1_3;
-        cost_1_4 = Math.min(cost_0_5, Math.min(cost_0_4, Math.min(cost_0_3, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_2_5, Math.min(cost_1_5, cost_1_4 - move_cost_1_4)))))))) + move_cost_1_4;
-        cost_1_5 = Math.min(cost_0_6, Math.min(cost_0_5, Math.min(cost_0_4, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_2_5, Math.min(cost_2_6, Math.min(cost_1_6, cost_1_5 - move_cost_1_5)))))))) + move_cost_1_5;
-        cost_1_6 = Math.min(cost_0_6, Math.min(cost_0_5, Math.min(cost_1_5, Math.min(cost_2_5, Math.min(cost_2_6, cost_1_6 - move_cost_1_6))))) + move_cost_1_6;
-        cost_2_0 = Math.min(cost_1_1, Math.min(cost_1_0, Math.min(cost_3_0, Math.min(cost_3_1, Math.min(cost_2_1, cost_2_0 - move_cost_2_0))))) + move_cost_2_0;
-        cost_2_1 = Math.min(cost_1_2, Math.min(cost_1_1, Math.min(cost_1_0, Math.min(cost_2_0, Math.min(cost_3_0, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_2_2, cost_2_1 - move_cost_2_1)))))))) + move_cost_2_1;
-        cost_2_2 = Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_2_3, cost_2_2 - move_cost_2_2)))))))) + move_cost_2_2;
-        cost_2_3 = Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_2_4, cost_2_3 - move_cost_2_3)))))))) + move_cost_2_3;
-        cost_2_4 = Math.min(cost_1_5, Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_3_5, Math.min(cost_2_5, cost_2_4 - move_cost_2_4)))))))) + move_cost_2_4;
-        cost_2_5 = Math.min(cost_1_6, Math.min(cost_1_5, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_3_5, Math.min(cost_3_6, Math.min(cost_2_6, cost_2_5 - move_cost_2_5)))))))) + move_cost_2_5;
-        cost_2_6 = Math.min(cost_1_6, Math.min(cost_1_5, Math.min(cost_2_5, Math.min(cost_3_5, Math.min(cost_3_6, cost_2_6 - move_cost_2_6))))) + move_cost_2_6;
-        cost_3_0 = Math.min(cost_2_1, Math.min(cost_2_0, Math.min(cost_4_0, Math.min(cost_4_1, Math.min(cost_3_1, cost_3_0 - move_cost_3_0))))) + move_cost_3_0;
-        cost_3_1 = Math.min(cost_2_2, Math.min(cost_2_1, Math.min(cost_2_0, Math.min(cost_3_0, Math.min(cost_4_0, Math.min(cost_4_1, Math.min(cost_4_2, Math.min(cost_3_2, cost_3_1 - move_cost_3_1)))))))) + move_cost_3_1;
-        cost_3_2 = Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_3_3, cost_3_2 - move_cost_3_2)))))))) + move_cost_3_2;
-        cost_3_3 = Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_3_4, cost_3_3 - move_cost_3_3)))))))) + move_cost_3_3;
-        cost_3_4 = Math.min(cost_2_5, Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_4_5, Math.min(cost_3_5, cost_3_4 - move_cost_3_4)))))))) + move_cost_3_4;
-        cost_3_5 = Math.min(cost_2_6, Math.min(cost_2_5, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_4_4, Math.min(cost_4_5, Math.min(cost_4_6, Math.min(cost_3_6, cost_3_5 - move_cost_3_5)))))))) + move_cost_3_5;
-        cost_3_6 = Math.min(cost_2_6, Math.min(cost_2_5, Math.min(cost_3_5, Math.min(cost_4_5, Math.min(cost_4_6, cost_3_6 - move_cost_3_6))))) + move_cost_3_6;
-        cost_4_0 = Math.min(cost_3_1, Math.min(cost_3_0, Math.min(cost_5_0, Math.min(cost_5_1, Math.min(cost_4_1, cost_4_0 - move_cost_4_0))))) + move_cost_4_0;
-        cost_4_1 = Math.min(cost_3_2, Math.min(cost_3_1, Math.min(cost_3_0, Math.min(cost_4_0, Math.min(cost_5_0, Math.min(cost_5_1, Math.min(cost_5_2, Math.min(cost_4_2, cost_4_1 - move_cost_4_1)))))))) + move_cost_4_1;
-        cost_4_2 = Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_5_1, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_4_3, cost_4_2 - move_cost_4_2)))))))) + move_cost_4_2;
-        cost_4_3 = Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_4_4, cost_4_3 - move_cost_4_3)))))))) + move_cost_4_3;
-        cost_4_4 = Math.min(cost_3_5, Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_5_5, Math.min(cost_4_5, cost_4_4 - move_cost_4_4)))))))) + move_cost_4_4;
-        cost_4_5 = Math.min(cost_3_6, Math.min(cost_3_5, Math.min(cost_3_4, Math.min(cost_4_4, Math.min(cost_5_4, Math.min(cost_5_5, Math.min(cost_5_6, Math.min(cost_4_6, cost_4_5 - move_cost_4_5)))))))) + move_cost_4_5;
-        cost_4_6 = Math.min(cost_3_6, Math.min(cost_3_5, Math.min(cost_4_5, Math.min(cost_5_5, Math.min(cost_5_6, cost_4_6 - move_cost_4_6))))) + move_cost_4_6;
-        cost_5_0 = Math.min(cost_4_1, Math.min(cost_4_0, Math.min(cost_6_0, Math.min(cost_6_1, Math.min(cost_5_1, cost_5_0 - move_cost_5_0))))) + move_cost_5_0;
-        cost_5_1 = Math.min(cost_4_2, Math.min(cost_4_1, Math.min(cost_4_0, Math.min(cost_5_0, Math.min(cost_6_0, Math.min(cost_6_1, Math.min(cost_6_2, Math.min(cost_5_2, cost_5_1 - move_cost_5_1)))))))) + move_cost_5_1;
-        cost_5_2 = Math.min(cost_4_3, Math.min(cost_4_2, Math.min(cost_4_1, Math.min(cost_5_1, Math.min(cost_6_1, Math.min(cost_6_2, Math.min(cost_6_3, Math.min(cost_5_3, cost_5_2 - move_cost_5_2)))))))) + move_cost_5_2;
-        cost_5_3 = Math.min(cost_4_4, Math.min(cost_4_3, Math.min(cost_4_2, Math.min(cost_5_2, Math.min(cost_6_2, Math.min(cost_6_3, Math.min(cost_6_4, Math.min(cost_5_4, cost_5_3 - move_cost_5_3)))))))) + move_cost_5_3;
-        cost_5_4 = Math.min(cost_4_5, Math.min(cost_4_4, Math.min(cost_4_3, Math.min(cost_5_3, Math.min(cost_6_3, Math.min(cost_6_4, Math.min(cost_6_5, Math.min(cost_5_5, cost_5_4 - move_cost_5_4)))))))) + move_cost_5_4;
-        cost_5_5 = Math.min(cost_4_6, Math.min(cost_4_5, Math.min(cost_4_4, Math.min(cost_5_4, Math.min(cost_6_4, Math.min(cost_6_5, Math.min(cost_6_6, Math.min(cost_5_6, cost_5_5 - move_cost_5_5)))))))) + move_cost_5_5;
-        cost_5_6 = Math.min(cost_4_6, Math.min(cost_4_5, Math.min(cost_5_5, Math.min(cost_6_5, Math.min(cost_6_6, cost_5_6 - move_cost_5_6))))) + move_cost_5_6;
-        cost_6_0 = Math.min(cost_5_1, Math.min(cost_5_0, Math.min(cost_6_1, cost_6_0 - move_cost_6_0))) + move_cost_6_0;
-        cost_6_1 = Math.min(cost_5_2, Math.min(cost_5_1, Math.min(cost_5_0, Math.min(cost_6_0, Math.min(cost_6_2, cost_6_1 - move_cost_6_1))))) + move_cost_6_1;
-        cost_6_2 = Math.min(cost_5_3, Math.min(cost_5_2, Math.min(cost_5_1, Math.min(cost_6_1, Math.min(cost_6_3, cost_6_2 - move_cost_6_2))))) + move_cost_6_2;
-        cost_6_3 = Math.min(cost_5_4, Math.min(cost_5_3, Math.min(cost_5_2, Math.min(cost_6_2, Math.min(cost_6_4, cost_6_3 - move_cost_6_3))))) + move_cost_6_3;
-        cost_6_4 = Math.min(cost_5_5, Math.min(cost_5_4, Math.min(cost_5_3, Math.min(cost_6_3, Math.min(cost_6_5, cost_6_4 - move_cost_6_4))))) + move_cost_6_4;
-        cost_6_5 = Math.min(cost_5_6, Math.min(cost_5_5, Math.min(cost_5_4, Math.min(cost_6_4, Math.min(cost_6_6, cost_6_5 - move_cost_6_5))))) + move_cost_6_5;
-        cost_6_6 = Math.min(cost_5_6, Math.min(cost_5_5, Math.min(cost_6_5, cost_6_6 - move_cost_6_6))) + move_cost_6_6;
-
-        // iteration 2
-        cost_1_1 = Math.min(cost_0_2, Math.min(cost_0_1, Math.min(cost_0_0, Math.min(cost_1_0, Math.min(cost_2_0, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_1_2, cost_1_1 - move_cost_1_1)))))))) + move_cost_1_1;
-        cost_1_2 = Math.min(cost_0_3, Math.min(cost_0_2, Math.min(cost_0_1, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_1_3, cost_1_2 - move_cost_1_2)))))))) + move_cost_1_2;
-        cost_1_3 = Math.min(cost_0_4, Math.min(cost_0_3, Math.min(cost_0_2, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_1_4, cost_1_3 - move_cost_1_3)))))))) + move_cost_1_3;
-        cost_1_4 = Math.min(cost_0_5, Math.min(cost_0_4, Math.min(cost_0_3, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_2_4, Math.min(cost_2_5, Math.min(cost_1_5, cost_1_4 - move_cost_1_4)))))))) + move_cost_1_4;
-        cost_1_5 = Math.min(cost_0_6, Math.min(cost_0_5, Math.min(cost_0_4, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_2_5, Math.min(cost_2_6, Math.min(cost_1_6, cost_1_5 - move_cost_1_5)))))))) + move_cost_1_5;
-        cost_2_1 = Math.min(cost_1_2, Math.min(cost_1_1, Math.min(cost_1_0, Math.min(cost_2_0, Math.min(cost_3_0, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_2_2, cost_2_1 - move_cost_2_1)))))))) + move_cost_2_1;
-        cost_2_2 = Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_2_3, cost_2_2 - move_cost_2_2)))))))) + move_cost_2_2;
-        cost_2_3 = Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_2_4, cost_2_3 - move_cost_2_3)))))))) + move_cost_2_3;
-        cost_2_4 = Math.min(cost_1_5, Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_3_5, Math.min(cost_2_5, cost_2_4 - move_cost_2_4)))))))) + move_cost_2_4;
-        cost_2_5 = Math.min(cost_1_6, Math.min(cost_1_5, Math.min(cost_1_4, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_3_5, Math.min(cost_3_6, Math.min(cost_2_6, cost_2_5 - move_cost_2_5)))))))) + move_cost_2_5;
-        cost_3_1 = Math.min(cost_2_2, Math.min(cost_2_1, Math.min(cost_2_0, Math.min(cost_3_0, Math.min(cost_4_0, Math.min(cost_4_1, Math.min(cost_4_2, Math.min(cost_3_2, cost_3_1 - move_cost_3_1)))))))) + move_cost_3_1;
-        cost_3_2 = Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_3_3, cost_3_2 - move_cost_3_2)))))))) + move_cost_3_2;
-        cost_3_3 = Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_3_4, cost_3_3 - move_cost_3_3)))))))) + move_cost_3_3;
-        cost_3_4 = Math.min(cost_2_5, Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_4_5, Math.min(cost_3_5, cost_3_4 - move_cost_3_4)))))))) + move_cost_3_4;
-        cost_3_5 = Math.min(cost_2_6, Math.min(cost_2_5, Math.min(cost_2_4, Math.min(cost_3_4, Math.min(cost_4_4, Math.min(cost_4_5, Math.min(cost_4_6, Math.min(cost_3_6, cost_3_5 - move_cost_3_5)))))))) + move_cost_3_5;
-        cost_4_1 = Math.min(cost_3_2, Math.min(cost_3_1, Math.min(cost_3_0, Math.min(cost_4_0, Math.min(cost_5_0, Math.min(cost_5_1, Math.min(cost_5_2, Math.min(cost_4_2, cost_4_1 - move_cost_4_1)))))))) + move_cost_4_1;
-        cost_4_2 = Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_5_1, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_4_3, cost_4_2 - move_cost_4_2)))))))) + move_cost_4_2;
-        cost_4_3 = Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_4_4, cost_4_3 - move_cost_4_3)))))))) + move_cost_4_3;
-        cost_4_4 = Math.min(cost_3_5, Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_5_5, Math.min(cost_4_5, cost_4_4 - move_cost_4_4)))))))) + move_cost_4_4;
-        cost_4_5 = Math.min(cost_3_6, Math.min(cost_3_5, Math.min(cost_3_4, Math.min(cost_4_4, Math.min(cost_5_4, Math.min(cost_5_5, Math.min(cost_5_6, Math.min(cost_4_6, cost_4_5 - move_cost_4_5)))))))) + move_cost_4_5;
-        cost_5_1 = Math.min(cost_4_2, Math.min(cost_4_1, Math.min(cost_4_0, Math.min(cost_5_0, Math.min(cost_6_0, Math.min(cost_6_1, Math.min(cost_6_2, Math.min(cost_5_2, cost_5_1 - move_cost_5_1)))))))) + move_cost_5_1;
-        cost_5_2 = Math.min(cost_4_3, Math.min(cost_4_2, Math.min(cost_4_1, Math.min(cost_5_1, Math.min(cost_6_1, Math.min(cost_6_2, Math.min(cost_6_3, Math.min(cost_5_3, cost_5_2 - move_cost_5_2)))))))) + move_cost_5_2;
-        cost_5_3 = Math.min(cost_4_4, Math.min(cost_4_3, Math.min(cost_4_2, Math.min(cost_5_2, Math.min(cost_6_2, Math.min(cost_6_3, Math.min(cost_6_4, Math.min(cost_5_4, cost_5_3 - move_cost_5_3)))))))) + move_cost_5_3;
-        cost_5_4 = Math.min(cost_4_5, Math.min(cost_4_4, Math.min(cost_4_3, Math.min(cost_5_3, Math.min(cost_6_3, Math.min(cost_6_4, Math.min(cost_6_5, Math.min(cost_5_5, cost_5_4 - move_cost_5_4)))))))) + move_cost_5_4;
-        cost_5_5 = Math.min(cost_4_6, Math.min(cost_4_5, Math.min(cost_4_4, Math.min(cost_5_4, Math.min(cost_6_4, Math.min(cost_6_5, Math.min(cost_6_6, Math.min(cost_5_6, cost_5_5 - move_cost_5_5)))))))) + move_cost_5_5;
-
-        // iteration 3
-        cost_2_2 = Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_1_1, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_2_3, cost_2_2 - move_cost_2_2)))))))) + move_cost_2_2;
-        cost_2_3 = Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_1_2, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_2_4, cost_2_3 - move_cost_2_3)))))))) + move_cost_2_3;
-        cost_2_4 = Math.min(cost_1_5, Math.min(cost_1_4, Math.min(cost_1_3, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_3_4, Math.min(cost_3_5, Math.min(cost_2_5, cost_2_4 - move_cost_2_4)))))))) + move_cost_2_4;
-        cost_3_2 = Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_2_1, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_3_3, cost_3_2 - move_cost_3_2)))))))) + move_cost_3_2;
-        cost_3_3 = Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_2_2, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_3_4, cost_3_3 - move_cost_3_3)))))))) + move_cost_3_3;
-        cost_3_4 = Math.min(cost_2_5, Math.min(cost_2_4, Math.min(cost_2_3, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_4_4, Math.min(cost_4_5, Math.min(cost_3_5, cost_3_4 - move_cost_3_4)))))))) + move_cost_3_4;
-        cost_4_2 = Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_3_1, Math.min(cost_4_1, Math.min(cost_5_1, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_4_3, cost_4_2 - move_cost_4_2)))))))) + move_cost_4_2;
-        cost_4_3 = Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_3_2, Math.min(cost_4_2, Math.min(cost_5_2, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_4_4, cost_4_3 - move_cost_4_3)))))))) + move_cost_4_3;
-        cost_4_4 = Math.min(cost_3_5, Math.min(cost_3_4, Math.min(cost_3_3, Math.min(cost_4_3, Math.min(cost_5_3, Math.min(cost_5_4, Math.min(cost_5_5, Math.min(cost_4_5, cost_4_4 - move_cost_4_4)))))))) + move_cost_4_4;
-
-        // DETERMINING MIN COST DIRECTION
-        Direction ret = Direction.CENTER;
-        double minCost = Double.MAX_VALUE;
-
-        if (cost_3_4 < minCost) {
-            minCost = cost_3_4;
-            ret = Direction.EAST;
-        }
-        if (cost_4_4 < minCost) {
-            minCost = cost_4_4;
-            ret = Direction.NORTHEAST;
-        }
-        if (cost_4_3 < minCost) {
-            minCost = cost_4_3;
-            ret = Direction.NORTH;
-        }
-        if (cost_4_2 < minCost) {
-            minCost = cost_4_2;
-            ret = Direction.NORTHWEST;
-        }
-        if (cost_3_2 < minCost) {
-            minCost = cost_3_2;
-            ret = Direction.WEST;
-        }
-        if (cost_2_2 < minCost) {
-            minCost = cost_2_2;
-            ret = Direction.SOUTHWEST;
-        }
-        if (cost_2_3 < minCost) {
-            minCost = cost_2_3;
-            ret = Direction.SOUTH;
-        }
-        if (cost_2_4 < minCost) {
-            ret = Direction.SOUTHEAST;
-        }
-        return minCost > 1073741824 ? Direction.CENTER : ret;
+        return ret;
     }
 }
