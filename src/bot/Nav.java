@@ -110,7 +110,9 @@ public class Nav {
      * @return the best direction to move in.
      */
     public static Direction tick(int dangerDirs) throws GameActionException {
-        // TODO: this
+        // if you can't move, this should not count towards the turnsSinceImprovement counter.
+        if (!rc.isReady()) return Direction.CENTER;
+
         switch (currentGoal) {
             case Nothing:
                 return null;
@@ -135,7 +137,6 @@ public class Nav {
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
             case Follow:
-                break;
             case Explore:
                 throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
         }
