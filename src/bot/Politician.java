@@ -3,7 +3,6 @@ package bot;
 import battlecode.common.*;
 
 import static bot.Communication.Label.DEFEND;
-import bot.Communication.Message;
 
 public class Politician extends Robot {
 
@@ -32,6 +31,10 @@ public class Politician extends Robot {
             case EXPAND:
                 expandAwake();
                 break;
+            case CAPTURE_NEUTRAL_EC:
+                commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
+                Nav.doGoTo(commandLoc);
+                break;
 
         }
     }
@@ -55,6 +58,10 @@ public class Politician extends Robot {
                 break;
             case EXPAND:
                 expandBehavior();
+                break;
+            case CAPTURE_NEUTRAL_EC:
+                captureNeutralECBehavior();
+                break;
             default:
                 attackBehavior();
                 break;
@@ -64,6 +71,32 @@ public class Politician extends Robot {
 
     void scoutBehavior() throws GameActionException {
         scoutLogic(commandDir);
+    }
+
+    void captureNeutralECBehavior() throws GameActionException {
+        if (rc.isReady()) {
+            Direction move = Nav.tick();
+            if (move != null && rc.canMove(move)) {
+                rc.move(move);
+            } else if (move == null) {
+                boolean found_neutral_nbor = false;
+                RobotInfo[] nbors = rc.senseNearbyRobots(2);
+                for (RobotInfo nbor : nbors) {
+                    if (nbor.getTeam() == Team.NEUTRAL) {
+                        found_neutral_nbor = true;
+                        if (nbor.getConviction() < (rc.getInfluence() - 10) / nbors.length / 2 && rc.canEmpower(2)) {
+                            rc.empower(2);
+                            Clock.yield();
+                            return;
+                        }
+                    }
+                }
+                if(!found_neutral_nbor) {
+                    reassignDefault();
+                }
+            }
+        }
+        Clock.yield();
     }
 
     @Override
@@ -86,13 +119,13 @@ public class Politician extends Robot {
         Team opponent = myTeam.opponent();
         int numNearby = nearbyRobots.length;
         if (numNearby == 0) return 0;
-        double usefulInfluence =  rc.getInfluence() - 10;
+        double usefulInfluence = rc.getInfluence() - 10;
         if (usefulInfluence < 0) return 0;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;
-        for(int i=0; i < numNearby; i++) {
+        for (int i = 0; i < numNearby; i++) {
             RobotInfo info = nearbyRobots[i];
-            if(info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER) {
+            if (info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER) {
                 // TODO reconsider this
                 wastedInfluence += Math.max(perUnit - info.getConviction(), 0) / 2;
             } else if (info.getTeam() == myTeam) {
@@ -127,6 +160,7 @@ public class Politician extends Robot {
 
     static boolean stayGrounded = false;
     static int reorientingMoves = -1;
+
     void defendBehavior() throws GameActionException {
         if (!rc.isReady()) {
             Clock.yield();
@@ -160,9 +194,9 @@ public class Politician extends Robot {
                     dx += rc.getLocation().x - info.getLocation().x;
                     dy += rc.getLocation().y - info.getLocation().y;
                 }
-                if (Math.abs(dx) < 3*Math.abs(dy))
+                if (Math.abs(dx) < 3 * Math.abs(dy))
                     dx += (Math.random() < 0.5) ? -dy : dy;
-                else if (Math.abs(dy) < 3*Math.abs(dx))
+                else if (Math.abs(dy) < 3 * Math.abs(dx))
                     dy += (Math.random() < 0.5) ? -dx : dx;
                 else if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
                     dx += (int) (Math.random() * 11) - 5;

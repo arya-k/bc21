@@ -16,8 +16,10 @@ abstract class Robot {
     static MapLocation initLoc;
     static int firstTurn;
     static int rounds_left = 0;
+    static double log_2 = Math.log(2);
     static Message prev_assignment = null;
     static Direction commandDir;
+    static MapLocation commandLoc;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -70,6 +72,9 @@ abstract class Robot {
                 assignment = null;
                 onUpdate();
                 return;
+            }
+            else if(info.getTeam() == Team.NEUTRAL) {
+                rc.setFlag(encode(neutralECMessage(info)));
             }
         }
         Direction move = Nav.tick();
@@ -233,6 +238,13 @@ abstract class Robot {
     Message dangerMessage(Direction dir) {
         int[] data = {dir.ordinal()};
         return new Message(Label.DANGER_DIR, data);
+    }
+
+    Message neutralECMessage(RobotInfo info) {
+        MapLocation loc = info.getLocation();
+        double log = Math.log(info.getConviction()) / log_2;
+        int[] data = {loc.x % 128, loc.y % 128, (int) log + 1};
+        return new Message(Label.NEUTRAL_EC, data);
     }
 
     Message safeDirMessage(Direction commandDir, Direction edgeDir, int offset) {

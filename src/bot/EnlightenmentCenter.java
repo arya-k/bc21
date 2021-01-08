@@ -23,6 +23,8 @@ public class EnlightenmentCenter extends Robot {
     static boolean[] safeDirs = new boolean[8];
     static int[] edgeOffsets = new int[8]; // only the cardinal directions matter here.
     static int[] directionOpenness = new int[8]; // lower numbers are "safer"
+    static MapLocation[] neutralECLocs = new MapLocation[6];
+    static int neutralECFound = 0;
 
     @Override
     void onAwake() throws GameActionException {
@@ -143,7 +145,7 @@ public class EnlightenmentCenter extends Robot {
                         for(int i = 0; i < wallSize; i++) {
                             int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
                             Message msg = new Message(Label.FORM_WALL, data);
-                            pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, msg), HIGH);
+                            pq.push(new UnitBuild(RobotType.MUCKRAKER, 10, msg), HIGH);
                         }
                         exploringIds.remove(id);
                         break;
@@ -152,6 +154,23 @@ public class EnlightenmentCenter extends Robot {
                         edgeOffsets[message.data[1]] = message.data[2];
                         updateDirOpenness();
                         exploringIds.remove(id);
+                        break;
+                    case NEUTRAL_EC:
+                        MapLocation neutral_ec_loc = getLocFromMessage(message.data[0], message.data[1]);
+                        boolean known = false;
+                        for(int i=neutralECFound; --i >=0;) {
+                            if(neutralECLocs[i].equals(neutral_ec_loc)) {
+                                known = true;
+                                break;
+                            }
+                        }
+                        if(!known) {
+                            neutralECLocs[neutralECFound++] = neutral_ec_loc;
+                            int influence = (int) Math.pow(2, message.data[2]);
+                            int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
+                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), MED);
+                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
+                        }
                         break;
                 }
 

@@ -80,6 +80,18 @@ public class Muckraker extends Robot {
         }
     }
 
+    @Override
+    void wallBehavior() throws GameActionException {
+        super.wallBehavior();
+        if(rc.isReady()) {
+            RobotInfo kill = bestSlandererKill();
+            if (kill != null) {
+                rc.expose(kill.getLocation());
+            }
+        }
+        Clock.yield();
+    }
+
     void latchBehavior() throws GameActionException {
         if (rc.isReady()) {
             RobotInfo kill = bestSlandererKill();
