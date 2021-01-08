@@ -347,6 +347,14 @@ task listMaps {
     }
 }
 
+task listBattleCodeJar(dependsOn: 'build') {
+    doLast {
+        sourceSets.main.compileClasspath.each {
+            println it
+        }
+    }
+}
+
 
 // Some client commands for 32 bit architectures
 def arch64 = false

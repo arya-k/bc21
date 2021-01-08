@@ -37,6 +37,7 @@ class Result:
 PLAYERS = None
 MAPS = None
 VERBOSE = False
+JAR_PATH = None
 
 
 ### Info gathering ###
@@ -104,20 +105,26 @@ def run_match(pairing: Pairing) -> Result:
             raise subprocess.CalledProcessError(return_code, cmd)
 
     tqdm.write(f"Starting {pairing.a} vs {pairing.b} on {pairing.m}")
-
     replay = f"{pairing.a}-vs-{pairing.b}-on-{pairing.m}-at-{time.time():.0f}.bc21"
     gen = _execute(
         [
-            "./gradlew",
-            "run",
-            f"-PteamA={pairing.a}",
-            f"-PteamB={pairing.b}",
-            f"-Pmaps={pairing.m}",
-            f"-Preplay=matches/{replay}",
+            "java",
+            "-classpath",
+            JAR_PATH,
+            "-Dbc.server.mode=headless",
+            "-Dbc.game.team-a=bot",
+            "-Dbc.game.team-b=bot",
+            "-Dbc.server.map-path=maps",
+            "-Dbc.server.debug=false",
+            "-Dbc.game.maps=" + pairing.m,
+            "-Dbc.server.save-file=matches/" + replay,
+            "-Dbc.game.team-a.url=build/classes",
+            "-Dbc.game.team-b.url=build/classes",
+            "battlecode.server.Main",
         ]
     )
 
-    winRegex = re.compile(r"bot \(([AB])\) wins \(round (\d+)\)")
+    winRegex = re.compile(r"\(([AB])\) wins \(round (\d+)\)")
     # reasonRegex = re.compile(r"Reason: The winning team won ([^\n\.]+)")
 
     ret = Result(pairing.a, pairing.b, pairing.m, "T", replay)
@@ -145,7 +152,14 @@ def run_matches(teamA, teamB, maps, games_per_match=1, stats=True) -> List[Resul
         ["./gradlew", "build"], stdout=subprocess.DEVNULL
     ).returncode
 
-    cores = min(multiprocessing.cpu_count(), 20)
+    # get jar path:
+    global JAR_PATH
+    buildOutput = subprocess.check_output(["./gradlew", "listBattleCodeJar"]).decode(
+        "utf-8"
+    )
+    JAR_PATH = re.search("[^\n]*\.jar", buildOutput).group(0)
+
+    cores = min(multiprocessing.cpu_count(), 40)
     print("\033[93m" + f"Running {len(pairings)} matches on {cores} cores." + "\033[0m")
 
     results = []
