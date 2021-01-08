@@ -198,6 +198,19 @@ abstract class Robot {
 
     void wallBehavior() throws GameActionException {
         if (rc.isReady()) {
+            Direction wallDir = assignment.data[3] == 0 ? Direction.EAST : Direction.NORTH;
+            MapLocation oneAway = rc.getLocation().add(wallDir);
+            MapLocation twoAway = oneAway.add(wallDir);
+            RobotInfo direct_nbor = rc.senseRobotAtLocation(oneAway);
+            RobotInfo indirect_nbor = rc.senseRobotAtLocation(twoAway);
+            if(direct_nbor == null && indirect_nbor != null) {
+                int flag = rc.getFlag(indirect_nbor.getID());
+                if(flag != 0 && decode(flag).label == Label.FORM_WALL && rc.canMove(wallDir)) {
+                    rc.move(wallDir);
+                    Clock.yield();
+                    return;
+                }
+            }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
             Clock.yield();
