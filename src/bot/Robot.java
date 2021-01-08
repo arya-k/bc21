@@ -94,6 +94,26 @@ abstract class Robot {
         Clock.yield();
     }
 
+    // returns direction that moves away from nearby friendly robots
+    static Direction spreadDirection() throws GameActionException {
+        RobotInfo[] neighbors = rc.senseNearbyRobots(-1, rc.getTeam());
+        int d = -1;
+        int distance = -1;
+        for (int i = 8; --i >= 0;) {
+            MapLocation curr = rc.getLocation().add(directions[i]);
+            int tempDistance = 0;
+            for (RobotInfo neighbor : neighbors) {
+                MapLocation location = neighbor.getLocation();
+                tempDistance += curr.distanceSquaredTo(location);
+            }
+            if (tempDistance > distance) {
+                distance = tempDistance;
+                d = i;
+            }
+        }
+        return directions[d];
+    }
+
     static Direction randomDirection() {
         return directions[(int) (Math.random() * directions.length)];
     }

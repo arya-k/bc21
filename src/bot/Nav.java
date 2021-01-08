@@ -2,6 +2,8 @@ package bot;
 
 import battlecode.common.*;
 
+import static bot.Robot.spreadDirection;
+
 /**
  * Navigation class, to manage robot movement in a certain direction at each turn.
  *
@@ -136,7 +138,8 @@ public class Nav {
 
             case Follow:
             case Explore:
-                throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
+                // go in direction away from other bots
+                return spreadDirection();
         }
         return null; // should never get here!
     }

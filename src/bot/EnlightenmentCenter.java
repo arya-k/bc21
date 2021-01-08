@@ -31,9 +31,12 @@ public class EnlightenmentCenter extends Robot {
         }
 
         // initialize pq
-        for (Direction dir : Robot.directions) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), HIGH);
+        for (int i = 0; i < 100; i++) {
+            for (Direction dir : Robot.directions) {
+                pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), HIGH);
+            }
         }
+
         for(int i=3; i>0; i--) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
         }
