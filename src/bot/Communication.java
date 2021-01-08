@@ -2,7 +2,7 @@ package bot;
 
 public class Communication {
     public enum Label {
-        SCOUT, DANGER_DIR, SAFE_DIR_EDGE, LATCH, ATTACK, DEFEND, HIDE, WALL_GAP
+        SCOUT, DANGER_DIR, SAFE_DIR_EDGE, LATCH, ATTACK, DEFEND, HIDE, WALL_GAP, FORM_WALL
     }
     public static class Message {
         Label label;
@@ -15,57 +15,68 @@ public class Communication {
     }
 
     public static Message decode(int flag) {
-        flag ^= 497798;
+        flag ^= 12887516;
         flag--;
-        int[] data = new int[3];
+        int[] data = new int[4];
         Label label;
         int acc;
-        switch (flag % 1024) {
+        switch (flag % 32) {
             case 0:
                 label = Label.SCOUT;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 512:
+            case 16:
                 label = Label.DANGER_DIR;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 256:
+            case 8:
                 label = Label.SAFE_DIR_EDGE;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 acc = acc / 8;
                 data[1] = acc % 8;
                 acc = acc / 8;
                 data[2] = acc % 64;
                 break;
-            case 768:
+            case 24:
                 label = Label.LATCH;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 128:
+            case 4:
                 label = Label.ATTACK;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 640:
+            case 20:
                 label = Label.DEFEND;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 384:
+            case 12:
                 label = Label.HIDE;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 8;
                 break;
-            case 896:
+            case 28:
                 label = Label.WALL_GAP;
-                acc = flag / 1024;
+                acc = flag / 32;
                 data[0] = acc % 128;
                 acc = acc / 128;
                 data[1] = acc % 128;
+                break;
+            case 2:
+                label = Label.FORM_WALL;
+                acc = flag / 32;
+                data[0] = acc % 128;
+                acc = acc / 128;
+                data[1] = acc % 128;
+                acc = acc / 128;
+                data[2] = acc % 16;
+                acc = acc / 16;
+                data[3] = acc % 2;
                 break;
             default:
                 throw new RuntimeException("Attempting to decode an invalid flag");
@@ -76,21 +87,23 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case SCOUT:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 0);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 0);
             case DANGER_DIR:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 512);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 16);
             case SAFE_DIR_EDGE:
-                return 497798 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 1024 + 256);
+                return 12887516 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 32 + 8);
             case LATCH:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 768);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 24);
             case ATTACK:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 128);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 4);
             case DEFEND:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 640);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 20);
             case HIDE:
-                return 497798 ^ (1 + (message.data[0] * 1) * 1024 + 384);
+                return 12887516 ^ (1 + (message.data[0] * 1) * 32 + 12);
             case WALL_GAP:
-                return 497798 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 896);
+                return 12887516 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 32 + 28);
+            case FORM_WALL:
+                return 12887516 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 262144) * 32 + 2);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

@@ -40,7 +40,9 @@ abstract class Robot {
                 if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
                     Robot.centerID = info.getID();
                     Robot.centerLoc = info.getLocation();
-                    Robot.assignment = decode(rc.getFlag(Robot.centerID));
+                    int flag = rc.getFlag(Robot.centerID);
+                    Robot.assignment = decode(flag);
+                    rc.setFlag(flag);
                     break;
                 }
             }
@@ -98,7 +100,7 @@ abstract class Robot {
         RobotInfo[] neighbors = rc.senseNearbyRobots((int)Math.pow(Math.sqrt(space)+1,2), rc.getTeam());
         int d = -1;
         int distance = -1;
-        for (int i = 8; --i >= 0;) {
+        for (int i = 8; --i >= 0; ) {
             MapLocation curr = rc.getLocation().add(directions[i]);
             int tempDistance = 0;
             for (RobotInfo neighbor : neighbors) {
@@ -111,6 +113,44 @@ abstract class Robot {
             }
         }
         return directions[d];
+    }
+
+    static MapLocation getLocFromMessage(int xMod, int yMod) {
+        MapLocation myLoc = rc.getLocation();
+        int x = myLoc.x % 128;
+        int y = myLoc.y % 128;
+        int xOff = xMod - x;
+        int yOff = yMod - y;
+        if(Math.abs(xOff) >= 64)
+            xOff = xOff > 0 ? xOff - 128 : xOff + 128;
+        if (Math.abs(yOff) >= 64)
+            yOff = yOff > 0 ? yOff - 128 : yOff + 128;
+        return myLoc.translate(xOff, yOff);
+    }
+
+    static MapLocation getWallGoalFrom(int[] messageData) {
+        MapLocation wallCenter = getLocFromMessage(messageData[0], messageData[1]);
+        System.out.println("center wall @ " + wallCenter);
+        int wallIx = messageData[2];
+        Direction wallDir = messageData[3] == 0 ? Direction.EAST : Direction.NORTH;
+        int numIter = (wallIx + 1) / 2;
+        if (wallIx % 2 == 0) {
+            wallDir = wallDir.opposite();
+        }
+        wallCenter = wallCenter.translate(wallDir.dx * numIter, wallDir.dy * numIter);
+        return wallCenter;
+    }
+
+    void wallAwake() throws GameActionException {
+        Nav.doGoTo(getWallGoalFrom(assignment.data));
+    }
+
+    void wallBehavior() throws GameActionException {
+        if (rc.isReady()) {
+            Direction move = Nav.tick();
+            if (move != null && rc.canMove(move)) rc.move(move);
+            Clock.yield();
+        }
     }
 
     static Direction randomDirection() {
