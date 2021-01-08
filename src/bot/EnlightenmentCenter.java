@@ -3,8 +3,6 @@ package bot;
 import battlecode.common.*;
 import bot.Communication.*;
 
-import java.util.Arrays;
-
 import static bot.Communication.encode;
 import static bot.Communication.decode;
 
