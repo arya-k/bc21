@@ -29,12 +29,11 @@ public class EnlightenmentCenter extends Robot {
             edgeOffsets[i] = 100; //default to an impossible value
             directionOpenness[i] = 200;
         }
+        calcBestSpawnDirs();
 
         // initialize pq
-        for (int i = 0; i < 100; i++) {
-            for (Direction dir : Robot.directions) {
-                pq.push(new UnitBuild(RobotType.POLITICIAN, 2, exploreMessage(dir)), HIGH);
-            }
+        for (Direction dir : Robot.directions) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 2, scoutMessage(dir)), HIGH);
         }
 
         for(int i=3; i>0; i--) {
@@ -71,7 +70,7 @@ public class EnlightenmentCenter extends Robot {
         if (prevUnit != null) {
             RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(prevDir));
             switch(prevUnit.message.label) {
-                case EXPLORE:
+                case SCOUT:
                     exploringIds.add(info.getID());
             }
             prevUnit = null;
@@ -94,7 +93,7 @@ public class EnlightenmentCenter extends Robot {
             // build a unit
             System.out.println("Trying to build a " + nextUnit.type);
             Direction buildDir = null;
-            for (Direction dir : Robot.directions) {
+            for (Direction dir : spawnDirs) {
                 if (rc.canBuildRobot(nextUnit.type, dir, nextUnit.influence)) {
                     buildDir = dir;
                     break;
@@ -226,5 +225,29 @@ public class EnlightenmentCenter extends Robot {
         directionOpenness[5] = edgeOffsets[4] + edgeOffsets[6];
         directionOpenness[6] = edgeOffsets[6] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
         directionOpenness[7] = edgeOffsets[0] + edgeOffsets[6];
+    }
+
+    static Direction[] spawnDirs = new Direction[8];
+    void calcBestSpawnDirs() throws GameActionException {
+        for (int i = 0; i < 8; i++) {
+            spawnDirs[i] = directions[i];
+        }
+        for (int i = 0; i < 7; i++) {
+            Direction best = spawnDirs[i];
+            int besti = i;
+            for (int j = i + 1; j < 8; j++) {
+                Direction jd = spawnDirs[j];
+                if (rc.sensePassability(rc.getLocation().add(jd)) >
+                        rc.sensePassability(rc.getLocation().add(best))) {
+                    best = jd;
+                    besti = j;
+                }
+            }
+            spawnDirs[besti] = spawnDirs[i];
+            spawnDirs[i] = best;
+        }
+        for (int i = 0; i < 8; i++) {
+            System.out.println(spawnDirs[i]);
+        }
     }
 }

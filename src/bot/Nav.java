@@ -137,6 +137,7 @@ public class Nav {
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
             case Follow:
+                break;
             case Explore:
                 // go in direction away from other bots
                 return spreadDirection();

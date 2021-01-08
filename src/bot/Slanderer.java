@@ -35,6 +35,7 @@ public class Slanderer extends Robot {
         switch (assignment.label) {
             case HIDE:
                 hideBehavior();
+                Clock.yield();
                 break;
             default:
                 Clock.yield();

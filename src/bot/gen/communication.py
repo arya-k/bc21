@@ -10,14 +10,14 @@ class Command:
 ########################################
 
 commands = [
-    Command("EXPLORE", [3]),
+    Command("SCOUT", [3]),
     Command("DANGER_DIR", [3]),
     Command("SAFE_DIR_EDGE", [3, 3, 6]),
     Command("LATCH", [3]),
     Command("ATTACK", [3]),
     Command("DEFEND", [3]),
     Command("HIDE", [3]),
-    Command('WALL_GAP', [7,7])
+    Command("WALL_GAP", [7, 7]),
 ]
 
 #########################################

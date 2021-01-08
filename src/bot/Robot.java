@@ -4,8 +4,6 @@ import battlecode.common.*;
 import bot.Communication.Label;
 import bot.Communication.Message;
 
-import java.util.Map;
-
 import static bot.Communication.decode;
 import static bot.Communication.encode;
 
@@ -60,7 +58,7 @@ abstract class Robot {
         assignment = null;
     }
 
-    void exploreLogic(Direction commandDir) throws GameActionException {
+    void scoutLogic(Direction commandDir) throws GameActionException {
         for (RobotInfo info : rc.senseNearbyRobots()) {
             if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                 rc.setFlag(encode(dangerMessage(commandDir)));
@@ -122,9 +120,9 @@ abstract class Robot {
         return Robot.directions[ordinal];
     }
 
-    Message exploreMessage(Direction dir) throws GameActionException {
+    Message scoutMessage(Direction dir) throws GameActionException {
         int[] data = {dir.ordinal()};
-        return new Message(Label.EXPLORE, data);
+        return new Message(Label.SCOUT, data);
     }
 
     Message dangerMessage(Direction dir) {

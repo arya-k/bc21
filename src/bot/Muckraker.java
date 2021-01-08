@@ -14,7 +14,7 @@ public class Muckraker extends Robot {
         }
 
         switch (assignment.label) {
-            case EXPLORE:
+            case SCOUT:
             case LATCH:
             case HIDE:
             case ATTACK:
@@ -35,7 +35,7 @@ public class Muckraker extends Robot {
         }
 
         switch (assignment.label) {
-            case EXPLORE:
+            case SCOUT:
                 exploreBehavior();
                 break;
             case LATCH:
@@ -52,7 +52,7 @@ public class Muckraker extends Robot {
     }
 
     void exploreBehavior() throws GameActionException {
-        exploreLogic(commandDir);
+        scoutLogic(commandDir);
     }
 
     @Override

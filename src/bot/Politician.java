@@ -17,7 +17,7 @@ public class Politician extends Robot {
         }
 
         switch (assignment.label) {
-            case EXPLORE:
+            case SCOUT:
             case ATTACK:
                 commandDir = fromOrdinal(assignment.data[0]);
                 Nav.doGoInDir(commandDir);
@@ -38,8 +38,8 @@ public class Politician extends Robot {
         }
 
         switch (assignment.label) {
-            case EXPLORE:
-                exploreBehavior();
+            case SCOUT:
+                scoutBehavior();
                 break;
             case DEFEND:
                 defendBehavior();
@@ -51,11 +51,12 @@ public class Politician extends Robot {
 
     }
 
-    void exploreBehavior() throws GameActionException {
-        exploreLogic(commandDir);
+    void scoutBehavior() throws GameActionException {
+        scoutLogic(commandDir);
     }
     @Override
     void reassignDefault() {
+        System.out.println("REASSIGNED TO DEFENSE!");
         if (commandDir == null) {
             commandDir = randomDirection();
         }
@@ -74,6 +75,7 @@ public class Politician extends Robot {
         int numNearby = nearbyRobots.length;
         if (numNearby == 0) return 0;
         double usefulInfluence =  rc.getInfluence() - 10;
+        if (usefulInfluence < 0) return 0;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;
         for(int i=0; i < numNearby; i++) {
@@ -107,9 +109,6 @@ public class Politician extends Robot {
                 bestRad = i;
             }
         }
-        if (bestEff > threshold) {
-            System.out.println(bestEff);
-        }
         return bestRad;
     }
 
@@ -122,7 +121,7 @@ public class Politician extends Robot {
         }
 
         // get all enemy nearby robots
-        int radius = getEfficientSpeech(0.5);
+        int radius = getEfficientSpeech(0.8);
         if (radius != -1) {
             System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
             rc.empower(radius);
@@ -137,7 +136,7 @@ public class Politician extends Robot {
         if (reorientingMoves <= 0) {
             RobotInfo[] closeFriends = rc.senseNearbyRobots(9);
             RobotInfo[] allFriends = rc.senseNearbyRobots();
-            if (closeFriends.length == 0) {
+            if (closeFriends.length == 0 && allFriends.length != 0) {
                 stayGrounded = true;
                 Clock.yield();
                 return;
