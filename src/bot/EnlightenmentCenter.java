@@ -38,11 +38,6 @@ public class EnlightenmentCenter extends Robot {
         for (Direction dir : Robot.directions) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 1, scoutMessage(dir)), HIGH);
         }
-
-        for(int i=3; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
-        }
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
     }
 
     void lowPriorityLogging() {
@@ -108,6 +103,10 @@ public class EnlightenmentCenter extends Robot {
                 prevUnit = nextUnit;
                 prevDir = buildDir;
                 nextUnit = null;
+            } else {
+                int myInfluence = rc.getInfluence();
+                int bidAmount = Math.max(10, myInfluence / 10);
+                if(rc.canBid(bidAmount)) rc.bid(bidAmount);
             }
         }
 
@@ -116,9 +115,27 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        pq.push(new UnitBuild(RobotType.SLANDERER, 300, hideMessage()), HIGH);
-        for (int i = 10; --i > 0; ) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, Math.min(75, rc.getInfluence() / 15), defendECMessage()), MED);
+        int northSouth = 1;
+        MapLocation myLoc = rc.getLocation();
+        for(int i=3; --i>0;) {
+            MapLocation wallCenter1 = myLoc.translate(i, 0);
+            MapLocation wallCenter2 = myLoc.translate(-i, 0);
+            int x1 = wallCenter1.x % 128; int y1 = wallCenter1.y % 128;
+            int x2 = wallCenter2.x % 128; int y2 = wallCenter2.y % 128;
+            for(int j=5; --j>=0;) {
+                int[] data = {x1, y1, j, northSouth};
+                pq.push(new UnitBuild(RobotType.MUCKRAKER, 12, new Message(Label.FORM_WALL, data)), LOW);
+                int[] data2 =  {x2, y2, j, northSouth};
+                pq.push(new UnitBuild(RobotType.MUCKRAKER, 12, new Message(Label.FORM_WALL, data2)), LOW);
+            }
+            MapLocation wallCenter3 = myLoc.translate(0, i + 1);
+            MapLocation wallCenter4 = myLoc.translate(0, -i - 1);
+            int x3 = wallCenter3.x % 128; int y3 = wallCenter3.y % 128;
+            int x4 = wallCenter4.x % 128; int y4 = wallCenter4.y % 128;
+            int[] data3 = {x3, y3, 0, northSouth};
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 12, new Message(Label.FORM_WALL, data3)), LOW);
+            int[] data4 = {x4, y4, 0, northSouth};
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 12, new Message(Label.FORM_WALL, data4)), LOW);
         }
     }
 
@@ -137,16 +154,6 @@ public class EnlightenmentCenter extends Robot {
                     case DANGER_DIR:
                         int dangerOrd = message.data[0];
                         dangerDirs[dangerOrd] = true;
-                        Direction dangerDir = fromOrdinal(dangerOrd);
-                        // probably make this next line better
-                        int eastWest = (dangerOrd / 2) % 2;
-                        MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
-                        int wallSize = 8;
-                        for(int i = 0; i < wallSize; i++) {
-                            int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
-                            Message msg = new Message(Label.FORM_WALL, data);
-                            pq.push(new UnitBuild(RobotType.MUCKRAKER, 10, msg), HIGH);
-                        }
                         exploringIds.remove(id);
                         break;
                     case SAFE_DIR_EDGE:
@@ -168,7 +175,7 @@ public class EnlightenmentCenter extends Robot {
                             neutralECLocs[neutralECFound++] = neutral_ec_loc;
                             int influence = (int) Math.pow(2, message.data[2]);
                             int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
-                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), MED);
+                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), HIGH);
                             System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
                         break;
