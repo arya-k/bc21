@@ -7,8 +7,6 @@ import battlecode.common.MapLocation;
 
 public class Slanderer extends Robot {
 
-    static Direction commandDir;
-
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Slanderer.rc); // Initialize the nav

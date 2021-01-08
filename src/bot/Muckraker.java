@@ -5,9 +5,6 @@ import battlecode.common.*;
 import static bot.Communication.decode;
 
 public class Muckraker extends Robot {
-
-    static Direction commandDir;
-
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Muckraker.rc); // Initialize the nav
@@ -25,6 +22,9 @@ public class Muckraker extends Robot {
                 break;
             case FORM_WALL:
                 wallAwake();
+                break;
+            case EXPAND:
+                expandAwake();
                 break;
             default:
                 reassignDefault();
@@ -52,6 +52,8 @@ public class Muckraker extends Robot {
             case FORM_WALL:
                 wallBehavior();
                 break;
+            case EXPAND:
+                expandBehavior();
             case ATTACK:
             default:
                 defaultBehavior();

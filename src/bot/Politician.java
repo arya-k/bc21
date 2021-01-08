@@ -3,10 +3,9 @@ package bot;
 import battlecode.common.*;
 
 import static bot.Communication.Label.DEFEND;
+import bot.Communication.Message;
 
 public class Politician extends Robot {
-
-    static Direction commandDir = null;
 
     @Override
     void onAwake() throws GameActionException {
@@ -30,6 +29,10 @@ public class Politician extends Robot {
             case FORM_WALL:
                 wallAwake();
                 break;
+            case EXPAND:
+                expandAwake();
+                break;
+
         }
     }
 
@@ -50,6 +53,8 @@ public class Politician extends Robot {
             case FORM_WALL:
                 wallBehavior();
                 break;
+            case EXPAND:
+                expandBehavior();
             default:
                 attackBehavior();
                 break;
@@ -60,6 +65,7 @@ public class Politician extends Robot {
     void scoutBehavior() throws GameActionException {
         scoutLogic(commandDir);
     }
+
     @Override
     void reassignDefault() {
         System.out.println("REASSIGNED TO DEFENSE!");
@@ -108,6 +114,7 @@ public class Politician extends Robot {
     int getEfficientSpeech(double threshold) {
         int bestRad = -1;
         double bestEff = threshold;
+        // TODO: check from radius 1
         for (int i = 2; i <= 9; i++) {
             double efficiency = speechEfficiency(i);
             if (efficiency > bestEff) {
