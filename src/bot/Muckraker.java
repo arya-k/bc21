@@ -2,6 +2,8 @@ package bot;
 
 import battlecode.common.*;
 
+import static bot.Communication.decode;
+
 public class Muckraker extends Robot {
 
     static Direction commandDir;
@@ -20,6 +22,9 @@ public class Muckraker extends Robot {
             case ATTACK:
                 commandDir = fromOrdinal(assignment.data[0]);
                 Nav.doGoInDir(commandDir);
+                break;
+            case FORM_WALL:
+                wallAwake();
                 break;
             default:
                 reassignDefault();
@@ -43,6 +48,9 @@ public class Muckraker extends Robot {
                 break;
             case HIDE:
                 hideBehavior();
+                break;
+            case FORM_WALL:
+                wallBehavior();
                 break;
             case ATTACK:
             default:
@@ -110,7 +118,7 @@ public class Muckraker extends Robot {
             if(move == null || move == Direction.CENTER) {
                 reassignDefault(false);
             }
-            else if (move != null && rc.canMove(move)) rc.move(move);
+            else if (rc.canMove(move)) rc.move(move);
 
         }
         Clock.yield();
@@ -126,7 +134,7 @@ public class Muckraker extends Robot {
                 Clock.yield();
                 return;
             }
-            if(Math.random() < 0.1) {
+            if(commandDir != null && Math.random() < 0.1) {
                 Nav.doGoInDir(commandDir);
                 Clock.yield();
                 return;

@@ -2,6 +2,7 @@ package bot;
 
 import battlecode.common.*;
 import bot.Communication.*;
+
 import static bot.Communication.encode;
 import static bot.Communication.decode;
 
@@ -132,15 +133,28 @@ public class EnlightenmentCenter extends Robot {
                 Message message = decode(flag);
                 switch (message.label) {
                     case DANGER_DIR:
-                        dangerDirs[message.data[0]] = true;
+                        int dangerOrd = message.data[0];
+                        dangerDirs[dangerOrd] = true;
+                        Direction dangerDir = fromOrdinal(dangerOrd);
+                        // probably make this next line better
+                        int eastWest = (dangerOrd / 2) % 2;
+                        MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
+                        int wallSize = 8;
+                        for(int i = 0; i < wallSize; i++) {
+                            int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
+                            Message msg = new Message(Label.FORM_WALL, data);
+                            pq.push(new UnitBuild(RobotType.MUCKRAKER, 5, msg), HIGH);
+                        }
+                        exploringIds.remove(id);
                         break;
                     case SAFE_DIR_EDGE:
                         safeDirs[message.data[0]] = true;
                         edgeOffsets[message.data[1]] = message.data[2];
                         updateDirOpenness();
+                        exploringIds.remove(id);
                         break;
                 }
-                exploringIds.remove(id);
+
             }
         }
     }

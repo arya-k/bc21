@@ -27,6 +27,9 @@ public class Politician extends Robot {
                 System.out.print("DEFENDING to the " + commandDir);
                 reassignDefault(); // default is defense!
                 break;
+            case FORM_WALL:
+                wallAwake();
+                break;
         }
     }
 
@@ -43,6 +46,9 @@ public class Politician extends Robot {
                 break;
             case DEFEND:
                 defendBehavior();
+                break;
+            case FORM_WALL:
+                wallBehavior();
                 break;
             default:
                 attackBehavior();
