@@ -18,7 +18,8 @@ commands = [
     Command("DEFEND", [3]),
     Command("HIDE", [3]),
     Command("WALL_GAP", [7, 7]),
-    Command("FORM_WALL", [7, 7, 4, 1])
+    Command("FORM_WALL", [7, 7, 4, 1]),
+    Command("EXPAND", [3, 6])
 ]
 
 #########################################

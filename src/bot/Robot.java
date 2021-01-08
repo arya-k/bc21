@@ -15,6 +15,9 @@ abstract class Robot {
     static Message assignment = null;
     static MapLocation initLoc;
     static int firstTurn;
+    static int rounds_left = 0;
+    static Message prev_assignment = null;
+    static Direction commandDir;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -94,10 +97,18 @@ abstract class Robot {
         Clock.yield();
     }
 
-    // returns direction that moves away from friendly robots
-    // that have a distance squared of variable space
+    /**
+     * returns direction that moves away from friendly robots within square
+     * distance of variable space, null if already away
+     *
+     * @param space square distance to consider
+     * @return the best direction to spread out in, null if should stay put
+     */
     static Direction spreadDirection(int space) throws GameActionException {
-        RobotInfo[] neighbors = rc.senseNearbyRobots((int)Math.pow(Math.sqrt(space)+1,2), rc.getTeam());
+        RobotInfo[] neighbors = rc.senseNearbyRobots(space, rc.getTeam());
+        // already spread out
+        if (neighbors.length == 0) return null;
+
         int d = -1;
         int distance = -1;
         for (int i = 8; --i >= 0; ) {
@@ -113,6 +124,46 @@ abstract class Robot {
             }
         }
         return directions[d];
+    }
+
+    void expandAwake() throws GameActionException {
+        rounds_left = assignment.data[0];
+        commandDir = spreadDirection(assignment.data[1]);
+        // done expanding
+        if (commandDir == null || rounds_left == 0) {
+            assignment = null;
+            reassignDefault();
+        }
+        else
+            Nav.doGoInDir(commandDir);
+    }
+
+    void expandBehavior() throws GameActionException{
+        rounds_left--;
+        commandDir = spreadDirection(assignment.data[1]);
+        // done expanding
+        if (commandDir == null || rounds_left == 0) {
+            assignment = prev_assignment;
+            if (assignment == null)
+                reassignDefault();
+        }
+        else
+            Nav.doGoInDir(commandDir);
+    }
+
+    void checkExpansion() throws GameActionException {
+        RobotInfo[] neighbors = rc.senseNearbyRobots(-1, rc.getTeam());
+        for (RobotInfo neighbor: neighbors) {
+            int flag = rc.getFlag(neighbor.getID());
+            Message m = decode(flag);
+            if (m.label == Label.EXPAND) {
+                prev_assignment = assignment;
+                assignment = m;
+                expandAwake();
+                break;
+            }
+        }
+
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
