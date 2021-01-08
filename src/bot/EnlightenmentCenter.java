@@ -113,11 +113,9 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        for (int i = 3; --i > 0; ) {
-            pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
-        }
+        pq.push(new UnitBuild(RobotType.SLANDERER, 300, hideMessage()), HIGH);
         for (int i = 10; --i > 0; ) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 100, defendECMessage()), MED);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, Math.min(75, rc.getInfluence() / 15), defendECMessage()), MED);
         }
     }
 
