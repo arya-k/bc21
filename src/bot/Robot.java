@@ -237,13 +237,11 @@ abstract class Robot {
                 int flag = rc.getFlag(indirect_nbor.getID());
                 if(flag != 0 && decode(flag).label == Label.FORM_WALL && rc.canMove(wallDir)) {
                     rc.move(wallDir);
-                    Clock.yield();
                     return;
                 }
             }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
-            Clock.yield();
         }
     }
 
