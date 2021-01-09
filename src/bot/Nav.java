@@ -43,16 +43,17 @@ public class Nav {
      */
     public static void init(RobotController rc) {
         Nav.rc = rc;
+        NavHistory.init();
     }
 
     /**
      * Sets the robot to explore mode. Will try to visit each unexplored chunk
      * in the map, noting walls as it gets to them.
-     * #unimplementedGang
      */
     public static void doExplore() {
         currentGoal = NavGoal.Explore; // TODO: this
 
+        goalPos = null;
         minDistToGoal = Integer.MAX_VALUE;
         turnsSinceImprovement = 0;
     }
@@ -110,6 +111,8 @@ public class Nav {
      * @return the best direction to move in.
      */
     public static Direction tick(int dangerDirs) throws GameActionException {
+        NavHistory.update(); // keep track of where we've been for the explore function
+
         // if you can't move, this should not count towards the turnsSinceImprovement counter.
         if (!rc.isReady()) return Direction.CENTER;
 
@@ -137,8 +140,19 @@ public class Nav {
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
             case Follow:
-            case Explore:
                 throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
+
+            case Explore:
+                if (goalPos == null || NavHistory.visited(goalPos)) {// pick a new location to visit if necessary
+                    goalPos = NavHistory.nearestUnexploredLocation();
+                    // if (goalPos != null)
+                    //     System.out.println("Trying to visit (" + goalPos.y + ", " + goalPos.x + ")");
+                }
+
+                if (goalPos == null) // there are no more unexplored locations to visit :(
+                    currentGoal = NavGoal.Nothing;
+
+                return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
         }
         return null; // should never get here!
     }
