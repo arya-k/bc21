@@ -34,11 +34,13 @@ public class Muckraker extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        checkExpansion();
         if (assignment == null) {
             defaultBehavior();
             return;
         }
-
+        if (rc.getID() == 12868)
+            System.out.println(assignment.label);
         switch (assignment.label) {
             case SCOUT:
                 exploreBehavior();
@@ -54,6 +56,7 @@ public class Muckraker extends Robot {
                 break;
             case EXPAND:
                 expandBehavior();
+                break;
             case ATTACK:
             default:
                 defaultBehavior();
