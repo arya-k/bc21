@@ -1,6 +1,9 @@
 package bot;
 
-import battlecode.common.*;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 
 /**
  * Navigation class, to manage robot movement in a certain direction at each turn.
@@ -51,7 +54,7 @@ public class Nav {
      * in the map, noting walls as it gets to them.
      */
     public static void doExplore() {
-        currentGoal = NavGoal.Explore; // TODO: this
+        currentGoal = NavGoal.Explore;
 
         goalPos = null;
         minDistToGoal = Integer.MAX_VALUE;
@@ -88,17 +91,13 @@ public class Nav {
     }
 
     /**
-     * Robot attempts to follow around the robot with the given ID. will stop this goal if it can no longer
+     * Robot attempts to follow around the robot with the given ID. Will stop this goal if it can no longer
      * see the robot in range.
-     * #unimplementedGang
      */
     public static void doFollow(int targetID) {
         // TODO: support a memory so it can try and find the robot even if it has gone out of sight!
-        currentGoal = NavGoal.Follow; // TODO: this
+        currentGoal = NavGoal.Follow;
         goalID = targetID;
-
-        minDistToGoal = Integer.MAX_VALUE;
-        turnsSinceImprovement = 0;
     }
 
     /**
@@ -140,7 +139,12 @@ public class Nav {
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
             case Follow:
-                throw new GameActionException(GameActionExceptionType.INTERNAL_ERROR, "Unimplemented!");
+                if (rc.canSenseRobot(goalID))
+                    goalPos = rc.senseRobot(goalID).location;
+                else
+                    currentGoal = NavGoal.Nothing;
+
+                return currentGoal == NavGoal.Nothing ? null : goTo(goalPos);
 
             case Explore:
                 if (goalPos == null || NavHistory.visited(goalPos)) {// pick a new location to visit if necessary
