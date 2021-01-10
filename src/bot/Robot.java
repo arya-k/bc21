@@ -15,11 +15,12 @@ abstract class Robot {
     static Message assignment = null;
     static MapLocation initLoc;
     static int firstTurn;
-    static int rounds_left = 0;
+    static int rounds = 0;
     static double log_2 = Math.log(2);
-    static Message prev_assignment = null;
+    static Message prevAssignment = null;
     static Direction commandDir;
     static MapLocation commandLoc;
+    static int prevFlag = 0;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -132,43 +133,67 @@ abstract class Robot {
     }
 
     void expandAwake() throws GameActionException {
-        rounds_left = assignment.data[0];
+        rounds = assignment.data[0];
         commandDir = spreadDirection(assignment.data[1]);
         // done expanding
-        if (commandDir == null || rounds_left == 0) {
+        if (commandDir == null || rc.getRoundNum() >= rounds) {
             assignment = null;
-            reassignDefault();
+            rc.setFlag(prevFlag);
         }
         else
             Nav.doGoInDir(commandDir);
     }
 
     void expandBehavior() throws GameActionException{
-        rounds_left--;
+        System.out.println("Expanding!");
         commandDir = spreadDirection(assignment.data[1]);
         // done expanding
-        if (commandDir == null || rounds_left == 0) {
-            assignment = prev_assignment;
-            if (assignment == null)
-                reassignDefault();
+        if (commandDir == null || rc.getRoundNum() >= rounds) {
+            System.out.println("Expanding done, return to " + prevAssignment.label);
+            assignment = prevAssignment;
+            rc.setFlag(prevFlag);
+            onAwake();
+//            onUpdate();
+            Clock.yield();
+            return;
         }
-        else
-            Nav.doGoInDir(commandDir);
+        if (commandDir != null && rc.canMove(commandDir)) rc.move(commandDir);
+        Clock.yield();
     }
 
     void checkExpansion() throws GameActionException {
+        if (assignment != null && assignment.label == Label.EXPAND) return;
         RobotInfo[] neighbors = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo neighbor: neighbors) {
+            if (neighbor.getType() == RobotType.ENLIGHTENMENT_CENTER) continue;
             int flag = rc.getFlag(neighbor.getID());
-            Message m = decode(flag);
+            Message m;
+            try {
+                m = decode(flag);
+            } catch (Exception e) {
+                continue;
+            }
             if (m.label == Label.EXPAND) {
-                prev_assignment = assignment;
+                prevAssignment = assignment;
+                prevFlag = rc.getFlag(rc.getID());
                 assignment = m;
+                rc.setFlag(encode(m));
                 expandAwake();
-                break;
+                return;
             }
         }
+    }
 
+    void startExpansion(int rounds, int space) throws GameActionException {
+        System.out.println("Root Expansion Until Round " + rounds);
+        int[] data = {Math.min(rounds+rc.getRoundNum(), 2999), space};
+        Message m = new Message(Label.EXPAND, data);
+        int flag = encode(m);
+        prevFlag = rc.getFlag(rc.getID());
+        rc.setFlag(flag);
+        prevAssignment = assignment;
+        assignment = m;
+        expandAwake();
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
@@ -212,13 +237,11 @@ abstract class Robot {
                 int flag = rc.getFlag(indirect_nbor.getID());
                 if(flag != 0 && decode(flag).label == Label.FORM_WALL && rc.canMove(wallDir)) {
                     rc.move(wallDir);
-                    Clock.yield();
                     return;
                 }
             }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
-            Clock.yield();
         }
     }
 
