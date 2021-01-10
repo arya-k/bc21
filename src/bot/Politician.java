@@ -6,6 +6,7 @@ import static bot.Communication.Label.DEFEND;
 
 public class Politician extends Robot {
 
+    static int waiting_rounds = 0;
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
@@ -31,6 +32,7 @@ public class Politician extends Robot {
             case EXPAND:
                 expandAwake();
                 break;
+            case ATTACK_LOC:
             case CAPTURE_NEUTRAL_EC:
                 commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
                 Nav.doGoTo(commandLoc);
@@ -79,12 +81,13 @@ public class Politician extends Robot {
             if (move != null && rc.canMove(move)) {
                 rc.move(move);
             } else if (move == null) {
+                waiting_rounds++;
                 boolean found_neutral_nbor = false;
                 RobotInfo[] nbors = rc.senseNearbyRobots(2);
                 for (RobotInfo nbor : nbors) {
                     if (nbor.getTeam() == Team.NEUTRAL) {
                         found_neutral_nbor = true;
-                        if (nbor.getConviction() < (rc.getInfluence() - 10) / nbors.length / 2 && rc.canEmpower(2)) {
+                        if ((waiting_rounds > 10 || nbor.getConviction() < (rc.getInfluence() - 10) / nbors.length / 2) && rc.canEmpower(2)) {
                             rc.empower(2);
                             Clock.yield();
                             return;
@@ -229,9 +232,9 @@ public class Politician extends Robot {
                 // otherwise move
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
-                if (move == null) {
-                    reassignDefault(); //TODO improve this
-                }
+//                if (move == null) {
+//                    reassignDefault(); //TODO improve this
+//                }
             }
         }
 

@@ -26,6 +26,10 @@ public class Muckraker extends Robot {
             case EXPAND:
                 expandAwake();
                 break;
+            case ATTACK_LOC:
+                commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
+                Nav.doGoTo(commandLoc);
+                break;
             default:
                 reassignDefault();
                 break;
@@ -34,7 +38,7 @@ public class Muckraker extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
-        checkExpansion();
+//        checkExpansion();
         if (assignment == null) {
             defaultBehavior();
             return;
@@ -58,6 +62,7 @@ public class Muckraker extends Robot {
                 expandBehavior();
                 break;
             case ATTACK:
+            case ATTACK_LOC:
             default:
                 defaultBehavior();
                 break;
@@ -151,11 +156,11 @@ public class Muckraker extends Robot {
                 Clock.yield();
                 return;
             }
-            if(commandDir != null && Math.random() < 0.1) {
-                Nav.doGoInDir(commandDir);
-                Clock.yield();
-                return;
-            }
+//            if(commandDir != null && Math.random() < 0.1) {
+//                Nav.doGoInDir(commandDir);
+//                Clock.yield();
+//                return;
+//            }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
             Clock.yield();

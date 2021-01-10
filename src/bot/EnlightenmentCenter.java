@@ -25,6 +25,8 @@ public class EnlightenmentCenter extends Robot {
     static int[] directionOpenness = new int[8]; // lower numbers are "safer"
     static MapLocation[] neutralECLocs = new MapLocation[6];
     static int neutralECFound = 0;
+    static MapLocation[] enemyECLocs = new MapLocation[9];
+    static int enemyECFound = 0;
 
     @Override
     void onAwake() throws GameActionException {
@@ -117,9 +119,14 @@ public class EnlightenmentCenter extends Robot {
 
     void refillQueue() throws GameActionException {
         pq.push(new UnitBuild(RobotType.SLANDERER, 300, hideMessage()), HIGH);
+        for (int i = enemyECFound; --i >=0; ) {
+            createAttackHorde(RobotType.POLITICIAN, 6, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+            createAttackHorde(RobotType.MUCKRAKER, 6, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+        }
         for (int i = 10; --i > 0; ) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, Math.min(75, rc.getInfluence() / 15), defendECMessage()), MED);
         }
+
     }
 
     void processFlags() throws  GameActionException {
@@ -132,20 +139,32 @@ public class EnlightenmentCenter extends Robot {
             int flag = rc.getFlag(id);
             // got a message!
             if (flag != 0) {
+                boolean known = false;
                 Message message = decode(flag);
                 switch (message.label) {
-                    case DANGER_DIR:
-                        int dangerOrd = message.data[0];
-                        dangerDirs[dangerOrd] = true;
-                        Direction dangerDir = fromOrdinal(dangerOrd);
-                        // probably make this next line better
-                        int eastWest = (dangerOrd / 2) % 2;
-                        MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
-                        int wallSize = 8;
-                        for(int i = 0; i < wallSize; i++) {
-                            int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
-                            Message msg = new Message(Label.FORM_WALL, data);
-                            pq.push(new UnitBuild(RobotType.MUCKRAKER, 10, msg), HIGH);
+                    case ENEMY_EC:
+                        MapLocation enemy_loc = getLocFromMessage(message.data[0], message.data[1]);
+                        for(int i=enemyECFound; --i >=0;) {
+                            if(enemyECLocs[i].equals(enemy_loc)) {
+                                known = true;
+                                break;
+                            }
+                        }
+                        if(!known) {
+                            enemyECLocs[enemyECFound++] = enemy_loc;
+                            createAttackHorde(RobotType.MUCKRAKER, 9, 25, enemy_loc, HIGH);
+                            Direction dangerDir = rc.getLocation().directionTo(enemy_loc);
+                            int dangerOrd = dangerDir.ordinal();
+                            dangerDirs[dangerOrd] = true;
+                            // probably make this next line better
+                            int eastWest = (dangerOrd / 2) % 2;
+                            MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
+                            int wallSize = 8;
+                            for (int i = 0; i < wallSize; i++) {
+                                int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
+                                Message msg = new Message(Label.FORM_WALL, data);
+                                pq.push(new UnitBuild(RobotType.MUCKRAKER, 15, msg), HIGH);
+                            }
                         }
                         exploringIds.remove(id);
                         break;
@@ -157,7 +176,6 @@ public class EnlightenmentCenter extends Robot {
                         break;
                     case NEUTRAL_EC:
                         MapLocation neutral_ec_loc = getLocFromMessage(message.data[0], message.data[1]);
-                        boolean known = false;
                         for(int i=neutralECFound; --i >=0;) {
                             if(neutralECLocs[i].equals(neutral_ec_loc)) {
                                 known = true;
@@ -176,6 +194,18 @@ public class EnlightenmentCenter extends Robot {
 
             }
         }
+    }
+
+    void createAttackHorde(RobotType type, int size, int troop_influence, MapLocation attack_target, int priority) throws GameActionException {
+        int[] data = { attack_target.x % 128, attack_target.y % 128 };
+        Message msg = new Message(Label.ATTACK_LOC, data);
+        for(int i=size; --i >=0;) {
+            pq.push(new UnitBuild(type, troop_influence, msg), priority);
+        }
+    }
+
+    void createAttackHorde(RobotType type, int size, int troop_influence, MapLocation attack_target) throws GameActionException {
+        createAttackHorde(type, size, troop_influence, attack_target, MED);
     }
 
     Message attackMessage() throws GameActionException {
