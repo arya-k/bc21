@@ -69,7 +69,7 @@ abstract class Robot {
     void scoutLogic(Direction commandDir) throws GameActionException {
         for (RobotInfo info : rc.senseNearbyRobots()) {
             if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(dangerMessage(info.getLocation())));
+                rc.setFlag(encode(dangerMessage(info)));
                 assignment = null;
                 onUpdate();
                 return;
@@ -258,8 +258,9 @@ abstract class Robot {
         return new Message(Label.SCOUT, data);
     }
 
-    Message dangerMessage(MapLocation enemy_loc) {
-        int[] data = {enemy_loc.x % 128, enemy_loc.y % 128};
+    Message dangerMessage(RobotInfo enemy) {
+        MapLocation enemy_loc = enemy.getLocation();
+        int[] data = {enemy_loc.x % 128, enemy_loc.y % 128, (int) (Math.log(enemy.getInfluence()) / Math.log(2) + 1)};
         return new Message(Label.ENEMY_EC, data);
     }
 

@@ -3,6 +3,7 @@ package good_bot;
 import battlecode.common.*;
 
 import static good_bot.Communication.decode;
+import static good_bot.Communication.encode;
 
 public class Muckraker extends Robot {
     @Override
@@ -16,9 +17,11 @@ public class Muckraker extends Robot {
             case SCOUT:
             case LATCH:
             case HIDE:
-            case ATTACK:
                 commandDir = fromOrdinal(assignment.data[0]);
                 Nav.doGoInDir(commandDir);
+                break;
+            case EXPLORE:
+                Nav.doExplore();
                 break;
             case FORM_WALL:
                 wallAwake();
@@ -43,11 +46,9 @@ public class Muckraker extends Robot {
             defaultBehavior();
             return;
         }
-        if (rc.getID() == 12868)
-            System.out.println(assignment.label);
         switch (assignment.label) {
             case SCOUT:
-                exploreBehavior();
+                scoutBehavior();
                 break;
             case LATCH:
                 latchBehavior();
@@ -61,7 +62,7 @@ public class Muckraker extends Robot {
             case EXPAND:
                 expandBehavior();
                 break;
-            case ATTACK:
+            case EXPLORE:
             case ATTACK_LOC:
             default:
                 defaultBehavior();
@@ -69,7 +70,7 @@ public class Muckraker extends Robot {
         }
     }
 
-    void exploreBehavior() throws GameActionException {
+    void scoutBehavior() throws GameActionException {
         scoutLogic(commandDir);
     }
 
@@ -99,6 +100,7 @@ public class Muckraker extends Robot {
         }
         Clock.yield();
     }
+
 
     void latchBehavior() throws GameActionException {
         if (rc.isReady()) {
@@ -156,15 +158,21 @@ public class Muckraker extends Robot {
                 Clock.yield();
                 return;
             }
-//            if(commandDir != null && Math.random() < 0.1) {
-//                Nav.doGoInDir(commandDir);
-//                Clock.yield();
-//                return;
-//            }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
-            Clock.yield();
+            for (RobotInfo info : rc.senseNearbyRobots()) {
+                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                    rc.setFlag(encode(dangerMessage(info)));
+                    MapLocation loc = info.getLocation();
+                    int[] data = {loc.x % 128, loc.y % 128};
+                    assignment = new Communication.Message(Communication.Label.ATTACK_LOC, data);
+                }
+                else if(info.getTeam() == Team.NEUTRAL) {
+                    rc.setFlag(encode(neutralECMessage(info)));
+                }
+            }
         }
+        Clock.yield();
     }
 
     RobotInfo bestSlandererKill() {

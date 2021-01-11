@@ -17,7 +17,6 @@ public class Politician extends Robot {
 
         switch (assignment.label) {
             case SCOUT:
-            case ATTACK:
                 commandDir = fromOrdinal(assignment.data[0]);
                 Nav.doGoInDir(commandDir);
                 break;

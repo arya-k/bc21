@@ -1,9 +1,8 @@
 package good_bot;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
+
+import java.util.Arrays;
 
 public class Slanderer extends Robot {
 
@@ -41,7 +40,20 @@ public class Slanderer extends Robot {
     }
 
     void hideBehavior() throws GameActionException {
-        Direction move = Nav.tick();
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        int numMuckrakers = 0;
+        Direction[] dangerDirs = new Direction[enemies.length];
+        for(int i = 0; i < enemies.length; i++) {
+            if(enemies[i].getType() == RobotType.MUCKRAKER) {
+                dangerDirs[numMuckrakers++] = enemies[i].getLocation().directionTo(rc.getLocation());
+            }
+        }
+        Direction[] realDirs = new Direction[numMuckrakers];
+        for(int i=0; i < numMuckrakers; i++) {
+            realDirs[i] = dangerDirs[i];
+        }
+        System.out.println(Arrays.toString(realDirs));
+        Direction move = Nav.tick(realDirs);
         if (move != null && rc.canMove(move)) rc.move(move);
         //TODO run from enemies
     }

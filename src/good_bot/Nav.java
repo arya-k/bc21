@@ -19,7 +19,7 @@ import battlecode.common.RobotController;
  */
 public class Nav {
     // Constants:
-    static final int FAILURE_TURNS = 5;
+    static final int FAILURE_TURNS = 100;
 
     // Variables:
     private static RobotController rc;
