@@ -231,8 +231,8 @@ abstract class Robot {
             Direction wallDir = assignment.data[3] == 0 ? Direction.EAST : Direction.NORTH;
             MapLocation oneAway = rc.getLocation().add(wallDir);
             MapLocation twoAway = oneAway.add(wallDir);
-            RobotInfo direct_nbor = rc.senseRobotAtLocation(oneAway);
-            RobotInfo indirect_nbor = rc.senseRobotAtLocation(twoAway);
+            RobotInfo direct_nbor = rc.onTheMap(oneAway) ? rc.senseRobotAtLocation(oneAway) : null;
+            RobotInfo indirect_nbor = rc.onTheMap(twoAway) ? rc.senseRobotAtLocation(twoAway) : null;
             if(direct_nbor == null && indirect_nbor != null) {
                 int flag = rc.getFlag(indirect_nbor.getID());
                 if(flag != 0 && decode(flag).label == Label.FORM_WALL && rc.canMove(wallDir)) {
