@@ -46,8 +46,6 @@ public class Politician extends Robot {
             return;
         }
 
-        System.out.println("I AM CURRENTLY DOING " + assignment.label);
-
         switch (assignment.label) {
             case SCOUT:
                 scoutBehavior();
