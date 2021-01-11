@@ -152,6 +152,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     static int exploderQueuedRound = 0;
+    static boolean haltBidding = false;
     void immediateDefense() {
         int enemyConviction = 0;
         int enemies = 0;
@@ -159,7 +160,8 @@ public class EnlightenmentCenter extends Robot {
             enemyConviction += info.getConviction();
             enemies++;
         }
-        if ((enemyConviction > 200 || enemies >= 5) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
+        haltBidding = enemies >= 4;
+        if ((enemyConviction > 200 || enemies >= 4) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
             int conv = 10 + enemyConviction * 2;
             pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), HIGH);
             System.out.println("EXPLODER QUEUED!!!!");
@@ -380,6 +382,7 @@ public class EnlightenmentCenter extends Robot {
             bidlessBreak--;
             return;
         }
+        if (haltBidding) return;
         int bid = prevBid;
         if (rc.getRoundNum() != 0 && rc.getTeamVotes() == prevTeamVotes) {
             // we lost the last vote!
