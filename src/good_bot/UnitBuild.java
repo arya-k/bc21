@@ -1,4 +1,4 @@
-package bot;
+package good_bot;
 
 import battlecode.common.RobotType;
 

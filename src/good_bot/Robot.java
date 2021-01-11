@@ -1,11 +1,11 @@
-package bot;
+package good_bot;
 
 import battlecode.common.*;
-import bot.Communication.Label;
-import bot.Communication.Message;
+import good_bot.Communication.Label;
+import good_bot.Communication.Message;
 
-import static bot.Communication.decode;
-import static bot.Communication.encode;
+import static good_bot.Communication.decode;
+import static good_bot.Communication.encode;
 
 abstract class Robot {
     static RobotController rc = null;

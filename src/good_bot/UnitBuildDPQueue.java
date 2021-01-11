@@ -1,4 +1,4 @@
-package bot;
+package good_bot;
 
 public class UnitBuildDPQueue {
     UnitBuildQueue[] queues;

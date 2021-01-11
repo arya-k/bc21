@@ -1,4 +1,4 @@
-package bot;
+package good_bot;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -19,7 +19,7 @@ import battlecode.common.RobotController;
  */
 public class Nav {
     // Constants:
-    static final int FAILURE_TURNS = 100;
+    static final int FAILURE_TURNS = 5;
 
     // Variables:
     private static RobotController rc;
