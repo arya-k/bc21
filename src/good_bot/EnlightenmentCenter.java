@@ -24,9 +24,13 @@ public class EnlightenmentCenter extends Robot {
     static int[] edgeOffsets = new int[8]; // only the cardinal directions matter here.
     static int[] directionOpenness = new int[8]; // lower numbers are "safer"
     static MapLocation[] neutralECLocs = new MapLocation[6];
+    static int[] neutralECInfluence = new int[6];
     static int neutralECFound = 0;
     static MapLocation[] enemyECLocs = new MapLocation[9];
     static int enemyECFound = 0;
+
+    static int slanderersBuilt = 0;
+
 
     @Override
     void onAwake() throws GameActionException {
@@ -41,10 +45,12 @@ public class EnlightenmentCenter extends Robot {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 1, scoutMessage(dir)), HIGH);
         }
 
+        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
+
         for(int i=10; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), MED);
         }
-        pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
+
     }
 
     void lowPriorityLogging() {
@@ -76,12 +82,14 @@ public class EnlightenmentCenter extends Robot {
             RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(prevDir));
             switch(prevUnit.message.label) {
                 case SCOUT:
+                case EXPLORE:
                     exploringIds.add(info.getID());
             }
             prevUnit = null;
         }
 
         processFlags();
+        immediateDefense();
 
         lowPriorityLogging();
 
@@ -97,7 +105,6 @@ public class EnlightenmentCenter extends Robot {
         if (nextUnit != null && ((nextUnit.priority == HIGH && nextUnit.influence <= rc.getInfluence()) ||
                 nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
             // build a unit
-            System.out.println("Trying to build a " + nextUnit.type);
             Direction buildDir = null;
             for (Direction dir : spawnDirs) {
                 if (rc.canBuildRobot(nextUnit.type, dir, nextUnit.influence)) {
@@ -108,6 +115,8 @@ public class EnlightenmentCenter extends Robot {
             if (buildDir != null) {
                 rc.setFlag(encode(nextUnit.message));
                 rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+                if(nextUnit.type == RobotType.SLANDERER)
+                    slanderersBuilt++;
                 prevUnit = nextUnit;
                 prevDir = buildDir;
                 nextUnit = null;
@@ -120,17 +129,42 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        for(int i=5; --i>=0;) {
-            pq.push(new UnitBuild(RobotType.SLANDERER, 50, hideMessage()), HIGH);
+        for(int i=4; --i>=0;) {
+            pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), LOW);
         }
-        for (int i = enemyECFound; --i >=0; ) {
-            createAttackHorde(RobotType.POLITICIAN, 5, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
-            createAttackHorde(RobotType.MUCKRAKER, 5, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+        for(int i=0; i < enemyECFound; i++) {
+            createAttackHorde(RobotType.MUCKRAKER, 3, 1, enemyECLocs[i], LOW);
         }
-        for (int i = 5; --i > 0; ) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, Math.min(75, rc.getInfluence() / 15), defendECMessage()), MED);
+        int threshold = rc.getRoundNum() / 20;
+        boolean muckrakerFound = false;
+        Team myTeam = rc.getTeam();
+        for(RobotInfo bot: rc.senseNearbyRobots()) {
+            if(bot.getTeam() != myTeam && bot.getType() == RobotType.MUCKRAKER) {
+                muckrakerFound = true;
+                break;
+            }
         }
+        if(!muckrakerFound) {
+            for (int i = slanderersBuilt; i < threshold; i++) {
+                pq.push(new UnitBuild(RobotType.SLANDERER, 150, hideMessage()), MED);
+            }
+        }
+    }
 
+    static int exploderQueuedRound = 0;
+    void immediateDefense() {
+        int enemyConviction = 0;
+        int enemies = 0;
+        for (RobotInfo info : rc.senseNearbyRobots(12, rc.getTeam().opponent())) {
+            enemyConviction += info.getConviction();
+            enemies++;
+        }
+        if ((enemyConviction > 200 || enemies >= 5) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
+            int conv = 10 + enemyConviction * 2;
+            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), HIGH);
+            System.out.println("EXPLODER QUEUED!!!!");
+            exploderQueuedRound = rc.getRoundNum();
+        }
     }
 
     void processFlags() throws  GameActionException {
@@ -161,14 +195,14 @@ public class EnlightenmentCenter extends Robot {
                             int dangerOrd = dangerDir.ordinal();
                             dangerDirs[dangerOrd] = true;
                             // probably make this next line better
-                            int eastWest = (dangerOrd / 2) % 2;
-                            MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
-                            int wallSize = 8;
-                            for (int i = 0; i < wallSize; i++) {
-                                int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
-                                Message msg = new Message(Label.FORM_WALL, data);
-                                pq.push(new UnitBuild(RobotType.MUCKRAKER, 15, msg), HIGH);
-                            }
+//                            int eastWest = (dangerOrd / 2) % 2;
+//                            MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
+//                            int wallSize = 8;
+//                            for (int i = 0; i < wallSize; i++) {
+//                                int[] data = {wallCenter.x % 128, wallCenter.y % 128, i, eastWest};
+//                                Message msg = new Message(Label.FORM_WALL, data);
+//                                pq.push(new UnitBuild(RobotType.MUCKRAKER, 15, msg), HIGH);
+//                            }
                         }
                         exploringIds.remove(id);
                         break;
@@ -187,11 +221,12 @@ public class EnlightenmentCenter extends Robot {
                             }
                         }
                         if(!known) {
-                            neutralECLocs[neutralECFound++] = neutral_ec_loc;
+                            neutralECLocs[neutralECFound] = neutral_ec_loc;
                             int influence = (int) Math.pow(2, message.data[2]);
-                            int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
-                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), LOW);
-                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
+                            neutralECInfluence[neutralECFound++] = influence;
+//                            int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
+//                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), LOW);
+//                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
                         break;
                 }
@@ -212,11 +247,6 @@ public class EnlightenmentCenter extends Robot {
         createAttackHorde(type, size, troop_influence, attack_target, MED);
     }
 
-    Message attackMessage() throws GameActionException {
-        int[] data = {bestDangerDir().ordinal()};
-        return new Message(Label.ATTACK, data);
-    }
-
     Message defendECMessage() throws GameActionException {
         int[] data = {randomFrontierDir().ordinal()};
         return new Message(Label.DEFEND, data);
@@ -225,6 +255,16 @@ public class EnlightenmentCenter extends Robot {
     Message hideMessage() {
         int[] data = {bestSafeDir().ordinal()};
         return new Message(Label.HIDE, data);
+    }
+
+    Message exploreMessage() {
+        int[] data = {};
+        return new Message(Label.EXPLORE, data);
+    }
+
+    Message explodeMessage() {
+        int[] data = {};
+        return new Message(Label.EXPLODE, data);
     }
 
     /**
@@ -323,25 +363,40 @@ public class EnlightenmentCenter extends Robot {
     }
 
     int influenceMinimum() {
-        return 20;
+        return 20 + (int) (rc.getRoundNum() * 0.25);
     }
 
     int maxBid() {
-        return Math.max(Math.min(rc.getInfluence() - influenceMinimum(), rc.getInfluence() / 5), 0);
+        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 8), 0);
     }
 
     static int prevTeamVotes = 0;
     static int prevBid = 2;
+    static int lostRounds = 0;
+    static int bidlessBreak = 0;
 
     void makeBid() throws GameActionException {
+        if (bidlessBreak > 0) {
+            bidlessBreak--;
+            return;
+        }
         int bid = prevBid;
         if (rc.getRoundNum() != 0 && rc.getTeamVotes() == prevTeamVotes) {
             // we lost the last vote!
-            if (rc.getRoundNum() < 1500) {
-                bid += 3;
+            lostRounds++;
+            if (lostRounds % 10 == 0) {
+                // take a break :(
+                bidlessBreak = 50;
+                return;
+            }
+            if (rc.getRoundNum() < 2500) {
+                bid += (int) (Math.random() * 4) + 1;
             } else {
+                // lol
                 bid = (bid * 3) / 2;
             }
+        } else {
+            lostRounds = 0;
         }
         bid = Math.min(bid, maxBid());
         prevBid = bid;

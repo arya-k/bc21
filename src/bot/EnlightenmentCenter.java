@@ -28,6 +28,8 @@ public class EnlightenmentCenter extends Robot {
     static MapLocation[] enemyECLocs = new MapLocation[9];
     static int enemyECFound = 0;
 
+    static int[] destination = new int[2];
+
     @Override
     void onAwake() throws GameActionException {
         for (int i = 0; i < 8; i++) {
@@ -41,9 +43,10 @@ public class EnlightenmentCenter extends Robot {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 1, scoutMessage(dir)), HIGH);
         }
 
-        for(int i=10; i>0; i--) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
-        }
+//        for(int i=10; i>0; i--) {
+//            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), HIGH);
+//        }
+        createDefenseLattice(10, 40, HIGH);
         pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
     }
 
@@ -217,10 +220,46 @@ public class EnlightenmentCenter extends Robot {
         return new Message(Label.ATTACK, data);
     }
 
+    void createDefenseLattice(int size, int troop_influence, int priority) throws GameActionException{
+        int created = 0;
+        int x = rc.getLocation().x;
+        int y = rc.getLocation().y;
+        for (int i = 1; i <= size/2; i++) {
+            for (int j = 1; j <= size/2; j++) {
+                if (created >= size) {
+                    return;
+                }
+                if ((i+j) % 2 == 0) continue;
+                int ds = (int)Math.pow(i,2) + (int)Math.pow(j,2);
+                if (ds > 40 || ds <= 1) continue;
+                int[][] circle = { {1,1},{1,-1}, {-1,1}, {-1,-1}};
+                for (int[] dir: circle) {
+                    System.out.println("dir " + dir[0] + " " + dir[1]);
+                    MapLocation location = new MapLocation(dir[0]*i+x,dir[1]*j+y);
+                    if (rc.canDetectLocation(location)) {
+                        System.out.println("locationing "+ dir[0]*i+ " " + dir[1]*j);
+                        destination[0] = location.x % 128;
+                        destination[1] = location.y % 128;
+                        pq.push(new UnitBuild(RobotType.POLITICIAN, troop_influence, defendECLOCMessage()), priority);
+                        created += 1;
+                    }
+                }
+            }
+        }
+    }
+    Message defendECLOCMessage() {
+        System.out.println(destination[0]+ " " + destination[1]);
+        int[] data = new int[2];
+        data[0] = destination[0];
+        data[1] = destination[1];
+        return new Message(Label.DEFEND_LOC, data);
+    }
+
     Message defendECMessage() throws GameActionException {
         int[] data = {randomFrontierDir().ordinal()};
         return new Message(Label.DEFEND, data);
     }
+
 
     Message hideMessage() {
         int[] data = {bestSafeDir().ordinal()};

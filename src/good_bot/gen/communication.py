@@ -11,14 +11,14 @@ class Command:
 
 commands = [
     Command("SCOUT", [3]),
+    Command("EXPLORE", []),
     Command("SAFE_DIR_EDGE", [3, 3, 6]),
     Command("LATCH", [3]),
-    Command("ATTACK", [3]),
-    Command("ENEMY_EC", [7, 7]),
+    Command("ENEMY_EC", [7, 7, 4]),
+    Command("EXPLODE", []),
     Command("ATTACK_LOC", [7, 7]),
     Command("DEFEND", [3]),
     Command("HIDE", [3]),
-    Command("WALL_GAP", [7, 7]),
     Command("FORM_WALL", [7, 7, 4, 1]),
     Command("EXPAND", [12, 6]),
     Command("NEUTRAL_EC", [7, 7, 4]),
