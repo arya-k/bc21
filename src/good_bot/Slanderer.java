@@ -2,8 +2,6 @@ package good_bot;
 
 import battlecode.common.*;
 
-import java.util.Arrays;
-
 public class Slanderer extends Robot {
 
     @Override

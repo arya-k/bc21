@@ -8,9 +8,10 @@ import static good_bot.Communication.decode;
 
 public class EnlightenmentCenter extends Robot {
 
-    static UnitBuildDPQueue pq = new UnitBuildDPQueue(3);
+    static UnitBuildDPQueue pq = new UnitBuildDPQueue(4);
     static IterableIdSet exploringIds = new IterableIdSet();
 
+    static final int ULTRA_LOW = 3;
     static final int LOW = 2;
     static final int MED = 1;
     static final int HIGH = 0;
@@ -27,13 +28,16 @@ public class EnlightenmentCenter extends Robot {
     static int[] neutralECInfluence = new int[6];
     static int neutralECFound = 0;
     static MapLocation[] enemyECLocs = new MapLocation[9];
+    static int[] enemyECInfluence = new int[9];
     static int enemyECFound = 0;
 
     static int slanderersBuilt = 0;
+    static int startRound = 0;
 
 
     @Override
     void onAwake() throws GameActionException {
+        startRound = rc.getRoundNum();
         for (int i = 0; i < 8; i++) {
             edgeOffsets[i] = 100; //default to an impossible value
             directionOpenness[i] = 200;
@@ -47,7 +51,7 @@ public class EnlightenmentCenter extends Robot {
 
         pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
 
-        for(int i=10; i>0; i--) {
+        for(int i=5; i>0; i--) {
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), MED);
         }
 
@@ -94,7 +98,7 @@ public class EnlightenmentCenter extends Robot {
         lowPriorityLogging();
 
         // queue the next unit to build
-        boolean empty = pq.isEmpty();
+        boolean empty = pq.isEmpty() || (pq.index == ULTRA_LOW && rc.getRoundNum() < 500);
         if (empty) {
             refillQueue();
         }
@@ -129,11 +133,16 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        for(int i=4; --i>=0;) {
-            pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), LOW);
+        if(rc.getRoundNum() - startRound < 1000) {
+            for (int i = 2; --i >= 0; ) {
+                pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), LOW);
+            }
         }
-        for(int i=0; i < enemyECFound; i++) {
-            createAttackHorde(RobotType.MUCKRAKER, 3, 1, enemyECLocs[i], LOW);
+        if(rc.getRoundNum() - startRound < 1500) {
+            for (int i = 0; i < enemyECFound; i++) {
+                createAttackHorde(RobotType.MUCKRAKER, 3, 1, enemyECLocs[i], LOW);
+                createAttackHorde(RobotType.POLITICIAN, 1, enemyECInfluence[i], enemyECLocs[i], MED);
+            }
         }
         int threshold = rc.getRoundNum() / 20;
         boolean muckrakerFound = false;
@@ -179,23 +188,28 @@ public class EnlightenmentCenter extends Robot {
             int flag = rc.getFlag(id);
             // got a message!
             if (flag != 0) {
-                boolean known = false;
+                int known = -1;
                 Message message = decode(flag);
                 switch (message.label) {
                     case ENEMY_EC:
                         MapLocation enemy_loc = getLocFromMessage(message.data[0], message.data[1]);
                         for(int i=enemyECFound; --i >=0;) {
                             if(enemyECLocs[i].equals(enemy_loc)) {
-                                known = true;
+                                known = i;
                                 break;
                             }
                         }
-                        if(!known) {
-                            enemyECLocs[enemyECFound++] = enemy_loc;
-                            createAttackHorde(RobotType.MUCKRAKER, 9, 25, enemy_loc, HIGH);
+                        if(known == -1) {
+                            enemyECLocs[enemyECFound] = enemy_loc;
+                            createAttackHorde(RobotType.MUCKRAKER, 9, 1, enemy_loc, HIGH);
                             Direction dangerDir = rc.getLocation().directionTo(enemy_loc);
                             int dangerOrd = dangerDir.ordinal();
                             dangerDirs[dangerOrd] = true;
+                            int influence = (int) Math.pow(2, message.data[2]);
+                            enemyECInfluence[enemyECFound++] = influence;
+                            int[] data = {enemy_loc.x % 128, enemy_loc.y % 128};
+                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.ATTACK_LOC, data)), HIGH);
+
                             // probably make this next line better
 //                            int eastWest = (dangerOrd / 2) % 2;
 //                            MapLocation wallCenter = rc.getLocation().translate(dangerDir.dx * 5, dangerDir.dy * 5);
@@ -205,6 +219,9 @@ public class EnlightenmentCenter extends Robot {
 //                                Message msg = new Message(Label.FORM_WALL, data);
 //                                pq.push(new UnitBuild(RobotType.MUCKRAKER, 15, msg), HIGH);
 //                            }
+                        } else {
+                            int influence = (int) Math.pow(2, message.data[2]);
+                            enemyECInfluence[known] = influence;
                         }
                         exploringIds.remove(id);
                         break;
@@ -218,18 +235,19 @@ public class EnlightenmentCenter extends Robot {
                         MapLocation neutral_ec_loc = getLocFromMessage(message.data[0], message.data[1]);
                         for(int i=neutralECFound; --i >=0;) {
                             if(neutralECLocs[i].equals(neutral_ec_loc)) {
-                                known = true;
+                                known = i;
                                 break;
                             }
                         }
-                        if(!known) {
+                        if(known == -1) {
                             neutralECLocs[neutralECFound] = neutral_ec_loc;
                             int influence = (int) Math.pow(2, message.data[2]);
                             neutralECInfluence[neutralECFound++] = influence;
-//                            int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
-//                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), LOW);
-//                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
+                            int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
+                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), ULTRA_LOW);
+                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
+                        exploringIds.remove(id);
                         break;
                 }
 

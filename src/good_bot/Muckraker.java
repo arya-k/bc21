@@ -163,9 +163,11 @@ public class Muckraker extends Robot {
             for (RobotInfo info : rc.senseNearbyRobots()) {
                 if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                     rc.setFlag(encode(dangerMessage(info)));
-                    MapLocation loc = info.getLocation();
+                    MapLocation loc = info.getLocation().add(randomDirection());
                     int[] data = {loc.x % 128, loc.y % 128};
                     assignment = new Communication.Message(Communication.Label.ATTACK_LOC, data);
+                    onAwake();
+                    break;
                 }
                 else if(info.getTeam() == Team.NEUTRAL) {
                     rc.setFlag(encode(neutralECMessage(info)));

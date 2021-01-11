@@ -46,6 +46,8 @@ public class Politician extends Robot {
             return;
         }
 
+        System.out.println("I AM CURRENTLY DOING " + assignment.label);
+
         switch (assignment.label) {
             case SCOUT:
                 scoutBehavior();
@@ -65,6 +67,9 @@ public class Politician extends Robot {
             case EXPLODE:
                 explodeBehavior();
                 break;
+            case ATTACK_LOC:
+                attackLocBehavior();
+                break;
             default:
                 attackBehavior();
                 break;
@@ -77,6 +82,8 @@ public class Politician extends Robot {
             int radius = getEfficientSpeech(0.1);
             if (radius != -1) {
                 rc.empower(radius);
+            } else {
+                rc.empower(9);
             }
         }
         Clock.yield();
@@ -116,8 +123,13 @@ public class Politician extends Robot {
 
     @Override
     void reassignDefault() {
-        assignment = null;
-        Nav.doExplore();
+        if(assignment != null && assignment.label == Communication.Label.SCOUT) {
+            int[] data = {};
+            assignment = new Communication.Message(Communication.Label.EXPLODE, data);
+        } else {
+            assignment = null;
+            Nav.doExplore();
+        }
     }
 
     double speechEfficiency(int range) {
@@ -138,6 +150,8 @@ public class Politician extends Robot {
             } else if (info.getTeam() == myTeam) {
                 double wasted = Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
                 wastedInfluence += wasted;
+            } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                if(perUnit >= info.getInfluence() / 4) return 1;
             }
         }
         double efficiency = 1 - (wastedInfluence / usefulInfluence);
@@ -223,6 +237,19 @@ public class Politician extends Robot {
             Nav.doGoInDir(commandDir);
         }
         // end turn
+        Clock.yield();
+    }
+
+    void attackLocBehavior() throws GameActionException {
+        if (rc.isReady()) {
+            Direction move = Nav.tick();
+            if (move != null && rc.canMove(move)) rc.move(move);
+            if (move == null) {
+                int radius = getEfficientSpeech(0.6);
+                if(radius != -1 && rc.canEmpower(radius))
+                    rc.empower(radius);
+            }
+        }
         Clock.yield();
     }
 

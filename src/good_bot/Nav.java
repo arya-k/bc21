@@ -20,7 +20,7 @@ import battlecode.common.Clock;
  */
 public class Nav {
     // Constants:
-    static final int FAILURE_TURNS = 100;
+    static final int FAILURE_TURNS = 10;
 
     // Variables:
     private static RobotController rc;
