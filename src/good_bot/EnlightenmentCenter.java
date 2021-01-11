@@ -8,13 +8,14 @@ import static good_bot.Communication.decode;
 
 public class EnlightenmentCenter extends Robot {
 
-    static UnitBuildDPQueue pq = new UnitBuildDPQueue(4);
+    static UnitBuildDPQueue pq = new UnitBuildDPQueue(5);
     static IterableIdSet exploringIds = new IterableIdSet();
 
-    static final int ULTRA_LOW = 3;
-    static final int LOW = 2;
-    static final int MED = 1;
-    static final int HIGH = 0;
+    static final int ULTRA_LOW = 4;
+    static final int LOW = 3;
+    static final int MED = 2;
+    static final int HIGH = 1;
+    static final int ULTRA_HIGH = 0;
 
     static UnitBuild nextUnit = null;
     static UnitBuild prevUnit = null;
@@ -106,7 +107,7 @@ public class EnlightenmentCenter extends Robot {
             nextUnit = pq.pop();
         }
 
-        if (nextUnit != null && ((nextUnit.priority == HIGH && nextUnit.influence <= rc.getInfluence()) ||
+        if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= rc.getInfluence()) ||
                 nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
             // build a unit
             Direction buildDir = null;
@@ -144,7 +145,7 @@ public class EnlightenmentCenter extends Robot {
                 createAttackHorde(RobotType.POLITICIAN, 1, enemyECInfluence[i], enemyECLocs[i], MED);
             }
         }
-        int threshold = rc.getRoundNum() / 20;
+        int threshold = rc.getRoundNum() / 30;
         boolean muckrakerFound = false;
         Team myTeam = rc.getTeam();
         for(RobotInfo bot: rc.senseNearbyRobots()) {
@@ -172,7 +173,7 @@ public class EnlightenmentCenter extends Robot {
         haltBidding = enemies >= 4;
         if ((enemyConviction > 200 || enemies >= 4) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
             int conv = 10 + enemyConviction * 2;
-            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), HIGH);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), ULTRA_HIGH);
             System.out.println("EXPLODER QUEUED!!!!");
             exploderQueuedRound = rc.getRoundNum();
         }
@@ -387,7 +388,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     int maxBid() {
-        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 8), 0);
+        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 5), 0);
     }
 
     static int prevTeamVotes = 0;
@@ -396,25 +397,31 @@ public class EnlightenmentCenter extends Robot {
     static int bidlessBreak = 0;
 
     void makeBid() throws GameActionException {
+        if (rc.getRoundNum() == 2999)
+            rc.bid(rc.getInfluence());
         if (bidlessBreak > 0) {
             bidlessBreak--;
             return;
         }
-        if (haltBidding) return;
+        if (haltBidding) {
+            return;
+        }
+
         int bid = prevBid;
         if (rc.getRoundNum() != 0 && rc.getTeamVotes() == prevTeamVotes) {
             // we lost the last vote!
             lostRounds++;
-            if (lostRounds % 10 == 0) {
+            if (lostRounds % 3 == 0 && rc.getRoundNum() < 1500) {
                 // take a break :(
                 bidlessBreak = 50;
                 return;
             }
-            if (rc.getRoundNum() < 2500 && (rc.getInfluence() < 3*influenceMinimum())) {
-                bid += (int) (Math.random() * 4) + 1;
-            } else {
-                // lol
+            if (rc.getRoundNum() > 2500 &&
+                    (rc.getInfluence() > 3*influenceMinimum()) &&
+                    (1.0 * rc.getTeamVotes() / rc.getRoundNum() < 0.2 && rc.getRoundNum() > 700)) {
                 bid = (bid * 3) / 2;
+            } else {
+                bid += (int) (Math.random() * 4) + 1;
             }
         } else {
             lostRounds = 0;
@@ -422,7 +429,9 @@ public class EnlightenmentCenter extends Robot {
         bid = Math.min(bid, maxBid());
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
-        if (bid != 0)
+        if (bid != 0) {
             rc.bid(bid);
+        }
+
     }
 }

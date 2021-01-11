@@ -100,7 +100,6 @@ public class EnlightenmentCenter extends Robot {
         if (nextUnit != null && ((nextUnit.priority == HIGH && nextUnit.influence <= rc.getInfluence()) ||
                 nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
             // build a unit
-            System.out.println("Trying to build a " + nextUnit.type);
             Direction buildDir = null;
             for (Direction dir : spawnDirs) {
                 if (rc.canBuildRobot(nextUnit.type, dir, nextUnit.influence)) {
