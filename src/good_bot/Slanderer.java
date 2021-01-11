@@ -52,7 +52,6 @@ public class Slanderer extends Robot {
         for(int i=0; i < numMuckrakers; i++) {
             realDirs[i] = dangerDirs[i];
         }
-        System.out.println(Arrays.toString(realDirs));
         Direction move = Nav.tick(realDirs);
         if (move != null && rc.canMove(move)) rc.move(move);
         //TODO run from enemies

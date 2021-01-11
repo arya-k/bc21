@@ -133,11 +133,7 @@ public class Politician extends Robot {
                 wastedInfluence += wasted;
             }
         }
-        double multiplier = 1;
-        if (assignment.label == DEFEND) {
-            multiplier = 0.5;
-        }
-        double efficiency = 1 - (wastedInfluence / usefulInfluence)*multiplier;
+        double efficiency = 1 - (wastedInfluence / usefulInfluence);
         return efficiency;
     }
 
@@ -171,7 +167,6 @@ public class Politician extends Robot {
     }
 
     void defendLocBehavior() throws GameActionException {
-        System.out.println("DEFENDING " + assignment.data[0] + " " + assignment.data[1]);
         if (!rc.isReady()) {
             Clock.yield();
             return;

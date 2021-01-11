@@ -105,7 +105,6 @@ public class EnlightenmentCenter extends Robot {
         if (nextUnit != null && ((nextUnit.priority == HIGH && nextUnit.influence <= rc.getInfluence()) ||
                 nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
             // build a unit
-            System.out.println("Trying to build a " + nextUnit.type);
             Direction buildDir = null;
             for (Direction dir : spawnDirs) {
                 if (rc.canBuildRobot(nextUnit.type, dir, nextUnit.influence)) {
@@ -124,7 +123,7 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
-        // makeBid();
+        makeBid();
         Clock.yield();
 
     }
@@ -136,7 +135,7 @@ public class EnlightenmentCenter extends Robot {
         for(int i=0; i < enemyECFound; i++) {
             createAttackHorde(RobotType.MUCKRAKER, 3, 1, enemyECLocs[i], LOW);
         }
-        int threshold = rc.getRoundNum() / 10;
+        int threshold = rc.getRoundNum() / 20;
         boolean muckrakerFound = false;
         Team myTeam = rc.getTeam();
         for(RobotInfo bot: rc.senseNearbyRobots()) {
@@ -147,7 +146,7 @@ public class EnlightenmentCenter extends Robot {
         }
         if(!muckrakerFound) {
             for (int i = slanderersBuilt; i < threshold; i++) {
-                pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
+                pq.push(new UnitBuild(RobotType.SLANDERER, 150, hideMessage()), MED);
             }
         }
     }
@@ -156,13 +155,14 @@ public class EnlightenmentCenter extends Robot {
     void immediateDefense() {
         int enemyConviction = 0;
         int enemies = 0;
-        for (RobotInfo info : rc.senseNearbyRobots(9, rc.getTeam().opponent())) {
+        for (RobotInfo info : rc.senseNearbyRobots(12, rc.getTeam().opponent())) {
             enemyConviction += info.getConviction();
             enemies++;
         }
-        if ((enemyConviction > 200 || enemies >= 6) && (rc.getRoundNum() - exploderQueuedRound < 50)) {
-            int conv = Math.min(rc.getInfluence(), 10 + enemyConviction * 2);
+        if ((enemyConviction > 200 || enemies >= 5) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
+            int conv = 10 + enemyConviction * 2;
             pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), HIGH);
+            System.out.println("EXPLODER QUEUED!!!!");
             exploderQueuedRound = rc.getRoundNum();
         }
     }
@@ -363,11 +363,11 @@ public class EnlightenmentCenter extends Robot {
     }
 
     int influenceMinimum() {
-        return 20;
+        return 20 + (int) (rc.getRoundNum() * 0.25);
     }
 
     int maxBid() {
-        return Math.max(Math.min(rc.getInfluence() - influenceMinimum(), rc.getInfluence() / 5), 0);
+        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 8), 0);
     }
 
     static int prevTeamVotes = 0;
@@ -386,7 +386,7 @@ public class EnlightenmentCenter extends Robot {
             lostRounds++;
             if (lostRounds % 10 == 0) {
                 // take a break :(
-                bidlessBreak = 40;
+                bidlessBreak = 50;
                 return;
             }
             if (rc.getRoundNum() < 2500) {
