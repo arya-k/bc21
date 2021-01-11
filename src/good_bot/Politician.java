@@ -36,7 +36,6 @@ public class Politician extends Robot {
                 commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
                 Nav.doGoTo(commandLoc);
                 break;
-
         }
     }
 
@@ -63,11 +62,24 @@ public class Politician extends Robot {
             case CAPTURE_NEUTRAL_EC:
                 captureNeutralECBehavior();
                 break;
+            case EXPLODE:
+                explodeBehavior();
+                break;
             default:
                 attackBehavior();
                 break;
         }
 
+    }
+
+    void explodeBehavior() throws GameActionException {
+        if (rc.isReady()) {
+            int radius = getEfficientSpeech(0.1);
+            if (radius != -1) {
+                rc.empower(radius);
+            }
+        }
+        Clock.yield();
     }
 
     void scoutBehavior() throws GameActionException {

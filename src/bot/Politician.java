@@ -38,7 +38,6 @@ public class Politician extends Robot {
                 commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
                 Nav.doGoTo(commandLoc);
                 break;
-
         }
     }
 

@@ -89,6 +89,7 @@ public class EnlightenmentCenter extends Robot {
         }
 
         processFlags();
+        immediateDefense();
 
         lowPriorityLogging();
 
@@ -148,6 +149,21 @@ public class EnlightenmentCenter extends Robot {
             for (int i = slanderersBuilt; i < threshold; i++) {
                 pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
             }
+        }
+    }
+
+    static int exploderQueuedRound = 0;
+    void immediateDefense() {
+        int enemyConviction = 0;
+        int enemies = 0;
+        for (RobotInfo info : rc.senseNearbyRobots(9, rc.getTeam().opponent())) {
+            enemyConviction += info.getConviction();
+            enemies++;
+        }
+        if ((enemyConviction > 200 || enemies >= 6) && (rc.getRoundNum() - exploderQueuedRound < 50)) {
+            int conv = Math.min(rc.getInfluence(), 10 + enemyConviction * 2);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), HIGH);
+            exploderQueuedRound = rc.getRoundNum();
         }
     }
 
@@ -244,6 +260,11 @@ public class EnlightenmentCenter extends Robot {
     Message exploreMessage() {
         int[] data = {};
         return new Message(Label.EXPLORE, data);
+    }
+
+    Message explodeMessage() {
+        int[] data = {};
+        return new Message(Label.EXPLODE, data);
     }
 
     /**
@@ -351,16 +372,31 @@ public class EnlightenmentCenter extends Robot {
 
     static int prevTeamVotes = 0;
     static int prevBid = 2;
+    static int lostRounds = 0;
+    static int bidlessBreak = 0;
 
     void makeBid() throws GameActionException {
+        if (bidlessBreak > 0) {
+            bidlessBreak--;
+            return;
+        }
         int bid = prevBid;
         if (rc.getRoundNum() != 0 && rc.getTeamVotes() == prevTeamVotes) {
             // we lost the last vote!
-            if (rc.getRoundNum() < 1500) {
-                bid += 3;
+            lostRounds++;
+            if (lostRounds % 10 == 0) {
+                // take a break :(
+                bidlessBreak = 40;
+                return;
+            }
+            if (rc.getRoundNum() < 2500) {
+                bid += (int) (Math.random() * 4) + 1;
             } else {
+                // lol
                 bid = (bid * 3) / 2;
             }
+        } else {
+            lostRounds = 0;
         }
         bid = Math.min(bid, maxBid());
         prevBid = bid;
