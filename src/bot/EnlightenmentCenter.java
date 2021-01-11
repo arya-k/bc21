@@ -41,7 +41,7 @@ public class EnlightenmentCenter extends Robot {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 1, scoutMessage(dir)), HIGH);
         }
 
-        for(int i=3; i>0; i--) {
+        for(int i=10; i>0; i--) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 40, defendECMessage()), MED);
         }
         pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), LOW);
@@ -118,12 +118,14 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void refillQueue() throws GameActionException {
-        pq.push(new UnitBuild(RobotType.SLANDERER, 300, hideMessage()), HIGH);
-        for (int i = enemyECFound; --i >=0; ) {
-            createAttackHorde(RobotType.POLITICIAN, 6, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
-            createAttackHorde(RobotType.MUCKRAKER, 6, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+        for(int i=5; --i>=0;) {
+            pq.push(new UnitBuild(RobotType.SLANDERER, 50, hideMessage()), HIGH);
         }
-        for (int i = 10; --i > 0; ) {
+        for (int i = enemyECFound; --i >=0; ) {
+            createAttackHorde(RobotType.POLITICIAN, 5, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+            createAttackHorde(RobotType.MUCKRAKER, 5, Math.min(75, rc.getInfluence() / 15), enemyECLocs[i]);
+        }
+        for (int i = 5; --i > 0; ) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, Math.min(75, rc.getInfluence() / 15), defendECMessage()), MED);
         }
 
@@ -186,7 +188,7 @@ public class EnlightenmentCenter extends Robot {
                             neutralECLocs[neutralECFound++] = neutral_ec_loc;
                             int influence = (int) Math.pow(2, message.data[2]);
                             int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
-                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), MED);
+                            pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), LOW);
                             System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
                         break;

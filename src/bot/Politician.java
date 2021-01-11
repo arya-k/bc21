@@ -24,7 +24,7 @@ public class Politician extends Robot {
             case DEFEND:
                 commandDir = fromOrdinal(assignment.data[0]);
                 System.out.print("DEFENDING to the " + commandDir);
-                reassignDefault(); // default is defense!
+//                reassignDefault(); // default is defense!
                 break;
             case FORM_WALL:
                 wallAwake();
@@ -96,6 +96,7 @@ public class Politician extends Robot {
                 }
                 if(!found_neutral_nbor) {
                     reassignDefault();
+                    return;
                 }
             }
         }
@@ -104,16 +105,9 @@ public class Politician extends Robot {
 
     @Override
     void reassignDefault() {
-        System.out.println("REASSIGNED TO DEFENSE!");
-        if (commandDir == null) {
-            commandDir = randomDirection();
-        }
-        if (assignment == null) {
-            int[] data = {};
-            assignment = new Communication.Message(DEFEND, data);
-        }
-        assignment.label = DEFEND;
-        Nav.doGoInDir(commandDir);
+        System.out.println("REASSIGNED TO EXPLORE!");
+        assignment = null;
+        Nav.doExplore();
     }
 
     double speechEfficiency(int range) {
@@ -151,7 +145,7 @@ public class Politician extends Robot {
         int bestRad = -1;
         double bestEff = threshold;
         // TODO: check from radius 1
-        for (int i = 2; i <= 9; i++) {
+        for (int i = 1; i <= 9; i++) {
             double efficiency = speechEfficiency(i);
             if (efficiency > bestEff) {
                 bestEff = efficiency;
@@ -232,9 +226,9 @@ public class Politician extends Robot {
                 // otherwise move
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
-//                if (move == null) {
-//                    reassignDefault(); //TODO improve this
-//                }
+                if (move == null) {
+                    reassignDefault(); //TODO improve this
+                }
             }
         }
 
