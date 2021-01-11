@@ -146,8 +146,24 @@ public class Nav {
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos, dangerDirs);
 
             case Explore:
-                if (goalPos == null || NavHistory.visited(goalPos))// pick a new location to visit if necessary
+                if (goalPos != null) {
+                    int currDistToGoal = rc.getLocation().distanceSquaredTo(goalPos);
+                    if (currDistToGoal < minDistToGoal) {
+                        turnsSinceImprovement = 0;
+                        minDistToGoal = currDistToGoal;
+                    } else {
+                        turnsSinceImprovement++;
+                    }
+
+                    if (turnsSinceImprovement >= 5)
+                        NavHistory.mark_visited(goalPos);
+                }
+
+                if (goalPos == null || NavHistory.visited(goalPos)) {// pick a new location to visit if necessary
                     goalPos = NavHistory.nearestUnexploredLocation();
+                    turnsSinceImprovement = 0;
+                    minDistToGoal = Integer.MAX_VALUE;
+                }
 
                 if (goalPos == null) // there are no more unexplored locations to visit :(
                     currentGoal = NavGoal.Nothing;
