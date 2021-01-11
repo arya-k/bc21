@@ -1,11 +1,9 @@
 package bot;
 
 import battlecode.common.*;
-
 import static bot.Communication.Label.DEFEND;
 
 public class Politician extends Robot {
-
     static int waiting_rounds = 0;
     @Override
     void onAwake() throws GameActionException {
@@ -25,6 +23,9 @@ public class Politician extends Robot {
                 commandDir = fromOrdinal(assignment.data[0]);
                 System.out.print("DEFENDING to the " + commandDir);
 //                reassignDefault(); // default is defense!
+                break;
+            case DEFEND_LOC:
+                defendLocAwake();
                 break;
             case FORM_WALL:
                 wallAwake();
@@ -54,6 +55,9 @@ public class Politician extends Robot {
                 break;
             case DEFEND:
                 defendBehavior();
+                break;
+            case DEFEND_LOC:
+                defendLocBehavior();
                 break;
             case FORM_WALL:
                 wallBehavior();
@@ -117,7 +121,7 @@ public class Politician extends Robot {
         int numNearby = nearbyRobots.length;
         if (numNearby == 0) return 0;
         double usefulInfluence = rc.getInfluence() - 10;
-        if (usefulInfluence < 0) return 0;
+        if (usefulInfluence <= 0) return 0;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;
         for (int i = 0; i < numNearby; i++) {
@@ -130,7 +134,11 @@ public class Politician extends Robot {
                 wastedInfluence += wasted;
             }
         }
-        double efficiency = 1 - (wastedInfluence / usefulInfluence);
+        double multiplier = 1;
+        if (assignment.label == DEFEND) {
+            multiplier = 0.5;
+        }
+        double efficiency = 1 - (wastedInfluence / usefulInfluence)*multiplier;
         return efficiency;
     }
 
@@ -155,6 +163,33 @@ public class Politician extends Robot {
         return bestRad;
     }
 
+    void defendLocAwake() {
+        int[] data = assignment.data;
+        int x = data[0];
+        int y = data[1];
+        MapLocation location = getLocFromMessage(x,y);
+        Nav.doGoTo(location);
+    }
+
+    void defendLocBehavior() throws GameActionException {
+        System.out.println("DEFENDING " + assignment.data[0] + " " + assignment.data[1]);
+        if (!rc.isReady()) {
+            Clock.yield();
+            return;
+        }
+        // get all enemy nearby robots
+        int radius = getEfficientSpeech(0.7);
+        if (radius != -1) {
+            System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
+            rc.empower(radius);
+            Clock.yield();
+            return;
+        }
+        Direction move = Nav.tick();
+        if (move != null && rc.canMove(move)) rc.move(move);
+        Clock.yield();
+    }
+
     static boolean stayGrounded = false;
     static int reorientingMoves = -1;
 
@@ -165,13 +200,14 @@ public class Politician extends Robot {
         }
 
         // get all enemy nearby robots
-        int radius = getEfficientSpeech(0.8);
+        int radius = getEfficientSpeech(0.7);
         if (radius != -1) {
             System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
             rc.empower(radius);
             Clock.yield();
             return;
-        } else if (stayGrounded) {
+        }
+        else if (stayGrounded) {
             // TODO some micro here? idk
             Clock.yield();
             return;
