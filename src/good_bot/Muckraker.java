@@ -160,18 +160,33 @@ public class Muckraker extends Robot {
             }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
-            for (RobotInfo info : rc.senseNearbyRobots()) {
-                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    rc.setFlag(encode(dangerMessage(info)));
-                    MapLocation loc = info.getLocation().add(randomDirection());
-                    int[] data = {loc.x % 128, loc.y % 128};
-                    assignment = new Communication.Message(Communication.Label.ATTACK_LOC, data);
-                    onAwake();
-                    break;
+            else if(move == null && assignment != null && assignment.label != Communication.Label.ATTACK_LOC) {
+                for (RobotInfo info : rc.senseNearbyRobots()) {
+                    if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                        MapLocation enemy_loc = info.getLocation();
+                        rc.setFlag(encode(dangerMessage(info)));
+                        MapLocation loc = enemy_loc.add(randomDirection());
+                        int[] data = {loc.x % 128, loc.y % 128};
+                        assignment = new Communication.Message(Communication.Label.ATTACK_LOC, data);
+                        onAwake();
+                        break;
+                    } else if (info.getTeam() == Team.NEUTRAL) {
+                        rc.setFlag(encode(neutralECMessage(info)));
+                    }
                 }
-                else if(info.getTeam() == Team.NEUTRAL) {
-                    rc.setFlag(encode(neutralECMessage(info)));
+            } else if(move == null && assignment != null && assignment.label == Communication.Label.ATTACK_LOC) {
+                if(rc.getLocation().distanceSquaredTo(commandLoc) > 12) {
+                    int[] data = {};
+                    rc.setFlag(encode(new Communication.Message(Communication.Label.STOP_PRODUCING_MUCKRAKERS, data)));
+                    assignment = null;
+                    Nav.doGoTo(centerLoc);
+                    onUpdate();
+                    return;
                 }
+            } else if(move == null) {
+                Nav.doGoInDir(randomDirection());
+                onUpdate();
+                return;
             }
         }
         Clock.yield();

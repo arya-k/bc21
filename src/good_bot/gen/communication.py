@@ -23,6 +23,7 @@ commands = [
     Command("EXPAND", [12, 6]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
+    Command("STOP_PRODUCING_MUCKRAKERS", []),
 ]
 
 #########################################

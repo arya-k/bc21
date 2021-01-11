@@ -1,7 +1,7 @@
 package good_bot;
 public class Communication {
     public enum Label {
-        FORM_WALL, ENEMY_EC, EXPAND, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, LATCH, DEFEND, HIDE, EXPLORE, EXPLODE
+        FORM_WALL, ENEMY_EC, EXPAND, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, LATCH, DEFEND, HIDE, EXPLORE, EXPLODE, STOP_PRODUCING_MUCKRAKERS
     }
     public static class Message {
         Label label;
@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 6929415;
+        flag ^= 3946019;
         flag--;
         int[] data = new int[4];
         Label label;
@@ -89,6 +89,8 @@ public class Communication {
             label = Label.EXPLORE;
         } else if (flag % 16777216 == 6) {
             label = Label.EXPLODE;
+        } else if (flag % 16777216 == 22) {
+            label = Label.STOP_PRODUCING_MUCKRAKERS;
         } else {
             throw new RuntimeException("Attempting to decode an invalid flag");
         }
@@ -97,31 +99,33 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case FORM_WALL:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 262144) * 32 + 0);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 262144) * 32 + 0);
             case ENEMY_EC:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
             case EXPAND:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 4096) * 64 + 8);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 4096) * 64 + 8);
             case NEUTRAL_EC:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 24);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 24);
             case ATTACK_LOC:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 4);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 4);
             case CAPTURE_NEUTRAL_EC:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 20);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 20);
             case SAFE_DIR_EDGE:
-                return 6929415 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 12);
+                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 12);
             case SCOUT:
-                return 6929415 ^ (1 + (message.data[0] * 1) * 2097152 + 28);
+                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 28);
             case LATCH:
-                return 6929415 ^ (1 + (message.data[0] * 1) * 2097152 + 2);
+                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 2);
             case DEFEND:
-                return 6929415 ^ (1 + (message.data[0] * 1) * 2097152 + 18);
+                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 18);
             case HIDE:
-                return 6929415 ^ (1 + (message.data[0] * 1) * 2097152 + 10);
+                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 10);
             case EXPLORE:
-                return 6929415 ^ (1 + (0) * 16777216 + 26);
+                return 3946019 ^ (1 + (0) * 16777216 + 26);
             case EXPLODE:
-                return 6929415 ^ (1 + (0) * 16777216 + 6);
+                return 3946019 ^ (1 + (0) * 16777216 + 6);
+            case STOP_PRODUCING_MUCKRAKERS:
+                return 3946019 ^ (1 + (0) * 16777216 + 22);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

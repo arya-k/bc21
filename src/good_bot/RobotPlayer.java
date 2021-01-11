@@ -19,8 +19,8 @@ public strictfp class RobotPlayer {
             robot.onAwake();
             robot.onUpdate();
         } catch (Exception e) {
-            System.out.println("Exception in " + rc.getType());
-            e.printStackTrace();
+//            System.out.println("Exception in " + rc.getType());
+//            e.printStackTrace();
         }
 
         while (true) {
@@ -38,8 +38,8 @@ public strictfp class RobotPlayer {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Exception in " + rc.getType());
-                e.printStackTrace();
+//                System.out.println("Exception in " + rc.getType());
+//                e.printStackTrace();
             }
         }
     }
