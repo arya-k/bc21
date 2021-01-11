@@ -50,6 +50,19 @@ public class NavHistory {
     }
 
     /**
+     * Forces a location to be marked as visited. Used for when the pathing
+     * is unable to get to a certain location...
+     */
+    public static void mark_visited(MapLocation m) {
+        int x = ((m.x - Robot.initLoc.x) / 4) + 15; // [-15,15] -> [0,32)
+        int y = ((m.y - Robot.initLoc.y) / 4) + 15;
+
+        String key = "^" + (char) x + (char) y;
+        if (keys.indexOf(key) == -1)
+            keys.append(key);
+    }
+
+    /**
      * Inits the random var and the sight range.
      */
     public static void init() {
