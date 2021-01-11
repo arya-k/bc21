@@ -15,6 +15,7 @@ public class UnitBuildDPQueue {
     }
 
     public void push(UnitBuild item, int level) {
+        item.priority = level;
         queues[level].push(item);
         if (level < index)
             index = level;

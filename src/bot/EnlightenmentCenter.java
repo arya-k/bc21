@@ -94,7 +94,8 @@ public class EnlightenmentCenter extends Robot {
             nextUnit = pq.pop();
         }
 
-        if (nextUnit != null && nextUnit.influence <= rc.getInfluence() && rc.isReady()) {
+        if (nextUnit != null && ((nextUnit.priority == HIGH && nextUnit.influence <= rc.getInfluence()) ||
+                nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
             // build a unit
             System.out.println("Trying to build a " + nextUnit.type);
             Direction buildDir = null;
@@ -113,6 +114,7 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
+        makeBid();
         Clock.yield();
 
     }
@@ -318,5 +320,33 @@ public class EnlightenmentCenter extends Robot {
         for (int i = 0; i < 8; i++) {
             System.out.println(spawnDirs[i]);
         }
+    }
+
+    int influenceMinimum() {
+        return 20;
+    }
+
+    int maxBid() {
+        return Math.max(Math.min(rc.getInfluence() - influenceMinimum(), rc.getInfluence() / 5), 0);
+    }
+
+    static int prevTeamVotes = 0;
+    static int prevBid = 2;
+
+    void makeBid() throws GameActionException {
+        int bid = prevBid;
+        if (rc.getRoundNum() != 0 && rc.getTeamVotes() == prevTeamVotes) {
+            // we lost the last vote!
+            if (rc.getRoundNum() < 1500) {
+                bid += 3;
+            } else {
+                bid = (bid * 3) / 2;
+            }
+        }
+        bid = Math.min(bid, maxBid());
+        prevBid = bid;
+        prevTeamVotes = rc.getTeamVotes();
+        if (bid != 0)
+            rc.bid(bid);
     }
 }
