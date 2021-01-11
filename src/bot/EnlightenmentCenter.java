@@ -300,8 +300,14 @@ public class EnlightenmentCenter extends Robot {
             int besti = i;
             for (int j = i + 1; j < 8; j++) {
                 Direction jd = spawnDirs[j];
-                if (rc.sensePassability(rc.getLocation().add(jd)) >
-                        rc.sensePassability(rc.getLocation().add(best))) {
+                double jPass = 0;
+                if (rc.onTheMap(rc.getLocation().add(jd)))
+                    jPass = rc.sensePassability(rc.getLocation().add(jd));
+                double bPass = 0;
+                if (rc.onTheMap(rc.getLocation().add(best)))
+                    bPass = rc.sensePassability(rc.getLocation().add(best));
+
+                if (jPass > bPass) {
                     best = jd;
                     besti = j;
                 }
