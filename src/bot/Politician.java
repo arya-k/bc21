@@ -95,7 +95,10 @@ public class Politician extends Robot {
                     }
                 }
                 if(!found_neutral_nbor) {
-                    reassignDefault();
+                    int[] data = {};
+                    assignment = new Communication.Message(Communication.Label.SCOUT, data);
+                    onUpdate();
+                    return;
                 }
             }
         }
