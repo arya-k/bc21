@@ -363,7 +363,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     int influenceMinimum() {
-        return 20 + (int) (rc.getRoundNum() * 0.25);
+        return 20 + (int) (rc.getRoundNum() * 0.1);
     }
 
     int maxBid() {
@@ -389,7 +389,7 @@ public class EnlightenmentCenter extends Robot {
                 bidlessBreak = 50;
                 return;
             }
-            if (rc.getRoundNum() < 2500) {
+            if (rc.getRoundNum() < 2500 && (rc.getInfluence() < 3*influenceMinimum())) {
                 bid += (int) (Math.random() * 4) + 1;
             } else {
                 // lol

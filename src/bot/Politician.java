@@ -108,7 +108,6 @@ public class Politician extends Robot {
 
     @Override
     void reassignDefault() {
-        System.out.println("REASSIGNED TO EXPLORE!");
         assignment = null;
         Nav.doExplore();
     }
