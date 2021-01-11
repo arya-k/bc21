@@ -64,19 +64,19 @@ public class EnlightenmentCenter extends Robot {
             return;
         }
 
-        System.out.println("Influence: " + rc.getInfluence());
-        System.out.println("Producing Muckrakers: " + keepProducingMuckrakers);
+        // System.out.println("Influence: " + rc.getInfluence());
+        // System.out.println("Producing Muckrakers: " + keepProducingMuckrakers);
         for (int i = 0; i < 8; i++) {
             if (!dangerDirs[i]) continue;
-            System.out.println("DANGEROUS: " + fromOrdinal(i));
+            // System.out.println("DANGEROUS: " + fromOrdinal(i));
         }
         for (Direction dir : Direction.cardinalDirections()) {
             int ord = dir.ordinal();
             if (edgeOffsets[ord] == 100) continue;
-            System.out.println(dir + " offset " + edgeOffsets[ord]);
+            // System.out.println(dir + " offset " + edgeOffsets[ord]);
         }
         for (Direction dir : directions) {
-            System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
+            // System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
         }
     }
 
@@ -183,7 +183,7 @@ public class EnlightenmentCenter extends Robot {
         if ((enemyConviction > 200 || enemies >= 4) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
             int conv = 10 + enemyConviction * 2;
             pq.push(new UnitBuild(RobotType.POLITICIAN, conv, explodeMessage()), ULTRA_HIGH);
-            System.out.println("EXPLODER QUEUED!!!!");
+            // System.out.println("EXPLODER QUEUED!!!!");
             exploderQueuedRound = rc.getRoundNum();
         }
     }
@@ -193,7 +193,7 @@ public class EnlightenmentCenter extends Robot {
             for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam())) {
                 int flag = rc.getFlag(bot.getID());
                 if (flag != 0 && decode(flag).label == Label.STOP_PRODUCING_MUCKRAKERS) {
-                    System.out.println("STOPPING PRODUCING MUCKRAKERS!");
+                    // System.out.println("STOPPING PRODUCING MUCKRAKERS!");
                     keepProducingMuckrakers = false;
                     break;
                 }
@@ -265,7 +265,7 @@ public class EnlightenmentCenter extends Robot {
                             neutralECInfluence[neutralECFound++] = influence;
                             int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
                             pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), ULTRA_LOW);
-                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
+                            // System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
                         exploringIds.remove(id);
                         break;
@@ -402,7 +402,7 @@ public class EnlightenmentCenter extends Robot {
             spawnDirs[i] = best;
         }
         for (int i = 0; i < 8; i++) {
-            System.out.println(spawnDirs[i]);
+            // System.out.println(spawnDirs[i]);
         }
     }
 

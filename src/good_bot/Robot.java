@@ -53,7 +53,7 @@ abstract class Robot {
                 }
             }
             if (Robot.assignment == null)
-                System.out.println("Didnt find assignment!");
+                // System.out.println("Didnt find assignment!");
         }
 
     }
@@ -145,11 +145,11 @@ abstract class Robot {
     }
 
     void expandBehavior() throws GameActionException{
-        System.out.println("Expanding!");
+        // System.out.println("Expanding!");
         commandDir = spreadDirection(assignment.data[1]);
         // done expanding
         if (commandDir == null || rc.getRoundNum() >= rounds) {
-            System.out.println("Expanding done, return to " + prevAssignment.label);
+            // System.out.println("Expanding done, return to " + prevAssignment.label);
             assignment = prevAssignment;
             rc.setFlag(prevFlag);
             onAwake();
@@ -185,7 +185,7 @@ abstract class Robot {
     }
 
     void startExpansion(int rounds, int space) throws GameActionException {
-        System.out.println("Root Expansion Until Round " + rounds);
+        // System.out.println("Root Expansion Until Round " + rounds);
         int[] data = {Math.min(rounds+rc.getRoundNum(), 2999), space};
         Message m = new Message(Label.EXPAND, data);
         int flag = encode(m);
@@ -211,7 +211,7 @@ abstract class Robot {
 
     static MapLocation getWallGoalFrom(int[] messageData) {
         MapLocation wallCenter = getLocFromMessage(messageData[0], messageData[1]);
-        System.out.println("center wall @ " + wallCenter);
+        // System.out.println("center wall @ " + wallCenter);
         int wallIx = messageData[2];
         Direction wallDir = messageData[3] == 0 ? Direction.EAST : Direction.NORTH;
         int numIter = (wallIx + 1) / 2;
@@ -286,6 +286,6 @@ abstract class Robot {
     static void logBytecodeUse(int startRound, int startBC) {
         int limit = rc.getType().bytecodeLimit;
         int byteCount = (limit - startBC) + (rc.getRoundNum() - startRound - 1) * limit + Clock.getBytecodeNum();
-        System.out.println("@@@Bytecodes used: " + byteCount);
+        // System.out.println("@@@Bytecodes used: " + byteCount);
     }
 }

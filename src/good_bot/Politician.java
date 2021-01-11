@@ -22,7 +22,7 @@ public class Politician extends Robot {
                 break;
             case DEFEND:
                 commandDir = fromOrdinal(assignment.data[0]);
-                System.out.print("DEFENDING to the " + commandDir);
+                // System.out.print("DEFENDING to the " + commandDir);
 //                reassignDefault(); // default is defense!
                 break;
             case FORM_WALL:
@@ -194,7 +194,7 @@ public class Politician extends Robot {
         // get all enemy nearby robots
         int radius = getEfficientSpeech(0.8);
         if (radius != -1) {
-            System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
+            // System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
             rc.empower(radius);
             Clock.yield();
             return;
@@ -260,7 +260,7 @@ public class Politician extends Robot {
         if (rc.isReady()) {
             int radius = getEfficientSpeech(0.8);
             if (radius != -1) {
-                System.out.println("GIVING OFFENSIVE SPEECH!");
+                // System.out.println("GIVING OFFENSIVE SPEECH!");
                 rc.empower(radius);
             } else {
                 // otherwise move
