@@ -54,7 +54,7 @@ for i, (y, x) in enumerate(grid_locations()):
     is_center = (dx == 0) and (dy == 0)
     init = "" if i else "MapLocation "
 
-    if is_center: # special case: the center
+    if is_center:  # special case: the center
         code += f"""
             {init}tile = rc_.getLocation();
             double cost_{y}_{x} = tile.distanceSquaredTo(target);
