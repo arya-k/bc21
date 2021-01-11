@@ -26,24 +26,29 @@ chunk_string = (
 )
 
 code = f"""
-    private static final int[][][] CHUNKS = {chunk_string};
-
     public static MapLocation nearestUnexploredLocation() {{
         int RAND = (int) (Math.random() * 1024);
 
         MapLocation m = Robot.rc.getLocation();
         int cx = ((m.x - Robot.initLoc.x) / 4) + 15;
-        int cy = ((m.y - Robot.initLoc.y) / 4) + 15;"""
+        int cy = ((m.y - Robot.initLoc.y) / 4) + 15;
+"""
 
 for i, dist in enumerate(sorted(by_dist.keys())):
     chunks = by_dist[dist]
-    code += f"""
-        for (int i = 0; i < {len(chunks)}; i++) {{ // r^2 = {dist}
-            int x = CHUNKS[{i}][(i+RAND) % {len(chunks)}][0];
-            int y = CHUNKS[{i}][(i+RAND) % {len(chunks)}][1];
-            if (!visited(cx+x,cy+y)) return m.translate(4*x, 4*y);
-        }}"""
+    code += f"\n        // r^2 = {dist}\n"
+    for j in range(len(chunks)):
+        x_str = f"CHUNKS[{i}][({str(j) + '+' if j else ''}RAND) % {len(chunks)}][0]"
+        y_str = f"CHUNKS[{i}][({str(j) + '+' if j else ''}RAND) % {len(chunks)}][1]"
+        code += f"""        if (!visited(cx+{x_str},cy+{y_str}))
+            return m.translate(4*{x_str}, 4*{y_str});
+"""
 
 
-code += "\n        return null;\n    }"
+code += f"""
+        return null;
+}}
+
+    private static final int[][][] CHUNKS = {chunk_string};"""
+
 print(code)
