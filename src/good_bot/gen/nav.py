@@ -40,7 +40,7 @@ def grid_locations():
     """ Generator to get all indices in the grid """
     for y in range(-R_SQUARED, R_SQUARED):
         for x in range(-R_SQUARED, R_SQUARED):
-            if x**2 + y**2 <= R_SQUARED:
+            if x ** 2 + y ** 2 <= R_SQUARED:
                 yield y + HALF_SIZE, x + HALF_SIZE
 
 
@@ -91,10 +91,10 @@ for i in range(NAV_ITERATIONS):
     code += f"\n    // iteration {i+1}\n"
     for y, x in grid_locations():
         # tighten the circle of updated grid items...
-#         if not (
-#             (i <= y < NAV_GRID_SIZE - i) and (i <= x < NAV_GRID_SIZE - i)
-#         ):
-#             continue
+        #         if not (
+        #             (i <= y < NAV_GRID_SIZE - i) and (i <= x < NAV_GRID_SIZE - i)
+        #         ):
+        #             continue
         neighbors = list(adjacent(y, x))
         min_expr = f"Math.min(cost_{neighbors[0][0]}_{neighbors[0][1]}, cost_{y}_{x} - move_cost_{y}_{x})"
         for adj_y, adj_x in neighbors[1:]:

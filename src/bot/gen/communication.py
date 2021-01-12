@@ -17,7 +17,7 @@ commands = [
     Command("ENEMY_EC", [7, 7]),
     Command("ATTACK_LOC", [7, 7]),
     Command("DEFEND", [3]),
-    Command("DEFEND_LOC", [7,7]),
+    Command("DEFEND_LOC", [7, 7]),
     Command("HIDE", [3]),
     Command("WALL_GAP", [7, 7]),
     Command("FORM_WALL", [7, 7, 4, 1]),

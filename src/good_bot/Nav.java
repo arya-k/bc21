@@ -96,9 +96,8 @@ public class Nav {
      * see the robot in range.
      */
     public static void doFollow(int targetID) {
-        // TODO: support a memory so it can try and find the robot even if it has gone out of sight!
         currentGoal = NavGoal.Follow;
-        goalID = targetID;
+        goalID = targetID; // If we start using this, it would be helpful to track it going out of sight...
     }
 
     /**
