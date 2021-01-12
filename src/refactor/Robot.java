@@ -37,31 +37,28 @@ abstract public class Robot {
         Robot.rc = rc;
         Robot.initLoc = rc.getLocation();
 
+        if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return; // Everything below here is for non-buildings:
+
         // find the EC
-        if (rc.getType() != RobotType.ENLIGHTENMENT_CENTER) {
-            for (RobotInfo info : rc.senseNearbyRobots(2)) {
-                if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
-                    Robot.centerID = info.getID();
-                    Robot.centerLoc = info.getLocation();
-                    int flag = rc.getFlag(Robot.centerID);
-                    Robot.assignment = decode(flag);
-                    rc.setFlag(flag); // TODO: why this line?
-                    break;
-                }
-            }
-            if (Robot.assignment == null) {
-                System.out.println("@@@ERROR: Didnt find assignment!");
-                rc.resign();
+        for (RobotInfo info : rc.senseNearbyRobots(2)) {
+            if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
+                Robot.centerID = info.getID();
+                Robot.centerLoc = info.getLocation();
+                int flag = rc.getFlag(Robot.centerID);
+                Robot.assignment = decode(flag);
+                rc.setFlag(flag); // TODO: why this line?
+                break;
             }
         }
 
+        Nav.init();
     }
 
     abstract void onAwake() throws GameActionException;
 
     abstract void onUpdate() throws GameActionException;
 
-    // TODO: I don't like where this code is- find a way to move it!
+    // TODO: I don't like where this code is- find a way to move it?
     void scoutLogic(Direction commandDir) throws GameActionException {
         for (RobotInfo info : rc.senseNearbyRobots()) {
             if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {

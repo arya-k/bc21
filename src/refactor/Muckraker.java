@@ -7,7 +7,6 @@ import static refactor.Communication.encode;
 public class Muckraker extends Robot {
     @Override
     void onAwake() throws GameActionException {
-        Nav.init(Muckraker.rc); // Initialize the nav
         if (assignment == null) {
             reassignDefault();
         }

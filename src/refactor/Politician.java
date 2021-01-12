@@ -8,7 +8,6 @@ public class Politician extends Robot {
 
     @Override
     void onAwake() throws GameActionException {
-        Nav.init(Politician.rc); // Initialize the nav
         if (assignment == null) {
             reassignDefault();
             return;

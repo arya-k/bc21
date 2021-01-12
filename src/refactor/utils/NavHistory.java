@@ -17,6 +17,14 @@ public class NavHistory {
     private static int southEdge = -100;
     private static int westEdge = -100;
 
+
+    /**
+     * Inits the random var and the sight range.
+     */
+    public static void init() {
+        SIGHT_RANGE = (int) Math.floor(Math.sqrt(Robot.rc.getType().sensorRadiusSquared));
+    }
+
     /**
      * Update the known locations of edges, and the visited chunks. Call on every tick.
      */
@@ -60,13 +68,6 @@ public class NavHistory {
         String key = "^" + (char) x + (char) y;
         if (keys.indexOf(key) == -1)
             keys.append(key);
-    }
-
-    /**
-     * Inits the random var and the sight range.
-     */
-    public static void init() {
-        SIGHT_RANGE = (int) Math.floor(Math.sqrt(Robot.rc.getType().sensorRadiusSquared));
     }
 
     /**
