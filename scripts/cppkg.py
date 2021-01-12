@@ -3,7 +3,7 @@
 import argparse
 import os
 
-SOURCE_DIRS = [f.name for f in os.scandir("src") if f.is_dir()]
+SOURCE_DIRS = [f.name for f in os.scandir("../src") if f.is_dir()]
 
 
 def move_package(src, dest):
@@ -18,7 +18,7 @@ def move_package(src, dest):
             f.write(contents)
 
     print(f"Moving {src} to {dest}... ", end="", flush=True)
-    os.system(f"cp -r src/{src} src/{dest}")
+    os.system(f"cp -r ../src/{src} ../src/{dest}")
 
     for subdir, dirs, files in os.walk(f"src/{dest}"):
         for file in files:

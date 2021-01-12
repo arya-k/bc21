@@ -45,7 +45,7 @@ def get_players() -> List[str]:
     """ Returns a list of all players we can use """
     global PLAYERS
     if PLAYERS is None:
-        raw_output = subprocess.check_output(["./gradlew", "listPlayers"]).decode(
+        raw_output = subprocess.check_output(["../gradlew", "listPlayers"]).decode(
             "utf-8"
         )
         PLAYERS = [
@@ -58,7 +58,7 @@ def get_maps() -> List[str]:
     """ Returns a list of all maps that we can play on """
     global MAPS
     if MAPS is None:
-        raw_output = subprocess.check_output(["./gradlew", "listMaps"]).decode("utf-8")
+        raw_output = subprocess.check_output(["../gradlew", "listMaps"]).decode("utf-8")
         MAPS = [
             line[5:] for line in raw_output.splitlines() if line.startswith("MAP: ")
         ]
@@ -149,12 +149,12 @@ def run_matches(teamA, teamB, maps, games_per_match=1, stats=True) -> List[Resul
 
     # build in advance
     assert not subprocess.run(
-        ["./gradlew", "build"], stdout=subprocess.DEVNULL
+        ["../gradlew", "build"], stdout=subprocess.DEVNULL
     ).returncode
 
     # get jar path:
     global JAR_PATH
-    buildOutput = subprocess.check_output(["./gradlew", "listBattleCodeJar"]).decode(
+    buildOutput = subprocess.check_output(["../gradlew", "listBattleCodeJar"]).decode(
         "utf-8"
     )
     JAR_PATH = re.search("[^\n]*\.jar", buildOutput).group(0)
