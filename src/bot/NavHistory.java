@@ -22,7 +22,6 @@ public class NavHistory {
     public static void update() throws GameActionException {
         MapLocation m = Robot.rc.getLocation();
 
-        // todo: maybe avoid extra checks with some fancy floors and ceilings?
         if (northEdge == 100 && !Robot.rc.onTheMap(m.translate(0, SIGHT_RANGE))) {
             northEdge = ((m.y + SIGHT_RANGE - Robot.initLoc.y) / 4) + 15;
             if ((m.y + SIGHT_RANGE - Robot.initLoc.y) % 4 != 0) ++northEdge;
