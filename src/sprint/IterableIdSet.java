@@ -1,4 +1,4 @@
-package good_bot;
+package sprint;
 
 public class IterableIdSet {
     private int size = 0;

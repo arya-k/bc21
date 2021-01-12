@@ -1,8 +1,8 @@
-package good_bot;
+package sprint;
 
 import battlecode.common.*;
 
-import static good_bot.Communication.Label.DEFEND;
+import static sprint.Communication.Label.DEFEND;
 
 public class Politician extends Robot {
 

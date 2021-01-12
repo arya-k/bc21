@@ -1,4 +1,4 @@
-package good_bot;
+package sprint;
 
 public class UnitBuildQueue {
     UnitBuild[] elements = new UnitBuild[64];

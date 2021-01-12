@@ -1,9 +1,9 @@
-package good_bot;
+package sprint;
 
 import battlecode.common.*;
 
-import static good_bot.Communication.decode;
-import static good_bot.Communication.encode;
+import static sprint.Communication.decode;
+import static sprint.Communication.encode;
 
 public class Muckraker extends Robot {
     @Override

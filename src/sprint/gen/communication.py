@@ -108,7 +108,7 @@ encode = "\n".join(encode_blocks)
 encode = "\n".join(s for s in encode.splitlines() if s.strip())
 decode = " else ".join(decode_blocks)
 
-code = f"""package good_bot;
+code = f"""package sprint;
 public class Communication {{
     public enum Label {{
         {", ".join(c.name for c in commands)}

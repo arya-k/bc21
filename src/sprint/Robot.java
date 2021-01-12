@@ -1,11 +1,11 @@
-package good_bot;
+package sprint;
 
 import battlecode.common.*;
-import good_bot.Communication.Label;
-import good_bot.Communication.Message;
+import sprint.Communication.Label;
+import sprint.Communication.Message;
 
-import static good_bot.Communication.decode;
-import static good_bot.Communication.encode;
+import static sprint.Communication.decode;
+import static sprint.Communication.encode;
 
 abstract class Robot {
     static RobotController rc = null;
@@ -52,7 +52,7 @@ abstract class Robot {
                     break;
                 }
             }
-            if (Robot.assignment == null)
+//            if (Robot.assignment == null)
                 // System.out.println("Didnt find assignment!");
         }
 

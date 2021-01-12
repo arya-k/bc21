@@ -1,4 +1,4 @@
-package good_bot;
+package sprint;
 public class Communication {
     public enum Label {
         FORM_WALL, ENEMY_EC, EXPAND, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, LATCH, DEFEND, HIDE, EXPLORE, EXPLODE, STOP_PRODUCING_MUCKRAKERS

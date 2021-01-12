@@ -1,4 +1,4 @@
-package good_bot;
+package sprint;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
