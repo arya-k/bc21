@@ -2,11 +2,10 @@ package refactor;
 
 import battlecode.common.*;
 
-import static refactor.Communication.Label.DEFEND;
-
 public class Politician extends Robot {
 
     static int waiting_rounds = 0;
+
     @Override
     void onAwake() throws GameActionException {
         Nav.init(Politician.rc); // Initialize the nav
@@ -24,12 +23,6 @@ public class Politician extends Robot {
                 commandDir = fromOrdinal(assignment.data[0]);
                 // System.out.print("DEFENDING to the " + commandDir);
 //                reassignDefault(); // default is defense!
-                break;
-            case FORM_WALL:
-                wallAwake();
-                break;
-            case EXPAND:
-                expandAwake();
                 break;
             case ATTACK_LOC:
             case CAPTURE_NEUTRAL_EC:
@@ -52,12 +45,6 @@ public class Politician extends Robot {
                 break;
             case DEFEND:
                 defendBehavior();
-                break;
-            case FORM_WALL:
-                wallBehavior();
-                break;
-            case EXPAND:
-                expandBehavior();
                 break;
             case CAPTURE_NEUTRAL_EC:
                 captureNeutralECBehavior();
@@ -110,7 +97,7 @@ public class Politician extends Robot {
                         }
                     }
                 }
-                if(!found_neutral_nbor) {
+                if (!found_neutral_nbor) {
                     reassignDefault();
                     return;
                 }
@@ -119,9 +106,8 @@ public class Politician extends Robot {
         Clock.yield();
     }
 
-    @Override
     void reassignDefault() {
-        if(assignment != null && assignment.label == Communication.Label.SCOUT) {
+        if (assignment != null && assignment.label == Communication.Label.SCOUT) {
             int[] data = {};
             assignment = new Communication.Message(Communication.Label.EXPLODE, data);
         } else {
@@ -152,7 +138,7 @@ public class Politician extends Robot {
                 double wasted = Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
                 wastedInfluence += wasted;
             } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                if(perUnit >= info.getInfluence() / 4) return 1;
+                if (perUnit >= info.getInfluence() / 4) return 1;
             }
         }
         double efficiency = 1 - (wastedInfluence / usefulInfluence);
@@ -249,7 +235,7 @@ public class Politician extends Robot {
             if (move != null && rc.canMove(move)) rc.move(move);
             if (move == null) {
                 int radius = getEfficientSpeech(0.6);
-                if(radius != -1 && rc.canEmpower(radius))
+                if (radius != -1 && rc.canEmpower(radius))
                     rc.empower(radius);
             }
         }

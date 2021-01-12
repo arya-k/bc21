@@ -19,7 +19,6 @@ public class Slanderer extends Robot {
         }
     }
 
-    @Override
     void reassignDefault() {
         int[] data = {randomDirection().ordinal()};
         assignment = new Communication.Message(Communication.Label.HIDE, data);
@@ -41,13 +40,13 @@ public class Slanderer extends Robot {
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         int numMuckrakers = 0;
         Direction[] dangerDirs = new Direction[enemies.length];
-        for(int i = 0; i < enemies.length; i++) {
-            if(enemies[i].getType() == RobotType.MUCKRAKER) {
+        for (int i = 0; i < enemies.length; i++) {
+            if (enemies[i].getType() == RobotType.MUCKRAKER) {
                 dangerDirs[numMuckrakers++] = enemies[i].getLocation().directionTo(rc.getLocation());
             }
         }
         Direction[] realDirs = new Direction[numMuckrakers];
-        for(int i=0; i < numMuckrakers; i++) {
+        for (int i = 0; i < numMuckrakers; i++) {
             realDirs[i] = dangerDirs[i];
         }
         Direction move = Nav.tick(realDirs);

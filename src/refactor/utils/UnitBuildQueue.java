@@ -1,4 +1,4 @@
-package refactor.Utils;
+package refactor.utils;
 
 public class UnitBuildQueue {
     UnitBuild[] elements = new UnitBuild[64];

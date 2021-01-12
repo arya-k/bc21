@@ -1,4 +1,4 @@
-package refactor.Utils;
+package refactor.utils;
 
 import battlecode.common.RobotType;
 import refactor.Communication;

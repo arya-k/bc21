@@ -3,9 +3,9 @@ package refactor;
 import battlecode.common.*;
 import refactor.Communication.Label;
 import refactor.Communication.Message;
-import refactor.Utils.IterableIdSet;
-import refactor.Utils.UnitBuild;
-import refactor.Utils.UnitBuildDPQueue;
+import refactor.utils.IterableIdSet;
+import refactor.utils.UnitBuild;
+import refactor.utils.UnitBuildDPQueue;
 
 import static refactor.Communication.decode;
 import static refactor.Communication.encode;
@@ -414,7 +414,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     int maxBid() {
-        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 5), 0);
+        return Math.max(Math.min(rc.getInfluence() - 2 * influenceMinimum(), rc.getInfluence() / 5), 0);
     }
 
     static int prevTeamVotes = 0;
@@ -443,7 +443,7 @@ public class EnlightenmentCenter extends Robot {
                 return;
             }
             if (rc.getRoundNum() > 2500 &&
-                    (rc.getInfluence() > 3*influenceMinimum()) &&
+                    (rc.getInfluence() > 3 * influenceMinimum()) &&
                     (1.0 * rc.getTeamVotes() / rc.getRoundNum() < 0.2 && rc.getRoundNum() > 700)) {
                 bid = (bid * 3) / 2;
             } else {

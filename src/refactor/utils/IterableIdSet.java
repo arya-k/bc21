@@ -1,4 +1,4 @@
-package refactor.Utils;
+package refactor.utils;
 
 public class IterableIdSet {
     private int size = 0;

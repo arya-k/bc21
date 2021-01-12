@@ -2,7 +2,6 @@ package refactor;
 
 import battlecode.common.*;
 
-import static refactor.Communication.decode;
 import static refactor.Communication.encode;
 
 public class Muckraker extends Robot {
@@ -14,7 +13,6 @@ public class Muckraker extends Robot {
         }
 
         switch (assignment.label) {
-            case SCOUT:
             case LATCH:
             case HIDE:
                 commandDir = fromOrdinal(assignment.data[0]);
@@ -22,12 +20,6 @@ public class Muckraker extends Robot {
                 break;
             case EXPLORE:
                 Nav.doExplore();
-                break;
-            case FORM_WALL:
-                wallAwake();
-                break;
-            case EXPAND:
-                expandAwake();
                 break;
             case ATTACK_LOC:
                 commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
@@ -47,20 +39,11 @@ public class Muckraker extends Robot {
             return;
         }
         switch (assignment.label) {
-            case SCOUT:
-                scoutBehavior();
-                break;
             case LATCH:
                 latchBehavior();
                 break;
             case HIDE:
                 hideBehavior();
-                break;
-            case FORM_WALL:
-                wallBehavior();
-                break;
-            case EXPAND:
-                expandBehavior();
                 break;
             case EXPLORE:
             case ATTACK_LOC:
@@ -70,11 +53,7 @@ public class Muckraker extends Robot {
         }
     }
 
-    void scoutBehavior() throws GameActionException {
-        scoutLogic(commandDir);
-    }
-
-    @Override
+    // TODO: do I want to go back to having this as an abstract base version?
     void reassignDefault() {
         assignment = null;
         MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
@@ -83,24 +62,11 @@ public class Muckraker extends Robot {
 
     void reassignDefault(boolean setGoal) {
         assignment = null;
-        if(setGoal) {
+        if (setGoal) {
             MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
             Nav.doGoTo(goalPos);
         }
     }
-
-    @Override
-    void wallBehavior() throws GameActionException {
-        super.wallBehavior();
-        if(rc.isReady()) {
-            RobotInfo kill = bestSlandererKill();
-            if (kill != null) {
-                rc.expose(kill.getLocation());
-            }
-        }
-        Clock.yield();
-    }
-
 
     void latchBehavior() throws GameActionException {
         if (rc.isReady()) {
@@ -139,10 +105,9 @@ public class Muckraker extends Robot {
 
         if (rc.isReady()) {
             Direction move = Nav.tick();
-            if(move == null || move == Direction.CENTER) {
+            if (move == null || move == Direction.CENTER) {
                 reassignDefault(false);
-            }
-            else if (rc.canMove(move)) rc.move(move);
+            } else if (rc.canMove(move)) rc.move(move);
 
         }
         Clock.yield();
@@ -160,7 +125,7 @@ public class Muckraker extends Robot {
             }
             Direction move = Nav.tick();
             if (move != null && rc.canMove(move)) rc.move(move);
-            else if(move == null && assignment != null && assignment.label != Communication.Label.ATTACK_LOC) {
+            else if (move == null && assignment != null && assignment.label != Communication.Label.ATTACK_LOC) {
                 for (RobotInfo info : rc.senseNearbyRobots()) {
                     if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                         MapLocation enemy_loc = info.getLocation();
@@ -174,8 +139,8 @@ public class Muckraker extends Robot {
                         rc.setFlag(encode(neutralECMessage(info)));
                     }
                 }
-            } else if(move == null && assignment != null && assignment.label == Communication.Label.ATTACK_LOC) {
-                if(rc.getLocation().distanceSquaredTo(commandLoc) > 12) {
+            } else if (move == null && assignment != null && assignment.label == Communication.Label.ATTACK_LOC) {
+                if (rc.getLocation().distanceSquaredTo(commandLoc) > 12) {
                     int[] data = {};
                     rc.setFlag(encode(new Communication.Message(Communication.Label.STOP_PRODUCING_MUCKRAKERS, data)));
                     assignment = null;
@@ -183,7 +148,7 @@ public class Muckraker extends Robot {
                     onUpdate();
                     return;
                 }
-            } else if(move == null) {
+            } else if (move == null) {
                 Nav.doGoInDir(randomDirection());
                 onUpdate();
                 return;

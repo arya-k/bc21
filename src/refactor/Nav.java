@@ -1,10 +1,7 @@
 package refactor;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.Clock;
+import battlecode.common.*;
+import refactor.utils.NavHistory;
 
 /**
  * Navigation class, to manage robot movement in a certain direction at each turn.
@@ -200,7 +197,7 @@ public class Nav {
             danger |= 1 << dangerDirs[i].ordinal();
 
         int budget = Clock.getBytecodeNum() +
-                ((int)Math.floor(rc.getCooldownTurns()) * rc.getType().bytecodeLimit)
+                ((int) Math.floor(rc.getCooldownTurns()) * rc.getType().bytecodeLimit)
                 - 1000;
 
         int sightRadius = rc.getType().sensorRadiusSquared;
@@ -453,25 +450,32 @@ public class Nav {
         double minCost = cost_2_2;
 
         if (cost_2_3 < minCost && (danger & 4) == 0) {
-            minCost = cost_2_3;ret = Direction.EAST;
+            minCost = cost_2_3;
+            ret = Direction.EAST;
         }
         if (cost_3_3 < minCost && (danger & 2) == 0) {
-            minCost = cost_3_3;ret = Direction.NORTHEAST;
+            minCost = cost_3_3;
+            ret = Direction.NORTHEAST;
         }
         if (cost_3_2 < minCost && (danger & 1) == 0) {
-            minCost = cost_3_2;ret = Direction.NORTH;
+            minCost = cost_3_2;
+            ret = Direction.NORTH;
         }
         if (cost_3_1 < minCost && (danger & 128) == 0) {
-            minCost = cost_3_1;ret = Direction.NORTHWEST;
+            minCost = cost_3_1;
+            ret = Direction.NORTHWEST;
         }
         if (cost_2_1 < minCost && (danger & 64) == 0) {
-            minCost = cost_2_1;ret = Direction.WEST;
+            minCost = cost_2_1;
+            ret = Direction.WEST;
         }
         if (cost_1_1 < minCost && (danger & 32) == 0) {
-            minCost = cost_1_1;ret = Direction.SOUTHWEST;
+            minCost = cost_1_1;
+            ret = Direction.SOUTHWEST;
         }
         if (cost_1_2 < minCost && (danger & 16) == 0) {
-            minCost = cost_1_2;ret = Direction.SOUTH;
+            minCost = cost_1_2;
+            ret = Direction.SOUTH;
         }
         if (cost_1_3 < minCost && (danger & 8) == 0) {
             ret = Direction.SOUTHEAST;
@@ -1183,25 +1187,32 @@ public class Nav {
         double minCost = cost_4_4;
 
         if (cost_4_5 < minCost && (danger & 4) == 0) {
-            minCost = cost_4_5;ret = Direction.EAST;
+            minCost = cost_4_5;
+            ret = Direction.EAST;
         }
         if (cost_5_5 < minCost && (danger & 2) == 0) {
-            minCost = cost_5_5;ret = Direction.NORTHEAST;
+            minCost = cost_5_5;
+            ret = Direction.NORTHEAST;
         }
         if (cost_5_4 < minCost && (danger & 1) == 0) {
-            minCost = cost_5_4;ret = Direction.NORTH;
+            minCost = cost_5_4;
+            ret = Direction.NORTH;
         }
         if (cost_5_3 < minCost && (danger & 128) == 0) {
-            minCost = cost_5_3;ret = Direction.NORTHWEST;
+            minCost = cost_5_3;
+            ret = Direction.NORTHWEST;
         }
         if (cost_4_3 < minCost && (danger & 64) == 0) {
-            minCost = cost_4_3;ret = Direction.WEST;
+            minCost = cost_4_3;
+            ret = Direction.WEST;
         }
         if (cost_3_3 < minCost && (danger & 32) == 0) {
-            minCost = cost_3_3;ret = Direction.SOUTHWEST;
+            minCost = cost_3_3;
+            ret = Direction.SOUTHWEST;
         }
         if (cost_3_4 < minCost && (danger & 16) == 0) {
-            minCost = cost_3_4;ret = Direction.SOUTH;
+            minCost = cost_3_4;
+            ret = Direction.SOUTH;
         }
         if (cost_3_5 < minCost && (danger & 8) == 0) {
             ret = Direction.SOUTHEAST;
@@ -2116,25 +2127,32 @@ public class Nav {
         double minCost = cost_5_5;
 
         if (cost_5_6 < minCost && (danger & 4) == 0) {
-            minCost = cost_5_6;ret = Direction.EAST;
+            minCost = cost_5_6;
+            ret = Direction.EAST;
         }
         if (cost_6_6 < minCost && (danger & 2) == 0) {
-            minCost = cost_6_6;ret = Direction.NORTHEAST;
+            minCost = cost_6_6;
+            ret = Direction.NORTHEAST;
         }
         if (cost_6_5 < minCost && (danger & 1) == 0) {
-            minCost = cost_6_5;ret = Direction.NORTH;
+            minCost = cost_6_5;
+            ret = Direction.NORTH;
         }
         if (cost_6_4 < minCost && (danger & 128) == 0) {
-            minCost = cost_6_4;ret = Direction.NORTHWEST;
+            minCost = cost_6_4;
+            ret = Direction.NORTHWEST;
         }
         if (cost_5_4 < minCost && (danger & 64) == 0) {
-            minCost = cost_5_4;ret = Direction.WEST;
+            minCost = cost_5_4;
+            ret = Direction.WEST;
         }
         if (cost_4_4 < minCost && (danger & 32) == 0) {
-            minCost = cost_4_4;ret = Direction.SOUTHWEST;
+            minCost = cost_4_4;
+            ret = Direction.SOUTHWEST;
         }
         if (cost_4_5 < minCost && (danger & 16) == 0) {
-            minCost = cost_4_5;ret = Direction.SOUTH;
+            minCost = cost_4_5;
+            ret = Direction.SOUTH;
         }
         if (cost_4_6 < minCost && (danger & 8) == 0) {
             ret = Direction.SOUTHEAST;
@@ -3225,25 +3243,32 @@ public class Nav {
         double minCost = cost_5_5;
 
         if (cost_5_6 < minCost && (danger & 4) == 0) {
-            minCost = cost_5_6;ret = Direction.EAST;
+            minCost = cost_5_6;
+            ret = Direction.EAST;
         }
         if (cost_6_6 < minCost && (danger & 2) == 0) {
-            minCost = cost_6_6;ret = Direction.NORTHEAST;
+            minCost = cost_6_6;
+            ret = Direction.NORTHEAST;
         }
         if (cost_6_5 < minCost && (danger & 1) == 0) {
-            minCost = cost_6_5;ret = Direction.NORTH;
+            minCost = cost_6_5;
+            ret = Direction.NORTH;
         }
         if (cost_6_4 < minCost && (danger & 128) == 0) {
-            minCost = cost_6_4;ret = Direction.NORTHWEST;
+            minCost = cost_6_4;
+            ret = Direction.NORTHWEST;
         }
         if (cost_5_4 < minCost && (danger & 64) == 0) {
-            minCost = cost_5_4;ret = Direction.WEST;
+            minCost = cost_5_4;
+            ret = Direction.WEST;
         }
         if (cost_4_4 < minCost && (danger & 32) == 0) {
-            minCost = cost_4_4;ret = Direction.SOUTHWEST;
+            minCost = cost_4_4;
+            ret = Direction.SOUTHWEST;
         }
         if (cost_4_5 < minCost && (danger & 16) == 0) {
-            minCost = cost_4_5;ret = Direction.SOUTH;
+            minCost = cost_4_5;
+            ret = Direction.SOUTH;
         }
         if (cost_4_6 < minCost && (danger & 8) == 0) {
             ret = Direction.SOUTHEAST;

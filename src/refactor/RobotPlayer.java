@@ -19,8 +19,8 @@ public strictfp class RobotPlayer {
             robot.onAwake();
             robot.onUpdate();
         } catch (Exception e) {
-//            // System.out.println("Exception in " + rc.getType());
-//            e.printStackTrace();
+            System.out.println("Exception in " + rc.getType());
+            e.printStackTrace();
         }
 
         while (true) {
@@ -28,7 +28,7 @@ public strictfp class RobotPlayer {
                 while (true) {
                     robot.onUpdate();
                     RobotType currType = rc.getType();
-                    if(currType != myType) {
+                    if (currType != myType) {
                         int currCenterId = Robot.centerID;
                         Robot.init(rc);
                         Robot.centerID = currCenterId;
@@ -38,8 +38,8 @@ public strictfp class RobotPlayer {
                     }
                 }
             } catch (Exception e) {
-//                // System.out.println("Exception in " + rc.getType());
-//                e.printStackTrace();
+                System.out.println("Exception in " + rc.getType());
+                e.printStackTrace();
             }
         }
     }
