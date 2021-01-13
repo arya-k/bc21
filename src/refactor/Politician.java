@@ -2,120 +2,203 @@ package refactor;
 
 import battlecode.common.*;
 
-public class Politician extends Robot {
+import static refactor.Communication.encode;
 
-    static int waiting_rounds = 0;
+public class Politician extends Robot {
+    public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
+
+    static State state = null;
+    static RobotInfo[] nearbyRobots;
+
+    /* NeutralEC vars */
+    static int waitingRounds = 0;
+    static boolean foundNeutralNeighbor = false;
+
+    /* Scout vars */
+    static Direction scoutDir;
+
+    /* Defense vars */
+    static Direction defendDir;
+
+    /* Attack & Neutral EC vars */
+    static MapLocation targetECLoc;
 
     @Override
-    void onAwake() throws GameActionException {
-        if (assignment == null) {
-            reassignDefault();
-            return;
-        }
+    void onAwake() {
+        state = State.Explore; // By default, we just explore!
+        Nav.doExplore();
+
+        if (assignment == null) return;
 
         switch (assignment.label) {
             case SCOUT:
-                commandDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(commandDir);
+                state = State.Scout;
+                scoutDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(scoutDir);
                 break;
-            case DEFEND:
-                commandDir = fromOrdinal(assignment.data[0]);
-                // System.out.print("DEFENDING to the " + commandDir);
-//                reassignDefault(); // default is defense!
-                break;
+
             case ATTACK_LOC:
-            case CAPTURE_NEUTRAL_EC:
-                commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
-                Nav.doGoTo(commandLoc);
+                state = State.AttackLoc;
+                targetECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
+                Nav.doGoTo(targetECLoc);
                 break;
+
+            case CAPTURE_NEUTRAL_EC:
+                state = State.CaptureNeutralEC;
+                targetECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
+                Nav.doGoTo(targetECLoc);
+                break;
+
+            case EXPLODE:
+                state = State.Explode;
+                break;
+
+            case HIDE: // We were once a slanderer! TODO return to sender?
+                break;
+
+            default:
+                System.out.println("ERROR: Politician has been given a bad assignment: " + assignment.label);
+                rc.resign();
         }
     }
 
     @Override
     void onUpdate() throws GameActionException {
-        if (assignment == null) {
-            attackBehavior();
-            return;
-        }
-
-        switch (assignment.label) {
-            case SCOUT:
-                scoutBehavior();
-                break;
-            case DEFEND:
-                defendBehavior();
-                break;
-            case CAPTURE_NEUTRAL_EC:
-                captureNeutralECBehavior();
-                break;
-            case EXPLODE:
-                explodeBehavior();
-                break;
-            case ATTACK_LOC:
-                attackLocBehavior();
-                break;
-            default:
-                attackBehavior();
-                break;
-        }
-
-    }
-
-    void explodeBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            int radius = getEfficientSpeech(0.1);
-            if (radius != -1) {
-                rc.empower(radius);
-            } else {
-                rc.empower(9);
-            }
-        }
+        transition();
+        state.act();
         Clock.yield();
     }
 
-    void scoutBehavior() throws GameActionException {
-        scoutLogic(commandDir);
+    void transition() throws GameActionException {
+        nearbyRobots = rc.senseNearbyRobots();
+
+        // Scout -> Explode
+        if (state == State.Scout && Nav.currentGoal == Nav.NavGoal.Nothing) {
+            for (Direction d : Direction.cardinalDirections()) {
+                if (!rc.onTheMap(rc.getLocation().add(d))) {
+                    int offset;
+                    switch (d) {
+                        case EAST:
+                        case WEST:
+                            offset = Math.abs(rc.getLocation().x - centerLoc.x);
+                            break;
+                        default:
+                            offset = Math.abs(rc.getLocation().y - centerLoc.y);
+                    }
+                    rc.setFlag(encode(safeDirMessage(scoutDir, d, offset)));
+                    break;
+                }
+            }
+
+            state = State.Explode; // BOOM!
+        }
+
+        // Explore -> Explode
+        if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
+            state = State.Explode; // TODO: we should do something more intelligent here probably.
+        }
+
+        // CaptureNeutralEC -> Explore 
+        if (state == State.CaptureNeutralEC && waitingRounds >= NEUTRAL_EC_WAIT_ROUNDS && !foundNeutralNeighbor) {
+            state = State.Explore;
+            Nav.doExplore();
+        }
+
     }
 
-    void captureNeutralECBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            Direction move = Nav.tick();
-            if (move != null && rc.canMove(move)) {
-                rc.move(move);
-            } else if (move == null) {
-                waiting_rounds++;
-                boolean found_neutral_nbor = false;
-                RobotInfo[] nbors = rc.senseNearbyRobots(2);
-                for (RobotInfo nbor : nbors) {
+    private enum State {
+        Scout {
+            @Override
+            public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
+                // Note enemy & neutral ECs:
+                for (RobotInfo info : nearbyRobots) {
+                    if (info.getTeam() == rc.getTeam().opponent() &&
+                            info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                        rc.setFlag(encode(dangerMessage(info)));
+                    } else if (info.getTeam() == Team.NEUTRAL) {
+                        rc.setFlag(encode(neutralECMessage(info)));
+                    }
+                }
+
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+            }
+        },
+        Explore {
+            @Override
+            public void act() throws GameActionException {
+                if (!rc.isReady()) return;
+
+                // See if offensive speech is possible.
+                int radius = getEfficientSpeech(0.8);
+                if (radius != -1) {
+                    rc.empower(radius);
+                    return;
+                }
+
+                // otherwise move
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+            }
+        },
+        CaptureNeutralEC {
+            @Override
+            public void act() throws GameActionException {
+                if (!rc.isReady()) return;
+
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+
+                if (move != null) return;
+
+                // We are at the destination- hopefully adjacent!
+                waitingRounds++;
+                RobotInfo[] neighbors = rc.senseNearbyRobots(2);
+                for (RobotInfo nbor : neighbors) {
                     if (nbor.getTeam() == Team.NEUTRAL) {
-                        found_neutral_nbor = true;
-                        if ((waiting_rounds > 10 || nbor.getConviction() < (rc.getInfluence() - 10) / nbors.length / 2) && rc.canEmpower(2)) {
+                        foundNeutralNeighbor = true;
+                        if ((waitingRounds > NEUTRAL_EC_WAIT_ROUNDS ||
+                                nbor.getConviction() < (rc.getInfluence() - 10) / neighbors.length / 2) && rc.canEmpower(2)) {
                             rc.empower(2);
                             Clock.yield();
                             return;
                         }
                     }
                 }
-                if (!found_neutral_nbor) {
-                    reassignDefault();
-                    return;
+            }
+        },
+        AttackLoc {
+            @Override
+            public void act() throws GameActionException {
+                if (!rc.isReady()) return;
+
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+
+                if (move == null) { // TODO: part the seas! also don't give up on Nav movement...
+                    int radius = getEfficientSpeech(0.6);
+                    if (radius != -1 && rc.canEmpower(radius))
+                        rc.empower(radius);
                 }
             }
-        }
-        Clock.yield();
+        },
+        Explode {
+            public void act() throws GameActionException {
+                if (!rc.isReady()) return;
+
+                int radius = getEfficientSpeech(0.1);
+                if (radius == -1) radius = 9;
+
+                rc.empower(radius);
+            }
+        };
+
+        public abstract void act() throws GameActionException;
+
     }
 
-    void reassignDefault() {
-        if (assignment != null && assignment.label == Communication.Label.SCOUT) {
-            int[] data = {};
-            assignment = new Communication.Message(Communication.Label.EXPLODE, data);
-        } else {
-            assignment = null;
-            Nav.doExplore();
-        }
-    }
 
-    double speechEfficiency(int range) {
+    static double speechEfficiency(int range) {
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots(range);
         Team myTeam = rc.getTeam();
         Team opponent = myTeam.opponent();
@@ -148,12 +231,12 @@ public class Politician extends Robot {
 
     /**
      * Picks the most efficient speech radius. Returns -1 if no radius is better
-     * than the provided threshhold
+     * than the provided threshold
      *
      * @param threshold the minimum speech efficiency to consider
      * @return the best speech radius (-1 if no radius is good)
      */
-    int getEfficientSpeech(double threshold) {
+    static int getEfficientSpeech(double threshold) {
         int bestRad = -1;
         double bestEff = threshold;
         // TODO: check from radius 1
@@ -164,100 +247,7 @@ public class Politician extends Robot {
                 bestRad = i;
             }
         }
+
         return bestRad;
-    }
-
-    static boolean stayGrounded = false;
-    static int reorientingMoves = -1;
-
-    void defendBehavior() throws GameActionException {
-        if (!rc.isReady()) {
-            Clock.yield();
-            return;
-        }
-
-        // get all enemy nearby robots
-        int radius = getEfficientSpeech(0.8);
-        if (radius != -1) {
-            // System.out.println("GIVING SPEECH IN DEFENSE (radius " + radius + ")!");
-            rc.empower(radius);
-            Clock.yield();
-            return;
-        } else if (stayGrounded) {
-            // TODO some micro here? idk
-            Clock.yield();
-            return;
-        }
-
-        if (reorientingMoves <= 0) {
-            RobotInfo[] closeFriends = rc.senseNearbyRobots(9);
-            RobotInfo[] allFriends = rc.senseNearbyRobots();
-            if (closeFriends.length == 0 && allFriends.length != 0) {
-                stayGrounded = true;
-                Clock.yield();
-                return;
-            } else if (allFriends.length == 1) {
-                int dy = 0;
-                int dx = 0;
-                for (RobotInfo info : allFriends) {
-                    dx += rc.getLocation().x - info.getLocation().x;
-                    dy += rc.getLocation().y - info.getLocation().y;
-                }
-                if (Math.abs(dx) < 3 * Math.abs(dy))
-                    dx += (Math.random() < 0.5) ? -dy : dy;
-                else if (Math.abs(dy) < 3 * Math.abs(dx))
-                    dy += (Math.random() < 0.5) ? -dx : dx;
-                else if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
-                    dx += (int) (Math.random() * 11) - 5;
-                    dy += (int) (Math.random() * 11) - 5;
-                }
-                Nav.doGoInDir(dx, dy);
-            }
-        }
-
-        // move
-        Direction move = Nav.tick();
-        if (reorientingMoves > 0) reorientingMoves--;
-        if (move != null && rc.canMove(move)) rc.move(move);
-        else if (move == null) {
-            reorientingMoves = 20;
-            commandDir = randomDirection();
-            Nav.doGoInDir(commandDir);
-        }
-        // end turn
-        Clock.yield();
-    }
-
-    void attackLocBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            Direction move = Nav.tick();
-            if (move != null && rc.canMove(move)) rc.move(move);
-            if (move == null) {
-                int radius = getEfficientSpeech(0.6);
-                if (radius != -1 && rc.canEmpower(radius))
-                    rc.empower(radius);
-            }
-        }
-        Clock.yield();
-    }
-
-    void attackBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            int radius = getEfficientSpeech(0.8);
-            if (radius != -1) {
-                // System.out.println("GIVING OFFENSIVE SPEECH!");
-                rc.empower(radius);
-            } else {
-                // otherwise move
-                Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) rc.move(move);
-                if (move == null) {
-                    reassignDefault(); //TODO improve this
-                }
-            }
-        }
-
-        // end turn
-        Clock.yield();
     }
 }

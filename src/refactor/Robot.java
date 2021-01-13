@@ -5,7 +5,6 @@ import refactor.Communication.Label;
 import refactor.Communication.Message;
 
 import static refactor.Communication.decode;
-import static refactor.Communication.encode;
 
 abstract public class Robot {
     public static RobotController rc = null;
@@ -16,9 +15,6 @@ abstract public class Robot {
     static MapLocation centerLoc;
 
     static Message assignment = null;
-
-    static Direction commandDir;
-    static MapLocation commandLoc;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -57,61 +53,6 @@ abstract public class Robot {
     abstract void onAwake() throws GameActionException;
 
     abstract void onUpdate() throws GameActionException;
-
-    // TODO: I don't like where this code is- find a way to move it?
-    void scoutLogic(Direction commandDir) throws GameActionException {
-        for (RobotInfo info : rc.senseNearbyRobots()) {
-            if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                MapLocation loc = info.getLocation();
-                flagMessage(
-                        Communication.Label.ENEMY_EC,
-                        loc.x % 128,
-                        loc.y % 128,
-                        (int) (Math.log(info.getInfluence()) / Math.log(2) + 1)
-                );
-                assignment = null;
-                onUpdate();
-                return;
-            } else if (info.getTeam() == Team.NEUTRAL) {
-                MapLocation loc = info.getLocation();
-                double log = Math.log(info.getConviction()) / Math.log(2);
-                flagMessage(
-                        Communication.Label.NEUTRAL_EC,
-                        loc.x % 128,
-                        loc.y % 128,
-                        (int) log + 1
-                );
-            }
-        }
-        Direction move = Nav.tick();
-        if (move != null && rc.canMove(move)) rc.move(move);
-        if (move == null) {
-            // send safety message
-            for (Direction d : Direction.cardinalDirections()) {
-                if (!rc.onTheMap(rc.getLocation().add(d))) {
-                    int offset;
-                    switch (d) {
-                        case EAST:
-                        case WEST:
-                            offset = Math.abs(rc.getLocation().x - centerLoc.x);
-                            break;
-                        default:
-                            offset = Math.abs(rc.getLocation().y - centerLoc.y);
-                    }
-                    rc.setFlag(encode(makeMessage(
-                            Label.SAFE_DIR_EDGE,
-                            commandDir.ordinal(),
-                            d.ordinal(),
-                            offset))
-                    );
-                    break;
-                }
-            }
-
-            // TODO: reassign is broken!
-        }
-        Clock.yield();
-    }
 
     /* Utility functions */
 

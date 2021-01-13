@@ -87,7 +87,7 @@ public class Muckraker extends Robot {
     private enum State {
         Clog {
             @Override
-            public void act() throws GameActionException {
+            public void act() throws GameActionException { // TODO: consider STOP_MUCKRAKER_SPAWN
                 if (trySlandererKill()) return;
 
                 if (Nav.currentGoal != Nav.NavGoal.GoTo)
