@@ -13,6 +13,8 @@ commands = [
     Command("SCOUT", [3]),
     Command("EXPLORE", []),
     Command("SAFE_DIR_EDGE", [3, 3, 6]),
+    Command("FLEE", []),
+    Command("DEFEND", [3]),
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("EXPLODE", []),

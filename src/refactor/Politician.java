@@ -6,7 +6,6 @@ public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
 
     static State state = null;
-    static RobotInfo[] nearbyRobots;
 
     /* NeutralEC vars */
     static int waitingRounds = 0;
@@ -17,6 +16,7 @@ public class Politician extends Robot {
 
     /* Defense vars */
     static Direction defendDir;
+    static MapLocation defendLocation;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -53,13 +53,24 @@ public class Politician extends Robot {
             case EXPLODE:
                 state = State.Explode;
                 break;
+            case DEFEND:
+                state = State.Defend;
+                defendDir = fromOrdinal(assignment.data[0]);
+                MapLocation targetLoc = rc.getLocation().translate(defendDir.dx * 4, defendDir.dy * 4);
+                targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * 2), defendDir.dy * (int) (Math.random() * 2));
+                if((targetLoc.x + targetLoc.y) % 2 != 0) {
+                    targetLoc = targetLoc.translate(defendDir.dx, 0);
+                }
+                defendLocation = targetLoc;
+                Nav.doGoTo(defendLocation);
+                break;
 
             case HIDE: // We were once a slanderer! TODO return to sender?
                 break;
 
             default:
                 System.out.println("ERROR: Politician has been given a bad assignment: " + assignment.label);
-                rc.resign(); // TODO: remove before uploading...
+//                rc.resign(); // TODO: remove before uploading...
         }
     }
 
@@ -117,7 +128,7 @@ public class Politician extends Robot {
             @Override
             public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
                 // Note enemy & neutral ECs:
-                for (RobotInfo info : nearbyRobots) {
+                for (RobotInfo info : nearby) {
                     if (info.getTeam() == rc.getTeam().opponent() &&
                             info.getType() == RobotType.ENLIGHTENMENT_CENTER) { // Enemy EC message...
                         MapLocation loc = info.getLocation();
@@ -206,10 +217,52 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                int radius = getEfficientSpeech(0.1);
-                if (radius == -1) radius = 9;
+                int enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent()).length;
+                if(enemiesNearby > 5) {
+                    int radius = getEfficientSpeech(0.1);
+                    if(radius == -1) {
+                        rc.empower(9);
+                        return;
+                    }
+                    rc.empower(radius);
+                }
+            }
+        },
+        Defend {
+            public void act() throws GameActionException {
+                if (!rc.isReady()) return;
 
-                rc.empower(radius);
+                if (Nav.currentGoal == Nav.NavGoal.Nothing) {
+                    Nav.doGoTo(defendLocation);
+                }
+
+
+                boolean foundMuckraker = false;
+                boolean foundPolitician = true;
+                for(RobotInfo bot : nearby) {
+                    if(bot.getType() == RobotType.MUCKRAKER && bot.getTeam() != rc.getTeam()) {
+                        foundMuckraker = true;
+                        Nav.doFollow(bot.getID());
+                        if(bot.getLocation().distanceSquaredTo(currentLocation) == 1) {
+                            rc.empower(1);
+                            return;
+                        }
+                        break;
+                    } else if (bot.getType() == RobotType.POLITICIAN && bot.getTeam() != rc.getTeam()) {
+                        foundPolitician = true;
+                        Nav.doFollow(bot.getID());
+                    }
+                }
+                if(!foundMuckraker && !foundPolitician) {
+                    Nav.doGoTo(defendLocation);
+                }
+                int radius = getEfficientSpeech(0.6);
+                if(radius != -1) {
+                    rc.empower(radius);
+                    return;
+                }
+                Direction move = Nav.tick();
+                if(move != null && rc.canMove(move)) rc.move(move);
             }
         };
 
@@ -224,7 +277,7 @@ public class Politician extends Robot {
         Team opponent = myTeam.opponent();
         int numNearby = nearbyRobots.length;
         if (numNearby == 0) return 0;
-        double usefulInfluence = myInfluence - 10;
+        double usefulInfluence = myInfluence * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
         if (usefulInfluence < 0) return 0;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;

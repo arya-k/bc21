@@ -28,7 +28,7 @@ public class Muckraker extends Robot {
                 break;
             default:
                 System.out.println("ERROR: Muckraker has been given a bad assignment");
-                rc.resign(); // TODO: remove this before we submit...
+//                rc.resign(); // TODO: remove this before we submit...
         }
     }
 

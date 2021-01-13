@@ -34,7 +34,6 @@ public class BidController {
         int bid = state.suggestBid();
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
-        System.out.println("Bid " + state + " " + bid);
         if (bid != 0) {
             rc.bid(bid);
         }

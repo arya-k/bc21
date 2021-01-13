@@ -14,6 +14,14 @@ public class UnitBuildDPQueue {
         this.index = levels;
     }
 
+    public void clear() {
+        this.queues = new UnitBuildQueue[this.levels];
+        for (int i = 0; i < levels; i++) {
+            this.queues[i] = new UnitBuildQueue();
+        }
+        this.index = levels;
+    }
+
     public void push(UnitBuild item, int level) {
         item.priority = level;
         queues[level].push(item);
