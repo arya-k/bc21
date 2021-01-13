@@ -30,6 +30,7 @@ public class BidController {
         int bid = state.suggestBid();
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
+        System.out.println("Bid " + state + " " + bid);
         if (bid != 0) {
             rc.bid(bid);
         }
@@ -46,6 +47,7 @@ public class BidController {
             // take a break
             bidlessBreak = 50;
             state = State.OnABreak;
+            lostInARow = 0;
             return;
         }
 
@@ -72,7 +74,7 @@ public class BidController {
             int suggestBid() {
                 int bid = prevBid;
                 if (lostLast)
-                    bid = (bid * 3) / 2;
+                    bid = (Math.max(bid, 2) * 3) / 2;
                 return Math.min(bid, maxBid());
             }
         };

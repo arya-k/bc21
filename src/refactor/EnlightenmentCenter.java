@@ -109,7 +109,7 @@ public class EnlightenmentCenter extends Robot {
 
         processFlags();
 
-        productionTransition();
+        transition();
 
         immediateDefense();
 
@@ -162,7 +162,7 @@ public class EnlightenmentCenter extends Robot {
 
     /* Production and Stimulus Logic */
 
-    static void productionTransition() throws GameActionException {
+    static void transition() throws GameActionException {
         switch (prodState) {
             case MuckrakerSpam:
                 for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam())) {
@@ -313,6 +313,10 @@ public class EnlightenmentCenter extends Robot {
     /* Helpers and Utilites */
 
     static int influenceMinimum() {
+        //TODO remove redundancy in this calculation
+        if (rc.senseNearbyRobots(2, rc.getTeam().opponent()).length == 8) {
+            return 0;
+        }
         return 20 + (int) (currentRound * 0.1);
     }
 
