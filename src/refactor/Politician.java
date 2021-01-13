@@ -2,8 +2,6 @@ package refactor;
 
 import battlecode.common.*;
 
-import static refactor.Communication.encode;
-
 public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
 
@@ -31,6 +29,9 @@ public class Politician extends Robot {
         if (assignment == null) return;
 
         switch (assignment.label) {
+            case EXPLORE:
+                break; // already handled above!
+
             case SCOUT:
                 state = State.Scout;
                 scoutDir = fromOrdinal(assignment.data[0]);
@@ -58,7 +59,7 @@ public class Politician extends Robot {
 
             default:
                 System.out.println("ERROR: Politician has been given a bad assignment: " + assignment.label);
-                rc.resign();
+                rc.resign(); // TODO: remove before uploading...
         }
     }
 
@@ -85,7 +86,12 @@ public class Politician extends Robot {
                         default:
                             offset = Math.abs(rc.getLocation().y - centerLoc.y);
                     }
-                    rc.setFlag(encode(safeDirMessage(scoutDir, d, offset)));
+                    flagMessage(
+                            Communication.Label.SAFE_DIR_EDGE,
+                            scoutDir.ordinal(),
+                            d.ordinal(),
+                            offset
+                    );
                     break;
                 }
             }
@@ -113,10 +119,24 @@ public class Politician extends Robot {
                 // Note enemy & neutral ECs:
                 for (RobotInfo info : nearbyRobots) {
                     if (info.getTeam() == rc.getTeam().opponent() &&
-                            info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                        rc.setFlag(encode(dangerMessage(info)));
-                    } else if (info.getTeam() == Team.NEUTRAL) {
-                        rc.setFlag(encode(neutralECMessage(info)));
+                            info.getType() == RobotType.ENLIGHTENMENT_CENTER) { // Enemy EC message...
+                        MapLocation loc = info.getLocation();
+                        double log = Math.log(info.getConviction()) / Math.log(2);
+                        flagMessage(
+                                Communication.Label.ENEMY_EC,
+                                loc.x % 128,
+                                loc.y % 128,
+                                (int) log + 1
+                        );
+                    } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
+                        MapLocation loc = info.getLocation();
+                        double log = Math.log(info.getConviction()) / Math.log(2);
+                        flagMessage(
+                                Communication.Label.NEUTRAL_EC,
+                                loc.x % 128,
+                                loc.y % 128,
+                                (int) log + 1
+                        );
                     }
                 }
 

@@ -5,6 +5,7 @@ import refactor.Communication.Label;
 import refactor.Communication.Message;
 
 import static refactor.Communication.decode;
+import static refactor.Communication.encode;
 
 abstract public class Robot {
     public static RobotController rc = null;
