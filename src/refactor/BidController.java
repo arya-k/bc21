@@ -12,6 +12,8 @@ public class BidController {
     static int prevTeamVotes = 0;
     static int prevBid = 2;
     static int lostInARow = 0;
+    static double proportionNeeded = 0.5;
+    static int winsNeeded = 1500;
     static boolean lostLast = false;
 
     public void update() throws GameActionException {
@@ -20,6 +22,8 @@ public class BidController {
         if (prevBid != 0) {
             lostInARow = lostLast ? lostInARow + 1 : 0;
         }
+        winsNeeded = 1500 - rc.getTeamVotes();
+        proportionNeeded = winsNeeded / (2999.0 - rc.getRoundNum());
 
         // state transitioning
         transition();
@@ -51,31 +55,44 @@ public class BidController {
             return;
         }
 
-        boolean beAggressive = (
-                rc.getRoundNum() > 2500 ||
-                (rc.getInfluence() > 3 * influenceMinimum()) ||
-                (1.0 * rc.getTeamVotes() / rc.getRoundNum() < 0.2 && rc.getRoundNum() > 700)
-        );
-        state = beAggressive ? State.ScaleUp : State.KeepUp;
+        if (proportionNeeded > 1.0)
+            state = State.GiveUp;
+        else if (rc.getRoundNum() > 2500)
+            state = State.Endgame;
+        else if (rc.getInfluence() > 4 * influenceMinimum() || proportionNeeded > 0.7)
+            state = State.ScaleUp;
+        else
+            state = State.KeepUp;
     }
 
     private enum State {
-        OnABreak,
+        OnABreak, GiveUp,
         KeepUp {
             int suggestBid() {
-                int bid = prevBid;
+                int bid = Math.max(prevBid, 2);
                 if (lostLast)
-                    bid += (int) (Math.random() * 4) + 1;
+                    bid += (int) (Math.random() * 3) + 1;
                 return Math.min(bid, maxBid());
             }
         },
         ScaleUp {
             @Override
             int suggestBid() {
-                int bid = prevBid;
+                int bid = Math.max(prevBid, 2);
                 if (lostLast)
                     bid = (Math.max(bid, 2) * 3) / 2;
                 return Math.min(bid, maxBid());
+            }
+        },
+        Endgame {
+            @Override
+            int suggestBid() {
+                int predictedInf = rc.getInfluence() +
+                        (int) (21898 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
+                if (Math.random() < proportionNeeded)
+                    return predictedInf / winsNeeded;
+                else
+                    return 0;
             }
         };
 
