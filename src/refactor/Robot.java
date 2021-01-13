@@ -60,6 +60,7 @@ abstract public class Robot {
     abstract void onAwake() throws GameActionException;
 
     void onUpdate() throws GameActionException {
+        myInfluence = rc.getInfluence();
         currentLocation = rc.getLocation();
         nearby = rc.senseNearbyRobots();
         currentRound = rc.getRoundNum();
