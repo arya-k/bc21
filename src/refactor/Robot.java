@@ -40,13 +40,13 @@ abstract public class Robot {
         if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return; // Everything below here is for non-buildings:
 
         // find the EC
-        for (RobotInfo info : rc.senseNearbyRobots(2)) {
-            if (info.getType() == RobotType.ENLIGHTENMENT_CENTER && info.getTeam() == rc.getTeam()) {
+        for (RobotInfo info : rc.senseNearbyRobots(2, rc.getTeam())) {
+            if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                 Robot.centerID = info.getID();
                 Robot.centerLoc = info.getLocation();
                 int flag = rc.getFlag(Robot.centerID);
                 Robot.assignment = decode(flag);
-                rc.setFlag(flag); // TODO: why this line?
+                rc.setFlag(flag); // useful default value: so other bots can know your assignment.
                 break;
             }
         }
@@ -62,12 +62,25 @@ abstract public class Robot {
     void scoutLogic(Direction commandDir) throws GameActionException {
         for (RobotInfo info : rc.senseNearbyRobots()) {
             if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                rc.setFlag(encode(dangerMessage(info)));
+                MapLocation loc = info.getLocation();
+                flagMessage(
+                        Communication.Label.ENEMY_EC,
+                        loc.x % 128,
+                        loc.y % 128,
+                        (int) (Math.log(info.getInfluence()) / Math.log(2) + 1)
+                );
                 assignment = null;
                 onUpdate();
                 return;
             } else if (info.getTeam() == Team.NEUTRAL) {
-                rc.setFlag(encode(neutralECMessage(info)));
+                MapLocation loc = info.getLocation();
+                double log = Math.log(info.getConviction()) / Math.log(2);
+                flagMessage(
+                        Communication.Label.NEUTRAL_EC,
+                        loc.x % 128,
+                        loc.y % 128,
+                        (int) log + 1
+                );
             }
         }
         Direction move = Nav.tick();
@@ -85,7 +98,12 @@ abstract public class Robot {
                         default:
                             offset = Math.abs(rc.getLocation().y - centerLoc.y);
                     }
-                    rc.setFlag(encode(safeDirMessage(commandDir, d, offset)));
+                    rc.setFlag(encode(makeMessage(
+                            Label.SAFE_DIR_EDGE,
+                            commandDir.ordinal(),
+                            d.ordinal(),
+                            offset))
+                    );
                     break;
                 }
             }
@@ -95,29 +113,14 @@ abstract public class Robot {
         Clock.yield();
     }
 
-    /* MESSAGE CREATION FUNCTIONS */
+    /* Utility functions */
 
-    static Message scoutMessage(Direction dir) {
-        int[] data = {dir.ordinal()};
-        return new Message(Label.SCOUT, data);
+    static Message makeMessage(Label label, int... data) {
+        return new Message(label, data);
     }
 
-    static Message dangerMessage(RobotInfo enemy) {
-        MapLocation enemy_loc = enemy.getLocation();
-        int[] data = {enemy_loc.x % 128, enemy_loc.y % 128, (int) (Math.log(enemy.getInfluence()) / Math.log(2) + 1)};
-        return new Message(Label.ENEMY_EC, data);
-    }
-
-    static Message neutralECMessage(RobotInfo info) {
-        MapLocation loc = info.getLocation();
-        double log = Math.log(info.getConviction()) / Math.log(2);
-        int[] data = {loc.x % 128, loc.y % 128, (int) log + 1};
-        return new Message(Label.NEUTRAL_EC, data);
-    }
-
-    static Message safeDirMessage(Direction commandDir, Direction edgeDir, int offset) {
-        int[] data = {commandDir.ordinal(), edgeDir.ordinal(), offset};
-        return new Message(Label.SAFE_DIR_EDGE, data);
+    static void flagMessage(Label label, int... data) throws GameActionException {
+        rc.setFlag(encode(makeMessage(label, data)));
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
@@ -132,8 +135,6 @@ abstract public class Robot {
             yOff = yOff > 0 ? yOff - 128 : yOff + 128;
         return myLoc.translate(xOff, yOff);
     }
-
-    /* Utility functions */
 
     static Direction fromOrdinal(int i) {
         return directions[i];

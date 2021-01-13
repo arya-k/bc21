@@ -53,7 +53,13 @@ public class Muckraker extends Robot {
         if (state == State.Explore) {
             for (RobotInfo info : enemies) {
                 if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    rc.setFlag(encode(dangerMessage(info)));
+                    MapLocation loc = info.getLocation();
+                    flagMessage(
+                            Communication.Label.ENEMY_EC,
+                            loc.x % 128,
+                            loc.y % 128,
+                            (int) (Math.log(info.getInfluence()) / Math.log(2) + 1)
+                    );
 
                     // We have seen an enemy EC: we should clog it:
                     enemyECLoc = info.getLocation();
@@ -61,7 +67,14 @@ public class Muckraker extends Robot {
                     state = State.Clog;
                     break;
                 } else if (info.getTeam() == Team.NEUTRAL) {
-                    rc.setFlag(encode(neutralECMessage(info)));
+                    MapLocation loc = info.getLocation();
+                    double log = Math.log(info.getConviction()) / Math.log(2);
+                    flagMessage(
+                            Communication.Label.NEUTRAL_EC,
+                            loc.x % 128,
+                            loc.y % 128,
+                            (int) log + 1
+                    );
                 }
             }
         }

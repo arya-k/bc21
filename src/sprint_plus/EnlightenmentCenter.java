@@ -10,7 +10,7 @@ import static sprint_plus.Communication.encode;
 public class EnlightenmentCenter extends Robot {
 
     static UnitBuildDPQueue pq = new UnitBuildDPQueue(5);
-    static IterableIdSet exploringIds = new IterableIdSet();
+    static IterableIdSet trackedIds = new IterableIdSet();
 
     static final int ULTRA_LOW = 4;
     static final int LOW = 3;
@@ -39,6 +39,7 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onAwake() throws GameActionException {
+        // initialize varius arrays
         for (int i = 0; i < 8; i++) {
             edgeOffsets[i] = 100; //default to an impossible value
             directionOpenness[i] = 200;
@@ -49,9 +50,7 @@ public class EnlightenmentCenter extends Robot {
         for (Direction dir : Robot.directions) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 1, scoutMessage(dir)), HIGH);
         }
-
         pq.push(new UnitBuild(RobotType.SLANDERER, 40, hideMessage()), MED);
-
         for (int i = 5; i > 0; i--) {
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, exploreMessage()), MED);
         }
@@ -64,19 +63,19 @@ public class EnlightenmentCenter extends Robot {
             return;
         }
 
-        // System.out.println("Influence: " + rc.getInfluence());
-        // System.out.println("Producing Muckrakers: " + keepProducingMuckrakers);
+        System.out.println("Influence: " + rc.getInfluence());
+        System.out.println("Producing Muckrakers: " + keepProducingMuckrakers);
         for (int i = 0; i < 8; i++) {
             if (!dangerDirs[i]) continue;
-            // System.out.println("DANGEROUS: " + fromOrdinal(i));
+            System.out.println("DANGEROUS: " + fromOrdinal(i));
         }
         for (Direction dir : Direction.cardinalDirections()) {
             int ord = dir.ordinal();
             if (edgeOffsets[ord] == 100) continue;
-            // System.out.println(dir + " offset " + edgeOffsets[ord]);
+            System.out.println(dir + " offset " + edgeOffsets[ord]);
         }
         for (Direction dir : directions) {
-            // System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
+            System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
         }
     }
 
@@ -89,7 +88,7 @@ public class EnlightenmentCenter extends Robot {
             switch (prevUnit.message.label) {
                 case SCOUT:
                 case EXPLORE:
-                    exploringIds.add(info.getID());
+                    trackedIds.add(info.getID());
             }
             prevUnit = null;
         }
@@ -200,9 +199,9 @@ public class EnlightenmentCenter extends Robot {
             }
         }
         // read the ids of the explorers
-        for (int id : exploringIds.getKeys()) {
+        for (int id : trackedIds.getKeys()) {
             if (!rc.canGetFlag(id)) {
-                exploringIds.remove(id);
+                trackedIds.remove(id);
                 continue;
             }
             int flag = rc.getFlag(id);
@@ -243,13 +242,13 @@ public class EnlightenmentCenter extends Robot {
                             int influence = (int) Math.pow(2, message.data[2]);
                             enemyECInfluence[known] = influence;
                         }
-                        exploringIds.remove(id);
+                        trackedIds.remove(id);
                         break;
                     case SAFE_DIR_EDGE:
                         safeDirs[message.data[0]] = true;
                         edgeOffsets[message.data[1]] = message.data[2];
                         updateDirOpenness();
-                        exploringIds.remove(id);
+                        trackedIds.remove(id);
                         break;
                     case NEUTRAL_EC:
                         MapLocation neutral_ec_loc = getLocFromMessage(message.data[0], message.data[1]);
@@ -265,9 +264,9 @@ public class EnlightenmentCenter extends Robot {
                             neutralECInfluence[neutralECFound++] = influence;
                             int[] data = {neutral_ec_loc.x % 128, neutral_ec_loc.y % 128};
                             pq.push(new UnitBuild(RobotType.POLITICIAN, influence, new Message(Label.CAPTURE_NEUTRAL_EC, data)), ULTRA_LOW);
-                            // System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
+                            System.out.println("attacking a neutral EC @ " + neutral_ec_loc + " with politician of influence " + influence);
                         }
-                        exploringIds.remove(id);
+                        trackedIds.remove(id);
                         break;
                 }
 
@@ -283,9 +282,7 @@ public class EnlightenmentCenter extends Robot {
         }
     }
 
-    void createAttackHorde(RobotType type, int size, int troop_influence, MapLocation attack_target) throws GameActionException {
-        createAttackHorde(type, size, troop_influence, attack_target, MED);
-    }
+    /* message helpers */
 
     Message defendECMessage() throws GameActionException {
         int[] data = {randomFrontierDir().ordinal()};
