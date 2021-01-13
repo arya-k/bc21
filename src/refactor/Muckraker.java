@@ -128,9 +128,10 @@ public class Muckraker extends Robot {
             @Override
             public void act() throws GameActionException {
                 if (trySlandererKill()) return;
-                System.out.println("UNIMPLEMENTED");
-                // TODO: figure out what we should do in this scenario lol.
-                rc.resign();
+
+                Nav.doGoInDir(randomDirection());
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         };
 
