@@ -27,6 +27,7 @@ public class Slanderer extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        super.onUpdate();
         transition(); // Consider state switches
         state.act(); // Take action based on current state
         Clock.yield();
@@ -78,7 +79,7 @@ public class Slanderer extends Robot {
                 for (RobotInfo enemy : enemies) {
                     if (enemy.type != RobotType.MUCKRAKER) continue;
 
-                    int dangerDir = rc.getLocation().directionTo(enemy.location).ordinal();
+                    int dangerDir = currentLocation.directionTo(enemy.location).ordinal();
 
                     dangerByDir[(dangerDir + 7) % 8]++;
                     dangerByDir[dangerDir] += 2;
@@ -95,7 +96,7 @@ public class Slanderer extends Robot {
                 double dirPassability = 0.0;
                 for (int i = 0; i < 8; i++) {
                     if (rc.canMove(fromOrdinal(i)) && dangerByDir[i] == minDanger) {
-                        double passability = rc.sensePassability(rc.getLocation().add(fromOrdinal(i)));
+                        double passability = rc.sensePassability(currentLocation.add(fromOrdinal(i)));
                         if (passability > dirPassability) {
                             dirPassability = passability;
                             dir = i;

@@ -12,6 +12,11 @@ abstract public class Robot {
     public static int firstTurn;
     public static MapLocation initLoc;
 
+    public static MapLocation currentLocation;
+    public static RobotInfo[] nearby;
+    public static int myInfluence;
+    public static int currentRound;
+
     static int centerID;
     static MapLocation centerLoc;
 
@@ -33,6 +38,7 @@ abstract public class Robot {
         Robot.firstTurn = rc.getRoundNum();
         Robot.rc = rc;
         Robot.initLoc = rc.getLocation();
+        myInfluence = rc.getInfluence();
 
         if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return; // Everything below here is for non-buildings:
 
@@ -53,7 +59,11 @@ abstract public class Robot {
 
     abstract void onAwake() throws GameActionException;
 
-    abstract void onUpdate() throws GameActionException;
+    void onUpdate() throws GameActionException {
+        currentLocation = rc.getLocation();
+        nearby = rc.senseNearbyRobots();
+        currentRound = rc.getRoundNum();
+    };
 
     /* Utility functions */
 
@@ -66,16 +76,15 @@ abstract public class Robot {
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
-        MapLocation myLoc = rc.getLocation();
-        int x = myLoc.x % 128;
-        int y = myLoc.y % 128;
+        int x = currentLocation.x % 128;
+        int y = currentLocation.y % 128;
         int xOff = xMod - x;
         int yOff = yMod - y;
         if (Math.abs(xOff) >= 64)
             xOff = xOff > 0 ? xOff - 128 : xOff + 128;
         if (Math.abs(yOff) >= 64)
             yOff = yOff > 0 ? yOff - 128 : yOff + 128;
-        return myLoc.translate(xOff, yOff);
+        return currentLocation.translate(xOff, yOff);
     }
 
     static Direction fromOrdinal(int i) {
@@ -83,12 +92,12 @@ abstract public class Robot {
     }
 
     static Direction randomDirection() {
-        return directions[(rc.getRoundNum() + rc.getID()) % 8];
+        return directions[(currentRound + rc.getID()) % 8];
     }
 
     static void logBytecodeUse(int startRound, int startBC) {
         int limit = rc.getType().bytecodeLimit;
-        int byteCount = (limit - startBC) + (rc.getRoundNum() - startRound - 1) * limit + Clock.getBytecodeNum();
+        int byteCount = (limit - startBC) + (currentRound - startRound - 1) * limit + Clock.getBytecodeNum();
         System.out.println("@@@Bytecodes used: " + byteCount);
     }
 }

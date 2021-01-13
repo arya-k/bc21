@@ -65,26 +65,26 @@ public class Politician extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        super.onUpdate();
         transition();
         state.act();
         Clock.yield();
     }
 
     void transition() throws GameActionException {
-        nearbyRobots = rc.senseNearbyRobots();
 
         // Scout -> Explode
         if (state == State.Scout && Nav.currentGoal == Nav.NavGoal.Nothing) {
             for (Direction d : Direction.cardinalDirections()) {
-                if (!rc.onTheMap(rc.getLocation().add(d))) {
+                if (!rc.onTheMap(currentLocation.add(d))) {
                     int offset;
                     switch (d) {
                         case EAST:
                         case WEST:
-                            offset = Math.abs(rc.getLocation().x - centerLoc.x);
+                            offset = Math.abs(currentLocation.x - centerLoc.x);
                             break;
                         default:
-                            offset = Math.abs(rc.getLocation().y - centerLoc.y);
+                            offset = Math.abs(currentLocation.y - centerLoc.y);
                     }
                     flagMessage(
                             Communication.Label.SAFE_DIR_EDGE,
@@ -178,7 +178,7 @@ public class Politician extends Robot {
                     if (nbor.getTeam() == Team.NEUTRAL) {
                         foundNeutralNeighbor = true;
                         if ((waitingRounds > NEUTRAL_EC_WAIT_ROUNDS ||
-                                nbor.getConviction() < (rc.getInfluence() - 10) / neighbors.length / 2) && rc.canEmpower(2)) {
+                                nbor.getConviction() < (myInfluence - 10) / neighbors.length / 2) && rc.canEmpower(2)) {
                             rc.empower(2);
                             Clock.yield();
                             return;
@@ -224,7 +224,7 @@ public class Politician extends Robot {
         Team opponent = myTeam.opponent();
         int numNearby = nearbyRobots.length;
         if (numNearby == 0) return 0;
-        double usefulInfluence = rc.getInfluence() - 10;
+        double usefulInfluence = myInfluence - 10;
         if (usefulInfluence < 0) return 0;
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;

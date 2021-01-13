@@ -64,7 +64,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void lowPriorityLogging() {
-        System.out.println("Influence: " + rc.getInfluence());
+        System.out.println("Influence: " + myInfluence);
         System.out.println("Production state: " + prodState);
         System.out.println("Bidding state: " + bidController.state);
         for (int i = 0; i < 8; i++) {
@@ -95,10 +95,10 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
-
+        super.onUpdate();
         // get the id of the previously build unit
         if (prevUnit != null) {
-            RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(prevDir));
+            RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(prevDir));
             switch (prevUnit.message.label) {
                 case SCOUT:
                 case EXPLORE:
@@ -113,7 +113,7 @@ public class EnlightenmentCenter extends Robot {
 
         immediateDefense();
 
-        if (rc.getRoundNum() % 100 == 0) {
+        if (currentRound % 100 == 0) {
             lowPriorityLogging();
         }
 
@@ -123,8 +123,8 @@ public class EnlightenmentCenter extends Robot {
             prodState.refillQueue();
         if (nextUnit == null && !empty)
             nextUnit = pq.pop();
-        if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= rc.getInfluence()) ||
-                nextUnit.influence + influenceMinimum() <= rc.getInfluence()) && rc.isReady()) {
+        if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
+                nextUnit.influence + influenceMinimum() <= myInfluence) && rc.isReady()) {
             // build a unit
             Direction buildDir = null;
             for (Direction dir : spawnDirs) {
@@ -153,7 +153,7 @@ public class EnlightenmentCenter extends Robot {
         }
 
 
-        if (rc.getRoundNum() % 100 == 0) {
+        if (currentRound % 100 == 0) {
             lowPriorityLogging();
         }
         Clock.yield();
@@ -189,7 +189,7 @@ public class EnlightenmentCenter extends Robot {
                 }
 
                 if (!muckrakerNearby()) {
-                    for (int i = slanderersBuilt; i < rc.getRoundNum() / 20; i++) {
+                    for (int i = slanderersBuilt; i < currentRound / 20; i++) {
                         pq.push(new UnitBuild(RobotType.SLANDERER, 150,
                                 makeMessage(Label.HIDE, bestSafeDir().ordinal())), MED);
                     }
@@ -200,7 +200,7 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() {
                 if (!muckrakerNearby()) {
-                    for (int i = slanderersBuilt; i < rc.getRoundNum() / 5; i++) {
+                    for (int i = slanderersBuilt; i < currentRound / 5; i++) {
                         pq.push(new UnitBuild(RobotType.SLANDERER, 150,
                                 makeMessage(Label.HIDE, bestSafeDir().ordinal())), MED);
                     }
@@ -222,11 +222,11 @@ public class EnlightenmentCenter extends Robot {
             enemies++;
         }
         underAttack = enemies >= 4;
-        if ((enemyConviction > 200 || enemies >= 4) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
+        if ((enemyConviction > 200 || enemies >= 4) && (currentRound - exploderQueuedRound > 50)) {
             int conv = 10 + enemyConviction * 2;
             pq.push(new UnitBuild(RobotType.POLITICIAN, conv, makeMessage(Label.EXPLODE)), ULTRA_HIGH);
             System.out.println("EXPLODER QUEUED!!!!");
-            exploderQueuedRound = rc.getRoundNum();
+            exploderQueuedRound = currentRound;
         }
     }
 
@@ -254,7 +254,7 @@ public class EnlightenmentCenter extends Robot {
                     }
 
                     if (knownEnemyEC == -1) {
-                        Direction dangerDir = rc.getLocation().directionTo(enemyECLoc);
+                        Direction dangerDir = currentLocation.directionTo(enemyECLoc);
                         int influence = (int) Math.pow(2, message.data[2]);
 
                         dangerDirs[dangerDir.ordinal()] = true;
@@ -313,7 +313,7 @@ public class EnlightenmentCenter extends Robot {
     /* Helpers and Utilites */
 
     static int influenceMinimum() {
-        return 20 + (int) (rc.getRoundNum() * 0.1);
+        return 20 + (int) (currentRound * 0.1);
     }
 
     static void createAttackHorde(RobotType type, int size, int troop_influence, MapLocation attack_target, int priority) {
@@ -325,7 +325,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     static boolean muckrakerNearby() {
-        for (RobotInfo bot : rc.senseNearbyRobots()) {
+        for (RobotInfo bot : nearby) {
             if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
                 return true;
             }
@@ -391,11 +391,11 @@ public class EnlightenmentCenter extends Robot {
             for (int j = i + 1; j < 8; j++) {
                 Direction jd = spawnDirs[j];
                 double jPass = 0;
-                if (rc.onTheMap(rc.getLocation().add(jd)))
-                    jPass = rc.sensePassability(rc.getLocation().add(jd));
+                if (rc.onTheMap(currentLocation.add(jd)))
+                    jPass = rc.sensePassability(currentLocation.add(jd));
                 double bPass = 0;
-                if (rc.onTheMap(rc.getLocation().add(best)))
-                    bPass = rc.sensePassability(rc.getLocation().add(best));
+                if (rc.onTheMap(currentLocation.add(best)))
+                    bPass = rc.sensePassability(currentLocation.add(best));
 
                 if (jPass > bPass) {
                     best = jd;

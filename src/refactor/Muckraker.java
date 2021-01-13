@@ -34,13 +34,14 @@ public class Muckraker extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        super.onUpdate();
         transition();
         state.act();
         Clock.yield();
     }
 
     void transition() throws GameActionException {
-        RobotInfo[] enemies = rc.senseNearbyRobots();
+        RobotInfo[] enemies = nearby;
 
         // Clog -> Explore (when the enemy EC we wanted to attack has been converted)
         if (state == State.Clog && rc.canSenseLocation(enemyECLoc) &&
@@ -93,7 +94,7 @@ public class Muckraker extends Robot {
                 if (Nav.currentGoal != Nav.NavGoal.GoTo)
                     Nav.doGoTo(enemyECLoc); // don't allow Nav.goTo to quit
 
-                if (rc.getLocation().distanceSquaredTo(enemyECLoc) > CLOG_BEHAVIOR_THRESHOLD) {
+                if (currentLocation.distanceSquaredTo(enemyECLoc) > CLOG_BEHAVIOR_THRESHOLD) {
                     Direction move = Nav.tick();
                     if (move != null && rc.canMove(move)) rc.move(move);
 
@@ -104,7 +105,7 @@ public class Muckraker extends Robot {
 
                         // If this location is available, and closer than we currently are:
                         if (rc.canDetectLocation(target) && !rc.isLocationOccupied(target) &&
-                                enemyECLoc.distanceSquaredTo(target) < enemyECLoc.distanceSquaredTo(rc.getLocation())) {
+                                enemyECLoc.distanceSquaredTo(target) < enemyECLoc.distanceSquaredTo(currentLocation)) {
                             Nav.doGoTo(target);
                             Direction move = Nav.tick();
                             if (move != null && rc.canMove(move)) {
