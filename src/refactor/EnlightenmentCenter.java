@@ -213,6 +213,7 @@ public class EnlightenmentCenter extends Robot {
 
     static int exploderQueuedRound = 0;
     static boolean underAttack = false;
+
     void immediateDefense() {
         int enemyConviction = 0;
         int enemies = 0;
@@ -223,7 +224,7 @@ public class EnlightenmentCenter extends Robot {
         underAttack = enemies >= 4;
         if ((enemyConviction > 200 || enemies >= 4) && (rc.getRoundNum() - exploderQueuedRound > 50)) {
             int conv = 10 + enemyConviction * 2;
-            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, makeMessage(Label.EXPLORE)), ULTRA_HIGH);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, conv, makeMessage(Label.EXPLODE)), ULTRA_HIGH);
             System.out.println("EXPLODER QUEUED!!!!");
             exploderQueuedRound = rc.getRoundNum();
         }
@@ -299,7 +300,7 @@ public class EnlightenmentCenter extends Robot {
                                 makeMessage(
                                         Label.CAPTURE_NEUTRAL_EC,
                                         neutralECLoc.x % 128, neutralECLoc.y % 128)
-                                ), ULTRA_LOW);
+                        ), ULTRA_LOW);
 
                         System.out.println("attacking a neutral EC @ " + neutralECLoc + " with politician of influence " + influence);
                     }
@@ -379,6 +380,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     static Direction[] spawnDirs = new Direction[8];
+
     static void calcBestSpawnDirs() throws GameActionException {
         for (int i = 0; i < 8; i++) {
             spawnDirs[i] = directions[i];

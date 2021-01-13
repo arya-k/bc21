@@ -1,7 +1,7 @@
 package refactor;
 public class Communication {
     public enum Label {
-        FORM_WALL, ENEMY_EC, EXPAND, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, LATCH, DEFEND, HIDE, EXPLORE, EXPLODE, STOP_PRODUCING_MUCKRAKERS
+        ENEMY_EC, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, HIDE, EXPLORE, EXPLODE, STOP_PRODUCING_MUCKRAKERS
     }
     public static class Message {
         Label label;
@@ -12,22 +12,12 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 3946019;
+        flag ^= 12554166;
         flag--;
-        int[] data = new int[4];
+        int[] data = new int[3];
         Label label;
         int acc;
-        if (flag % 32 == 0) {
-            label = Label.FORM_WALL;
-            acc = flag / 32;
-            data[0] = acc % 128;
-            acc = acc / 128;
-            data[1] = acc % 128;
-            acc = acc / 128;
-            data[2] = acc % 16;
-            acc = acc / 16;
-            data[3] = acc % 2;
-        } else if (flag % 64 == 16) {
+        if (flag % 64 == 0) {
             label = Label.ENEMY_EC;
             acc = flag / 64;
             data[0] = acc % 128;
@@ -35,13 +25,7 @@ public class Communication {
             data[1] = acc % 128;
             acc = acc / 128;
             data[2] = acc % 16;
-        } else if (flag % 64 == 8) {
-            label = Label.EXPAND;
-            acc = flag / 64;
-            data[0] = acc % 4096;
-            acc = acc / 4096;
-            data[1] = acc % 64;
-        } else if (flag % 64 == 24) {
+        } else if (flag % 64 == 32) {
             label = Label.NEUTRAL_EC;
             acc = flag / 64;
             data[0] = acc % 128;
@@ -49,19 +33,19 @@ public class Communication {
             data[1] = acc % 128;
             acc = acc / 128;
             data[2] = acc % 16;
-        } else if (flag % 1024 == 4) {
+        } else if (flag % 1024 == 16) {
             label = Label.ATTACK_LOC;
             acc = flag / 1024;
             data[0] = acc % 128;
             acc = acc / 128;
             data[1] = acc % 128;
-        } else if (flag % 1024 == 20) {
+        } else if (flag % 1024 == 48) {
             label = Label.CAPTURE_NEUTRAL_EC;
             acc = flag / 1024;
             data[0] = acc % 128;
             acc = acc / 128;
             data[1] = acc % 128;
-        } else if (flag % 4096 == 12) {
+        } else if (flag % 4096 == 8) {
             label = Label.SAFE_DIR_EDGE;
             acc = flag / 4096;
             data[0] = acc % 8;
@@ -69,27 +53,19 @@ public class Communication {
             data[1] = acc % 8;
             acc = acc / 8;
             data[2] = acc % 64;
-        } else if (flag % 2097152 == 28) {
+        } else if (flag % 2097152 == 40) {
             label = Label.SCOUT;
             acc = flag / 2097152;
             data[0] = acc % 8;
-        } else if (flag % 2097152 == 2) {
-            label = Label.LATCH;
-            acc = flag / 2097152;
-            data[0] = acc % 8;
-        } else if (flag % 2097152 == 18) {
-            label = Label.DEFEND;
-            acc = flag / 2097152;
-            data[0] = acc % 8;
-        } else if (flag % 2097152 == 10) {
+        } else if (flag % 2097152 == 24) {
             label = Label.HIDE;
             acc = flag / 2097152;
             data[0] = acc % 8;
-        } else if (flag % 16777216 == 26) {
+        } else if (flag % 16777216 == 56) {
             label = Label.EXPLORE;
-        } else if (flag % 16777216 == 6) {
+        } else if (flag % 16777216 == 4) {
             label = Label.EXPLODE;
-        } else if (flag % 16777216 == 22) {
+        } else if (flag % 16777216 == 36) {
             label = Label.STOP_PRODUCING_MUCKRAKERS;
         } else {
             throw new RuntimeException("Attempting to decode an invalid flag");
@@ -98,34 +74,26 @@ public class Communication {
     }
     public static int encode(Message message) {
         switch (message.label) {
-            case FORM_WALL:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 262144) * 32 + 0);
             case ENEMY_EC:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
-            case EXPAND:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 4096) * 64 + 8);
+                return 12554166 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 0);
             case NEUTRAL_EC:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 24);
+                return 12554166 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case ATTACK_LOC:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 4);
+                return 12554166 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 16);
             case CAPTURE_NEUTRAL_EC:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 20);
+                return 12554166 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 48);
             case SAFE_DIR_EDGE:
-                return 3946019 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 12);
+                return 12554166 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 8);
             case SCOUT:
-                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 28);
-            case LATCH:
-                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 2);
-            case DEFEND:
-                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 18);
+                return 12554166 ^ (1 + (message.data[0] * 1) * 2097152 + 40);
             case HIDE:
-                return 3946019 ^ (1 + (message.data[0] * 1) * 2097152 + 10);
+                return 12554166 ^ (1 + (message.data[0] * 1) * 2097152 + 24);
             case EXPLORE:
-                return 3946019 ^ (1 + (0) * 16777216 + 26);
+                return 12554166 ^ (1 + (0) * 16777216 + 56);
             case EXPLODE:
-                return 3946019 ^ (1 + (0) * 16777216 + 6);
+                return 12554166 ^ (1 + (0) * 16777216 + 4);
             case STOP_PRODUCING_MUCKRAKERS:
-                return 3946019 ^ (1 + (0) * 16777216 + 22);
+                return 12554166 ^ (1 + (0) * 16777216 + 36);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }
