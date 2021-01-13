@@ -97,25 +97,25 @@ abstract public class Robot {
 
     /* MESSAGE CREATION FUNCTIONS */
 
-    Message scoutMessage(Direction dir) {
+    static Message scoutMessage(Direction dir) {
         int[] data = {dir.ordinal()};
         return new Message(Label.SCOUT, data);
     }
 
-    Message dangerMessage(RobotInfo enemy) {
+    static Message dangerMessage(RobotInfo enemy) {
         MapLocation enemy_loc = enemy.getLocation();
         int[] data = {enemy_loc.x % 128, enemy_loc.y % 128, (int) (Math.log(enemy.getInfluence()) / Math.log(2) + 1)};
         return new Message(Label.ENEMY_EC, data);
     }
 
-    Message neutralECMessage(RobotInfo info) {
+    static Message neutralECMessage(RobotInfo info) {
         MapLocation loc = info.getLocation();
         double log = Math.log(info.getConviction()) / Math.log(2);
         int[] data = {loc.x % 128, loc.y % 128, (int) log + 1};
         return new Message(Label.NEUTRAL_EC, data);
     }
 
-    Message safeDirMessage(Direction commandDir, Direction edgeDir, int offset) {
+    static Message safeDirMessage(Direction commandDir, Direction edgeDir, int offset) {
         int[] data = {commandDir.ordinal(), edgeDir.ordinal(), offset};
         return new Message(Label.SAFE_DIR_EDGE, data);
     }

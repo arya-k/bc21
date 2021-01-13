@@ -5,159 +5,127 @@ import battlecode.common.*;
 import static refactor.Communication.encode;
 
 public class Muckraker extends Robot {
+    static final int CLOG_BEHAVIOR_THRESHOLD = 9; // If we are within this r^2, we manually path instead of using Nav
+
+    static State state = null;
+
+    /* clog vars */
+    static MapLocation enemyECLoc;
+
     @Override
-    void onAwake() throws GameActionException {
-        if (assignment == null) {
-            reassignDefault();
-        }
+    void onAwake() {
+        state = State.ChillAroundEC; // by default, just sit around the EC
 
         switch (assignment.label) {
-            case LATCH:
-            case HIDE:
-                commandDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(commandDir);
-                break;
             case EXPLORE:
+                state = State.Explore;
                 Nav.doExplore();
                 break;
             case ATTACK_LOC:
-                commandLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
-                Nav.doGoTo(commandLoc);
+                state = State.Clog;
+                enemyECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
+                Nav.doGoTo(enemyECLoc);
                 break;
             default:
-                reassignDefault();
-                break;
+                System.out.println("ERROR: Muckraker has been given a bad assignment");
+                rc.resign(); // TODO: remove this before we submit...
         }
     }
 
     @Override
     void onUpdate() throws GameActionException {
-//        checkExpansion();
-        if (assignment == null) {
-            defaultBehavior();
-            return;
-        }
-        switch (assignment.label) {
-            case LATCH:
-                latchBehavior();
-                break;
-            case HIDE:
-                hideBehavior();
-                break;
-            case EXPLORE:
-            case ATTACK_LOC:
-            default:
-                defaultBehavior();
-                break;
-        }
-    }
-
-    // TODO: do I want to go back to having this as an abstract base version?
-    void reassignDefault() {
-        assignment = null;
-        MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
-        Nav.doGoTo(goalPos);
-    }
-
-    void reassignDefault(boolean setGoal) {
-        assignment = null;
-        if (setGoal) {
-            MapLocation goalPos = initLoc.translate((int) (Math.random() * 4) + 1, (int) (Math.random() * 4) + 1);
-            Nav.doGoTo(goalPos);
-        }
-    }
-
-    void latchBehavior() throws GameActionException {
-        if (rc.isReady()) {
-            RobotInfo kill = bestSlandererKill();
-            if (kill != null) {
-                rc.expose(kill.getLocation());
-                Clock.yield();
-                return;
-            }
-            //TODO actually do something here
-            //Waiting for the follow command to exist
-        }
-    }
-
-    void hideBehavior() throws GameActionException {
-        if (Nav.currentGoal != Nav.NavGoal.GoTo) {
-            RobotInfo[] allies = rc.senseNearbyRobots(25, rc.getTeam());
-            RobotInfo closest_slanderer = null;
-            MapLocation myLocation = rc.getLocation();
-            for (RobotInfo info : allies) {
-                if (info.getType() == RobotType.SLANDERER) {
-                    if (closest_slanderer == null || info.getLocation().distanceSquaredTo(myLocation) < closest_slanderer.getLocation().distanceSquaredTo(myLocation)) {
-                        closest_slanderer = info;
-                    }
-                }
-            }
-            if (closest_slanderer != null) {
-                MapLocation target = closest_slanderer.getLocation();
-                Direction opposite = commandDir.opposite();
-                for (int i = 3; --i > 0; ) {
-                    target = target.translate(opposite.dx * (int) (Math.random() + 0.5), opposite.dy * (int) (Math.random() + 0.5));
-                }
-                Nav.doGoTo(target);
-            }
-        }
-
-        if (rc.isReady()) {
-            Direction move = Nav.tick();
-            if (move == null || move == Direction.CENTER) {
-                reassignDefault(false);
-            } else if (rc.canMove(move)) rc.move(move);
-
-        }
+        transition();
+        state.act();
         Clock.yield();
     }
 
-    void defaultBehavior() throws GameActionException {
-        // check if action possible
-        if (rc.isReady()) {
-            // get all enemy nearby robots
-            RobotInfo kill = bestSlandererKill();
-            if (kill != null) {
-                rc.expose(kill.getLocation());
-                Clock.yield();
-                return;
-            }
-            Direction move = Nav.tick();
-            if (move != null && rc.canMove(move)) rc.move(move);
-            else if (move == null && assignment != null && assignment.label != Communication.Label.ATTACK_LOC) {
-                for (RobotInfo info : rc.senseNearbyRobots()) {
-                    if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                        MapLocation enemy_loc = info.getLocation();
-                        rc.setFlag(encode(dangerMessage(info)));
-                        MapLocation loc = enemy_loc.add(randomDirection());
-                        int[] data = {loc.x % 128, loc.y % 128};
-                        assignment = new Communication.Message(Communication.Label.ATTACK_LOC, data);
-                        onAwake();
-                        break;
-                    } else if (info.getTeam() == Team.NEUTRAL) {
-                        rc.setFlag(encode(neutralECMessage(info)));
-                    }
+    void transition() throws GameActionException {
+        RobotInfo[] enemies = rc.senseNearbyRobots();
+
+        // Clog -> Explore (when the enemy EC we wanted to attack has been converted)
+        if (state == State.Clog && rc.canSenseLocation(enemyECLoc) &&
+                rc.senseRobotAtLocation(enemyECLoc).getTeam() != rc.getTeam().opponent()) {
+            state = State.Explore;
+            Nav.doExplore();
+        }
+
+        // Explore -> Clog
+        if (state == State.Explore) {
+            for (RobotInfo info : enemies) {
+                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                    rc.setFlag(encode(dangerMessage(info)));
+
+                    // We have seen an enemy EC: we should clog it:
+                    enemyECLoc = info.getLocation();
+                    Nav.doGoTo(enemyECLoc);
+                    state = State.Clog;
+                    break;
+                } else if (info.getTeam() == Team.NEUTRAL) {
+                    rc.setFlag(encode(neutralECMessage(info)));
                 }
-            } else if (move == null && assignment != null && assignment.label == Communication.Label.ATTACK_LOC) {
-                if (rc.getLocation().distanceSquaredTo(commandLoc) > 12) {
-                    int[] data = {};
-                    rc.setFlag(encode(new Communication.Message(Communication.Label.STOP_PRODUCING_MUCKRAKERS, data)));
-                    assignment = null;
-                    Nav.doGoTo(centerLoc);
-                    onUpdate();
-                    return;
-                }
-            } else if (move == null) {
-                Nav.doGoInDir(randomDirection());
-                onUpdate();
-                return;
             }
         }
-        Clock.yield();
+
+        // Explore -> ChillAroundEC
+        if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing)
+            state = State.ChillAroundEC;
     }
 
-    RobotInfo bestSlandererKill() {
-        RobotInfo[] neighbors = rc.senseNearbyRobots(12, rc.getTeam().opponent());
+    private enum State {
+        Clog {
+            @Override
+            public void act() throws GameActionException {
+                if (trySlandererKill()) return;
+
+                if (Nav.currentGoal != Nav.NavGoal.GoTo)
+                    Nav.doGoTo(enemyECLoc); // don't allow Nav.goTo to quit
+
+                if (rc.getLocation().distanceSquaredTo(enemyECLoc) > CLOG_BEHAVIOR_THRESHOLD) {
+                    Direction move = Nav.tick();
+                    if (move != null && rc.canMove(move)) rc.move(move);
+
+                } else {
+                    // Manually try and find the location closest to the enemy EC to target:
+                    for (int[] translation : TRANSLATIONS) {
+                        MapLocation target = enemyECLoc.translate(translation[0], translation[1]);
+
+                        // If this location is available, and closer than we currently are:
+                        if (rc.canDetectLocation(target) && !rc.isLocationOccupied(target) &&
+                                enemyECLoc.distanceSquaredTo(target) < enemyECLoc.distanceSquaredTo(rc.getLocation())) {
+                            Nav.doGoTo(target);
+                            Direction move = Nav.tick();
+                            if (move != null && rc.canMove(move)) {
+                                rc.move(move);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        Explore {
+            @Override
+            public void act() throws GameActionException {
+                if (trySlandererKill()) return;
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+            }
+        },
+        ChillAroundEC {
+            @Override
+            public void act() throws GameActionException {
+                if (trySlandererKill()) return;
+                System.out.println("UNIMPLEMENTED");
+                // TODO: figure out what we should do in this scenario lol.
+                rc.resign();
+            }
+        };
+
+        public abstract void act() throws GameActionException;
+    }
+
+    static boolean trySlandererKill() throws GameActionException {
+        RobotInfo[] neighbors = rc.senseNearbyRobots(RobotType.MUCKRAKER.actionRadiusSquared, rc.getTeam().opponent());
         RobotInfo best = null;
         int bestInfluence = 0;
         for (RobotInfo info : neighbors) {
@@ -169,6 +137,15 @@ public class Muckraker extends Robot {
                 }
             }
         }
-        return best;
+
+        if (best != null && rc.canExpose(best.ID)) {
+            rc.expose(best.getLocation());
+            return true;
+        }
+        return false;
     }
+
+    public static final int[][] TRANSLATIONS = {{-1, 0}, {0, -1}, {0, 1}, {1, 0}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
+            {-2, 0}, {0, -2}, {0, 2}, {2, 0}, {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2}, {1, -2}, {1, 2}, {2, -1}, {2, 1},
+            {-2, -2}, {-2, 2}, {2, -2}, {2, 2}, {-3, 0}, {0, -3}, {0, 3}, {3, 0}};
 }

@@ -3,9 +3,9 @@ package refactor;
 import battlecode.common.*;
 
 public class Slanderer extends Robot {
-    private static final int ENEMY_FEAR_ROUNDS = 5; // how long until we go back to hiding instead of fleeing
+    static final int ENEMY_FEAR_ROUNDS = 5; // how long until we go back to hiding instead of fleeing
 
-    State state = null;
+    static State state = null;
 
     /* hide vars */
     static Direction hideDir = null;
