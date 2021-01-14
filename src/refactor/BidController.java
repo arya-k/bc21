@@ -31,7 +31,7 @@ public class BidController {
 
     public void bid() throws GameActionException {
         // make the next bid
-        int bid = state.suggestBid();
+        int bid = Math.min(rc.getInfluence(), state.suggestBid());
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
         if (bid != 0) {
@@ -87,7 +87,7 @@ public class BidController {
             @Override
             int suggestBid() {
                 int predictedInf = rc.getInfluence() +
-                        (int) (7746 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
+                        (int) (7745 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
                 if (Math.random() < proportionNeeded)
                     return predictedInf / winsNeeded;
                 else
