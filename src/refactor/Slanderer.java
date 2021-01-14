@@ -59,7 +59,7 @@ public class Slanderer extends Robot {
         // Flee -> Hide
         if (state == State.Flee && enemyLastSeen > ENEMY_FEAR_ROUNDS) {
             state = State.Hide; // TODO: Do I want to change the hide direction?
-            Nav.doGoInDir(hideDir);
+            Nav.doGoTo(randomHoverLocation(5));
         }
     }
 
@@ -67,9 +67,11 @@ public class Slanderer extends Robot {
         Hide {
             @Override
             public void act() throws GameActionException {
-                // TODO: hover around the EC instead of just disappearing off into the sunset lol
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
+                if (move == null) {
+                    Nav.doGoTo(randomHoverLocation(5));
+                }
             }
         },
         Flee {
@@ -110,5 +112,13 @@ public class Slanderer extends Robot {
         };
 
         public abstract void act() throws GameActionException; // Take a single action in accordance with the state
+    }
+
+    static MapLocation randomHoverLocation(double radius) {
+        double angle = 2 * Math.PI * Math.random();
+        int x = (int) (radius * Math.cos(angle));
+        int y = (int) (radius * Math.sin(angle));
+        System.out.println("angle " + angle);
+        return centerLoc.translate(x, y);
     }
 }

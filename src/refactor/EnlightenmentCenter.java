@@ -78,10 +78,7 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
-        int createSlandererInfluence = getSlandererInfluence();
-        if(createSlandererInfluence != -1) {
-            pq.push(new UnitBuild(RobotType.SLANDERER, createSlandererInfluence, makeMessage(Label.FLEE)), ULTRA_HIGH);
-        }
+        pq.push(new UnitBuild(RobotType.SLANDERER, 41, makeMessage(Label.HIDE)), ULTRA_HIGH);
 
         for(int i=5; --i >=0;) {
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE)), LOW);

@@ -1,7 +1,7 @@
 package refactor;
 public class Communication {
     public enum Label {
-        ENEMY_EC, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, DEFEND, HIDE, EXPLORE, FLEE, EXPLODE, STOP_PRODUCING_MUCKRAKERS
+        ENEMY_EC, NEUTRAL_EC, ATTACK_LOC, CAPTURE_NEUTRAL_EC, SAFE_DIR_EDGE, SCOUT, DEFEND, EXPLORE, FLEE, EXPLODE, HIDE, STOP_PRODUCING_MUCKRAKERS
     }
     public static class Message {
         Label label;
@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 12368428;
+        flag ^= 8809664;
         flag--;
         int[] data = new int[3];
         Label label;
@@ -61,16 +61,14 @@ public class Communication {
             label = Label.DEFEND;
             acc = flag / 2097152;
             data[0] = acc % 8;
-        } else if (flag % 2097152 == 56) {
-            label = Label.HIDE;
-            acc = flag / 2097152;
-            data[0] = acc % 8;
-        } else if (flag % 16777216 == 4) {
+        } else if (flag % 16777216 == 56) {
             label = Label.EXPLORE;
-        } else if (flag % 16777216 == 36) {
+        } else if (flag % 16777216 == 4) {
             label = Label.FLEE;
-        } else if (flag % 16777216 == 20) {
+        } else if (flag % 16777216 == 36) {
             label = Label.EXPLODE;
+        } else if (flag % 16777216 == 20) {
+            label = Label.HIDE;
         } else if (flag % 16777216 == 52) {
             label = Label.STOP_PRODUCING_MUCKRAKERS;
         } else {
@@ -81,29 +79,29 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case ENEMY_EC:
-                return 12368428 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 0);
+                return 8809664 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 0);
             case NEUTRAL_EC:
-                return 12368428 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
+                return 8809664 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case ATTACK_LOC:
-                return 12368428 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 16);
+                return 8809664 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 16);
             case CAPTURE_NEUTRAL_EC:
-                return 12368428 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 48);
+                return 8809664 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 48);
             case SAFE_DIR_EDGE:
-                return 12368428 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 8);
+                return 8809664 ^ (1 + (message.data[0] * 1 + message.data[1] * 8 + message.data[2] * 64) * 4096 + 8);
             case SCOUT:
-                return 12368428 ^ (1 + (message.data[0] * 1) * 2097152 + 40);
+                return 8809664 ^ (1 + (message.data[0] * 1) * 2097152 + 40);
             case DEFEND:
-                return 12368428 ^ (1 + (message.data[0] * 1) * 2097152 + 24);
-            case HIDE:
-                return 12368428 ^ (1 + (message.data[0] * 1) * 2097152 + 56);
+                return 8809664 ^ (1 + (message.data[0] * 1) * 2097152 + 24);
             case EXPLORE:
-                return 12368428 ^ (1 + (0) * 16777216 + 4);
+                return 8809664 ^ (1 + (0) * 16777216 + 56);
             case FLEE:
-                return 12368428 ^ (1 + (0) * 16777216 + 36);
+                return 8809664 ^ (1 + (0) * 16777216 + 4);
             case EXPLODE:
-                return 12368428 ^ (1 + (0) * 16777216 + 20);
+                return 8809664 ^ (1 + (0) * 16777216 + 36);
+            case HIDE:
+                return 8809664 ^ (1 + (0) * 16777216 + 20);
             case STOP_PRODUCING_MUCKRAKERS:
-                return 12368428 ^ (1 + (0) * 16777216 + 52);
+                return 8809664 ^ (1 + (0) * 16777216 + 52);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

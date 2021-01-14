@@ -19,7 +19,7 @@ commands = [
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("EXPLODE", []),
     Command("ATTACK_LOC", [7, 7]),
-    Command("HIDE", [3]),
+    Command("HIDE", []),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
     Command("STOP_PRODUCING_MUCKRAKERS", []),
 ]
