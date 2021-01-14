@@ -6,7 +6,6 @@ import refactor.Communication.Message;
 import refactor.utils.IterableIdSet;
 import refactor.utils.UnitBuild;
 import refactor.utils.UnitBuildDPQueue;
-import scala.Unit;
 
 import static refactor.Communication.decode;
 import static refactor.Communication.encode;
@@ -153,7 +152,7 @@ public class EnlightenmentCenter extends Robot {
 
         immediateDefense();
 
-        if (currentRound % 100 == 0) {
+        if (currentRound % 25 == 0) {
             lowPriorityLogging();
         }
 
@@ -237,7 +236,7 @@ public class EnlightenmentCenter extends Robot {
                     weakest = getWeakestEnemyEC();
                     if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
                         state = State.AttackEnemy;
-                    } else if (neutralECFound > 0 && rc.getInfluence() - neutralECInfluence[getClosestNeutralEC()] > influenceMinimum()) {
+                    } else if (neutralECFound > 0 && 2*rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                         state = State.CaptureNeutral;
                     } else if (bestDangerDir() == null) {
                         state = State.SlandererEconomy;
@@ -265,7 +264,7 @@ public class EnlightenmentCenter extends Robot {
                     }
                 }
                 if (!stillCapturing) {
-                    int closest = getClosestNeutralEC();
+                    int closest = getBestNeutralEC();
                     neutralECFound--;
                     neutralECLocs[closest] = neutralECLocs[neutralECFound];
                     neutralECInfluence[closest] = neutralECInfluence[neutralECFound];
@@ -286,7 +285,7 @@ public class EnlightenmentCenter extends Robot {
                         state = State.AttackEnemy;
                     } else if (bestDangerDir() != null) {
                         state = State.Defend;
-                    } else if (neutralECFound > 0 && rc.getInfluence() - neutralECInfluence[getClosestNeutralEC()] > influenceMinimum()) {
+                    } else if (neutralECFound > 0 && 2*rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                         state = State.CaptureNeutral;
                     }
                 }
@@ -294,19 +293,21 @@ public class EnlightenmentCenter extends Robot {
         }
     }
 
-    static int getClosestNeutralEC() {
+    static int getBestNeutralEC() {
         if(neutralECFound <= 0) return -1;
-        int closest = 0;
+        int best = 0;
         for(int i = 1; i < neutralECFound; i++) {
-            MapLocation loc = neutralECLocs[i];
-            MapLocation curr = neutralECLocs[closest];
-            int newDist = loc.distanceSquaredTo(currentLocation);
-            int oldDist = curr.distanceSquaredTo(currentLocation);
-            if(oldDist > newDist) {
-                closest = i;
+            MapLocation newLoc = neutralECLocs[i];
+            MapLocation oldLoc = neutralECLocs[best];
+            int newDist = newLoc.distanceSquaredTo(currentLocation);
+            int oldDist = oldLoc.distanceSquaredTo(currentLocation);
+            int newInf = neutralECInfluence[i];
+            int oldInf = neutralECInfluence[best];
+            if(newDist + newInf < oldDist + oldInf) {
+                best = i;
             }
         }
-        return closest;
+        return best;
     }
 
 
@@ -330,6 +331,9 @@ public class EnlightenmentCenter extends Robot {
                         pq.push(new UnitBuild(RobotType.POLITICIAN, 18,
                                 makeMessage(Label.DEFEND, dir2.ordinal())), MED);
                     }
+                    int influence = getSlandererInfluence();
+                    if(influence > 0)
+                        pq.push(new UnitBuild(RobotType.SLANDERER, influence, makeMessage(Label.HIDE)), MED);
                 }
             }
         },
@@ -338,7 +342,7 @@ public class EnlightenmentCenter extends Robot {
             void refillQueue() {
                 System.out.println("number neutral found: " +  neutralECFound);
                 if (neutralECFound > 0) {
-                    int closest = getClosestNeutralEC();
+                    int closest = getBestNeutralEC();
                     int influence = neutralECInfluence[closest];
                     MapLocation best = neutralECLocs[closest];
                     pq.push(new UnitBuild(RobotType.POLITICIAN, influence,
@@ -351,8 +355,9 @@ public class EnlightenmentCenter extends Robot {
             void refillQueue() {
                 int influence = getSlandererInfluence();
                 if(influence > 0) {
-                    pq.push(new UnitBuild(RobotType.SLANDERER, influence, makeMessage(Label.FLEE)), MED);
-                    pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE)), LOW);
+                    pq.push(new UnitBuild(RobotType.SLANDERER, influence, makeMessage(Label.HIDE)), MED);
+                    for (int i = 5; i > 0; i--)
+                        pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE)), LOW);
                 }
             }
         },
