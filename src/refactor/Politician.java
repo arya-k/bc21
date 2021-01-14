@@ -228,15 +228,26 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                int enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent()).length;
-                if (enemiesNearby > 5) {
+                RobotInfo[] enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
+                if (enemiesNearby.length >= 3) {
                     int radius = getEfficientSpeech(0.1);
                     if (radius == -1) {
                         rc.empower(9);
                         return;
                     }
                     rc.empower(radius);
+                    return;
                 }
+                int closestPolitician = -1;
+                for (RobotInfo enemy: enemiesNearby) {
+                    if (enemy.getType() == RobotType.POLITICIAN) {
+                        int distanceAway = rc.getLocation().distanceSquaredTo(enemy.getLocation());
+                        if (closestPolitician == -1 || distanceAway < closestPolitician)
+                            closestPolitician = distanceAway;
+                    }
+                }
+                if (closestPolitician >= 1)
+                    rc.empower(closestPolitician);
             }
         },
         Defend {
