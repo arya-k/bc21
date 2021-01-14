@@ -34,12 +34,13 @@ public class BidController {
         int bid = Math.min(rc.getInfluence(), state.suggestBid());
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
-        if (bid != 0) {
+        if (bid > 0) {
             rc.bid(bid);
         }
     }
 
     static int bidlessBreak = 0;
+
     void transition() {
         if (state == State.OnABreak) {
             if (--bidlessBreak > 0)
@@ -48,7 +49,7 @@ public class BidController {
 
         if (lostInARow >= 4 && rc.getRoundNum() < 750) {
             // take a break
-            bidlessBreak = 50;
+            bidlessBreak = 25;
             state = State.OnABreak;
             lostInARow = 0;
             return;
@@ -56,7 +57,7 @@ public class BidController {
 
         if (proportionNeeded > 1.0)
             state = State.GiveUp;
-        else if (rc.getRoundNum() > 1200)
+        else if (rc.getRoundNum() > 1350)
             state = State.Endgame;
         else if (rc.getInfluence() > 6 * influenceMinimum() || proportionNeeded > 0.8)
             state = State.ScaleUp;
@@ -70,7 +71,7 @@ public class BidController {
             int suggestBid() {
                 int bid = Math.max(prevBid, 2);
                 if (lostLast)
-                    bid += (int) Math.random() + 1;
+                    bid += (int) (Math.random() * 2) + 1;
                 return Math.min(bid, maxBid());
             }
         },
@@ -88,7 +89,7 @@ public class BidController {
             int suggestBid() {
                 int predictedInf = rc.getInfluence() +
                         (int) (7745 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
-                if (Math.random() < proportionNeeded)
+                if (predictedInf > 3000 || Math.random() < proportionNeeded)
                     return predictedInf / winsNeeded;
                 else
                     return 0;
@@ -102,6 +103,6 @@ public class BidController {
 
     /* Helper Functions */
     static int maxBid() {
-        return Math.max(Math.min(rc.getInfluence() - 2*influenceMinimum(), rc.getInfluence() / 5), 0);
+        return Math.max(Math.min(rc.getInfluence() - 2 * influenceMinimum(), rc.getInfluence() / 5), 0);
     }
 }
