@@ -58,13 +58,12 @@ public class EnlightenmentCenter extends Robot {
 
         RobotInfo[] nearby = rc.senseNearbyRobots();
         Team enemyTeam = rc.getTeam().opponent();
-        for(RobotInfo bot : nearby) {
-            if(bot.getType() == RobotType.ENLIGHTENMENT_CENTER && bot.getTeam() == enemyTeam) {
+        for (RobotInfo bot : nearby) {
+            if (bot.getType() == RobotType.ENLIGHTENMENT_CENTER && bot.getTeam() == enemyTeam) {
                 enemyECInfluence[enemyECFound] = bot.getInfluence();
                 enemyECLocs[enemyECFound++] = bot.getLocation();
                 enemyECNearby = true;
-            }
-            else if(bot.getType() == RobotType.ENLIGHTENMENT_CENTER && bot.getTeam() == Team.NEUTRAL) {
+            } else if (bot.getType() == RobotType.ENLIGHTENMENT_CENTER && bot.getTeam() == Team.NEUTRAL) {
                 neutralECInfluence[neutralECFound] = bot.getInfluence() + GameConstants.EMPOWER_TAX * 2;
                 neutralECLocs[neutralECFound++] = bot.getLocation();
             }
@@ -79,7 +78,7 @@ public class EnlightenmentCenter extends Robot {
 
         pq.push(new UnitBuild(RobotType.SLANDERER, 41, makeMessage(Label.HIDE)), ULTRA_HIGH);
 
-        for(int i=5; --i >=0;) {
+        for (int i = 5; --i >= 0; ) {
             pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE)), LOW);
         }
 
@@ -88,7 +87,7 @@ public class EnlightenmentCenter extends Robot {
     void lowPriorityLogging() {
         System.out.println("Influence: " + myInfluence);
         System.out.println("Production state: " + state);
-        System.out.println("Bidding state: " + bidController.state);
+        System.out.println("Bidding state: " + BidController.state);
         for (int i = 0; i < 8; i++) {
             if (!dangerDirs[i]) continue;
             System.out.println("DANGEROUS: " + fromOrdinal(i));
@@ -131,17 +130,19 @@ public class EnlightenmentCenter extends Robot {
         // get the id of the previously build unit
         if (prevUnit != null) {
             RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(prevDir));
-            switch (prevUnit.message.label) {
-                case SCOUT:
-                case EXPLORE:
-                    trackedIds.add(info.getID());
-                    break;
-                case CAPTURE_NEUTRAL_EC:
-                    neutralCapturers.add(info.getID());
-                    break;
-                case EXPLODE:
-                    lastDefender = info.getID();
-                    break;
+            if (info != null) {
+                switch (prevUnit.message.label) {
+                    case SCOUT:
+                    case EXPLORE:
+                        trackedIds.add(info.getID());
+                        break;
+                    case CAPTURE_NEUTRAL_EC:
+                        neutralCapturers.add(info.getID());
+                        break;
+                    case EXPLODE:
+                        lastDefender = info.getID();
+                        break;
+                }
             }
             prevUnit = null;
         }
@@ -162,11 +163,12 @@ public class EnlightenmentCenter extends Robot {
             state.refillQueue();
         if (nextUnit == null && !empty)
             nextUnit = pq.pop();
+        myInfluence = rc.getInfluence();
         if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
                 nextUnit.influence + influenceMinimum() <= myInfluence) && rc.isReady()) {
             // build a unit
             Direction buildDir = null;
-            if(nextUnit.message.label == Label.EXPLODE) {
+            if (nextUnit.message.label == Label.EXPLODE) {
                 for (int i = spawnDirs.length - 1; i >= 0; i--) {
                     if (rc.canBuildRobot(nextUnit.type, spawnDirs[i], nextUnit.influence)) {
                         buildDir = spawnDirs[i];
@@ -175,7 +177,7 @@ public class EnlightenmentCenter extends Robot {
                 }
                 addedExplode = false;
             } else {
-                for (int i = 0; i < spawnDirs.length - 1; i++) {
+                for (int i = 0; i < spawnDirs.length; i++) {
                     if (rc.canBuildRobot(nextUnit.type, spawnDirs[i], nextUnit.influence)) {
                         buildDir = spawnDirs[i];
                         break;
@@ -183,12 +185,22 @@ public class EnlightenmentCenter extends Robot {
                 }
             }
             if (buildDir != null) {
-                rc.setFlag(encode(nextUnit.message));
-                rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+                boolean skipCurrent = false;
+                if (nextUnit.type == RobotType.SLANDERER) {
+                    nextUnit.influence = getSlandererInfluence();
+                    if (muckrakerNearby())
+                        skipCurrent = true;
+                }
+                if (nextUnit.influence < 0)
+                    skipCurrent = true;
+                if (!skipCurrent) {
+                    rc.setFlag(encode(nextUnit.message));
+                    rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
 
 
-                prevUnit = nextUnit;
-                prevDir = buildDir;
+                    prevUnit = nextUnit;
+                    prevDir = buildDir;
+                }
                 nextUnit = null;
             }
         }
@@ -209,7 +221,7 @@ public class EnlightenmentCenter extends Robot {
     public static int getSlandererInfluence() {
         int useInfluence = rc.getInfluence() - influenceMinimum();
         if (useInfluence < slandererInfluences[0]) return -1;
-        for (int i=0; i < slandererInfluences.length - 1; i++) {
+        for (int i = 0; i < slandererInfluences.length - 1; i++) {
             if (useInfluence < slandererInfluences[i + 1])
                 return slandererInfluences[i];
         }
@@ -236,7 +248,7 @@ public class EnlightenmentCenter extends Robot {
                     weakest = getWeakestEnemyEC();
                     if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
                         state = State.AttackEnemy;
-                    } else if (neutralECFound > 0 && 2*rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+                    } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                         state = State.CaptureNeutral;
                     } else if (bestDangerDir() == null) {
                         state = State.SlandererEconomy;
@@ -279,13 +291,13 @@ public class EnlightenmentCenter extends Robot {
                 }
                 break;
             case SlandererEconomy:
-                if(pq.isEmpty()) {
+                if (pq.isEmpty()) {
                     weakest = getWeakestEnemyEC();
                     if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
                         state = State.AttackEnemy;
                     } else if (bestDangerDir() != null) {
                         state = State.Defend;
-                    } else if (neutralECFound > 0 && 2*rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+                    } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                         state = State.CaptureNeutral;
                     }
                 }
@@ -294,16 +306,16 @@ public class EnlightenmentCenter extends Robot {
     }
 
     static int getBestNeutralEC() {
-        if(neutralECFound <= 0) return -1;
+        if (neutralECFound <= 0) return -1;
         int best = 0;
-        for(int i = 1; i < neutralECFound; i++) {
+        for (int i = 1; i < neutralECFound; i++) {
             MapLocation newLoc = neutralECLocs[i];
             MapLocation oldLoc = neutralECLocs[best];
             int newDist = newLoc.distanceSquaredTo(currentLocation);
             int oldDist = oldLoc.distanceSquaredTo(currentLocation);
             int newInf = neutralECInfluence[i];
             int oldInf = neutralECInfluence[best];
-            if(newDist + newInf < oldDist + oldInf) {
+            if (newDist + newInf < oldDist + oldInf) {
                 best = i;
             }
         }
@@ -316,7 +328,7 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() throws GameActionException {
                 Direction dangerDir = bestDangerDir();
-                if(dangerDir != null) {
+                if (dangerDir != null) {
                     System.out.println("Defending in direction " + dangerDir);
                     int required = dangerDirs[dangerDir.ordinal()] ? 3 : 1;
                     for (int i = required; --i >= 0; ) {
@@ -332,7 +344,7 @@ public class EnlightenmentCenter extends Robot {
                                 makeMessage(Label.DEFEND, dir2.ordinal())), MED);
                     }
                     int influence = getSlandererInfluence();
-                    if(influence > 0)
+                    if (influence > 0)
                         pq.push(new UnitBuild(RobotType.SLANDERER, influence, makeMessage(Label.HIDE)), MED);
                 }
             }
@@ -340,12 +352,12 @@ public class EnlightenmentCenter extends Robot {
         CaptureNeutral {
             @Override
             void refillQueue() {
-                System.out.println("number neutral found: " +  neutralECFound);
+                System.out.println("number neutral found: " + neutralECFound);
                 if (neutralECFound > 0) {
                     int closest = getBestNeutralEC();
                     int influence = neutralECInfluence[closest];
                     MapLocation best = neutralECLocs[closest];
-                    pq.push(new UnitBuild(RobotType.POLITICIAN, influence,
+                    pq.push(new UnitBuild(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
                             makeMessage(Label.CAPTURE_NEUTRAL_EC, best.x % 128, best.y % 128)), MED);
                 }
             }
@@ -354,7 +366,7 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() {
                 int influence = getSlandererInfluence();
-                if(influence > 0) {
+                if (influence > 0) {
                     pq.push(new UnitBuild(RobotType.SLANDERER, influence, makeMessage(Label.HIDE)), MED);
                     for (int i = 5; i > 0; i--)
                         pq.push(new UnitBuild(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE)), LOW);
@@ -364,20 +376,23 @@ public class EnlightenmentCenter extends Robot {
         AttackEnemy {
             @Override
             void refillQueue() {
-                if(enemyECFound > 0) {
+                if (enemyECFound > 0) {
                     int closest = 0;
-                    for(int i = 1; i < enemyECFound; i++) {
+                    for (int i = 1; i < enemyECFound; i++) {
                         MapLocation loc = enemyECLocs[i];
                         MapLocation curr = enemyECLocs[closest];
                         int newDist = loc.distanceSquaredTo(currentLocation);
                         int oldDist = curr.distanceSquaredTo(currentLocation);
-                        if(oldDist > newDist) {
+                        if (oldDist > newDist) {
                             closest = i;
                         }
                     }
                     int influence = enemyECInfluence[closest];
                     MapLocation best = enemyECLocs[closest];
-                    pq.push(new UnitBuild(RobotType.POLITICIAN, influence, makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128)), MED);
+                    pq.push(new UnitBuild(RobotType.POLITICIAN,
+                            influence + GameConstants.EMPOWER_TAX,
+                            makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128)
+                    ), MED);
                 }
             }
         };
@@ -388,8 +403,8 @@ public class EnlightenmentCenter extends Robot {
     static boolean underAttack = false;
 
     void immediateDefense() throws GameActionException {
-        if(addedExplode) return;
-        if(lastDefender == -1 || !rc.canGetFlag(lastDefender)) {
+        if (addedExplode) return;
+        if (lastDefender == -1 || !rc.canGetFlag(lastDefender)) {
             pq.push(new UnitBuild(RobotType.POLITICIAN, 40, makeMessage(Label.EXPLODE)), ULTRA_HIGH);
             addedExplode = true;
         }
@@ -486,7 +501,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     static boolean muckrakerNearby() {
-        for (RobotInfo bot : nearby) {
+        for (RobotInfo bot : rc.senseNearbyRobots(24)) {
             if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
                 return true;
             }
@@ -509,25 +524,26 @@ public class EnlightenmentCenter extends Robot {
         }
         return fromOrdinal(ix);
     }
+
     static Direction bestDangerDir() throws GameActionException {
         Direction dangerDir = bestDangerDirHelper();
         int[] defenders_in = {0, 0, 0, 0, 0, 0, 0, 0};
-        for(RobotInfo bot : nearby) {
-            if(bot.getTeam() == rc.getTeam() && rc.canGetFlag(bot.getID())) {
+        for (RobotInfo bot : nearby) {
+            if (bot.getTeam() == rc.getTeam() && rc.canGetFlag(bot.getID())) {
                 int flag = rc.getFlag(bot.getID());
-                if(flag != 0 && decode(flag).label == Label.DEFEND) {
+                if (flag != 0 && decode(flag).label == Label.DEFEND) {
                     defenders_in[currentLocation.directionTo(bot.getLocation()).ordinal()]++;
                 }
             }
         }
         boolean sufficient_defense = true;
-        for(int i=0; i < 8; i++) {
+        for (int i = 0; i < 8; i++) {
             boolean isDangerous = dangerDirs[i];
             int required = isDangerous ? 4 : 0;
-            if(defenders_in[i] < required)
+            if (defenders_in[i] < required)
                 sufficient_defense = false;
         }
-        if(sufficient_defense) return null;
+        if (sufficient_defense) return null;
         return dangerDir;
     }
 

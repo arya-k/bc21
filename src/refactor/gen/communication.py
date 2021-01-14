@@ -15,6 +15,7 @@ commands = [
     Command("SAFE_DIR_EDGE", [3, 3, 6]),
     Command("FLEE", []),
     Command("DEFEND", [3]),
+    Command("CURRENTLY_DEFENDING", []),
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("EXPLODE", []),

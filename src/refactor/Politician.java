@@ -2,6 +2,8 @@ package refactor;
 
 import battlecode.common.*;
 
+import static refactor.Communication.decode;
+
 public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
 
@@ -22,7 +24,7 @@ public class Politician extends Robot {
     static MapLocation targetECLoc;
 
     @Override
-    void onAwake() {
+    void onAwake() throws GameActionException {
         state = State.Explore; // By default, we just explore!
         Nav.doExplore();
 
@@ -61,8 +63,13 @@ public class Politician extends Robot {
                 if ((targetLoc.x + targetLoc.y) % 2 != 0) {
                     targetLoc = targetLoc.translate(defendDir.dx, 0);
                 }
-                defendLocation = targetLoc;
-                Nav.doGoTo(defendLocation);
+                if(rc.onTheMap(centerLoc.translate(defendDir.dx * 2, defendDir.dy * 2))) {
+                    defendLocation = targetLoc;
+                    Nav.doGoTo(defendLocation);
+                } else {
+                    Nav.doExplore();
+                    state = State.Explore;
+                }
                 break;
 
             case HIDE: // We were once a slanderer! TODO return to sender?
@@ -107,7 +114,8 @@ public class Politician extends Robot {
                 }
             }
 
-            state = State.Explode; // BOOM!
+            state = State.Explore;
+            Nav.doExplore();
         }
 
         // Explore -> Explode
@@ -196,6 +204,9 @@ public class Politician extends Robot {
                         }
                     }
                 }
+                if (!foundNeutralNeighbor) {
+                    Nav.doExplore();
+                }
             }
         },
         AttackLoc {
@@ -250,6 +261,29 @@ public class Politician extends Robot {
                 }
                 if (closestEnemy == null) {
                     Nav.doGoTo(defendLocation);
+                    flagMessage(Communication.Label.DEFEND, defendDir.ordinal());
+                } else {
+                    if(closestEnemy.getType() == RobotType.MUCKRAKER) {
+                        for (RobotInfo bot : nearby) {
+                            if (bot.getType() == RobotType.POLITICIAN
+                                    && bot.getTeam() == rc.getTeam()
+                                    && bot.getLocation().isWithinDistanceSquared(closestEnemy.getLocation(), 2)
+                            ) {
+                                int flag = rc.getFlag(bot.getID());
+                                if (flag != 0 && decode(flag).label == Communication.Label.CURRENTLY_DEFENDING) {
+                                    closestEnemy = null;
+                                    break;
+                                }
+                            }
+                        }
+                        if (closestEnemy != null
+                                && closestEnemy.getLocation().isWithinDistanceSquared(currentLocation, 2)) {
+                            flagMessage(Communication.Label.CURRENTLY_DEFENDING);
+                        } else if (closestEnemy == null) {
+                            Nav.doGoTo(defendLocation);
+                            flagMessage(Communication.Label.DEFEND, defendDir.ordinal());
+                        }
+                    }
                 }
                 int radius = getEfficientSpeech(0.5);
                 if (radius != -1) {

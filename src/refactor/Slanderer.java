@@ -114,7 +114,6 @@ public class Slanderer extends Robot {
         double angle = 2 * Math.PI * Math.random();
         int x = (int) (radius * Math.cos(angle));
         int y = (int) (radius * Math.sin(angle));
-        System.out.println("angle " + angle);
         return centerLoc.translate(x, y);
     }
 }
