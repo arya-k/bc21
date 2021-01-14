@@ -8,7 +8,7 @@ public class Slanderer extends Robot {
     static State state = null;
 
     /* hide vars */
-    static Direction hideDir = null;
+    static final double HIDE_RAD = 4.5;
 
     /* flee vars */
     static RobotInfo[] enemies = null;
@@ -18,7 +18,7 @@ public class Slanderer extends Robot {
     @Override
     void onAwake() {
         state = State.Hide; // Slanderers always initialize to hiding!
-        Nav.doGoTo(randomHoverLocation(5));
+        Nav.doGoTo(randomHoverLocation(HIDE_RAD));
     }
 
     @Override
@@ -54,8 +54,8 @@ public class Slanderer extends Robot {
 
         // Flee -> Hide
         if (state == State.Flee && enemyLastSeen > ENEMY_FEAR_ROUNDS) {
-            state = State.Hide; // TODO: Do I want to change the hide direction?
-            Nav.doGoTo(randomHoverLocation(5));
+            state = State.Hide;
+            Nav.doGoTo(randomHoverLocation(HIDE_RAD));
         }
     }
 
@@ -66,7 +66,7 @@ public class Slanderer extends Robot {
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
                 if (move == null) {
-                    Nav.doGoTo(randomHoverLocation(5));
+                    Nav.doGoTo(randomHoverLocation(HIDE_RAD));
                 }
             }
         },

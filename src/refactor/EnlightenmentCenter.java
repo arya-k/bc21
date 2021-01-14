@@ -57,13 +57,6 @@ public class EnlightenmentCenter extends Robot {
         }
         calcBestSpawnDirs();
 
-        // initialize priority queue
-        for (Direction dir : Robot.directions) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 1,
-                    makeMessage(Label.SCOUT, dir.ordinal())), HIGH);
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 20, makeMessage(Label.DEFEND, dir.ordinal())), MED);
-        }
-
         RobotInfo[] nearby = rc.senseNearbyRobots();
         Team enemyTeam = rc.getTeam().opponent();
         for(RobotInfo bot : nearby) {
@@ -76,6 +69,13 @@ public class EnlightenmentCenter extends Robot {
                 neutralECInfluence[neutralECFound] = bot.getInfluence() + GameConstants.EMPOWER_TAX * 2;
                 neutralECLocs[neutralECFound++] = bot.getLocation();
             }
+        }
+
+        // initialize priority queue
+        for (Direction dir : Robot.directions) {
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 1,
+                    makeMessage(Label.SCOUT, dir.ordinal())), HIGH);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 18, makeMessage(Label.DEFEND, dir.ordinal())), MED);
         }
 
         pq.push(new UnitBuild(RobotType.SLANDERER, 41, makeMessage(Label.HIDE)), ULTRA_HIGH);
@@ -168,7 +168,6 @@ public class EnlightenmentCenter extends Robot {
             // build a unit
             Direction buildDir = null;
             if(nextUnit.message.label == Label.EXPLODE) {
-                System.out.println("BUILDING EXPLODER!");
                 for (int i = spawnDirs.length - 1; i >= 0; i--) {
                     if (rc.canBuildRobot(nextUnit.type, spawnDirs[i], nextUnit.influence)) {
                         buildDir = spawnDirs[i];
@@ -320,15 +319,15 @@ public class EnlightenmentCenter extends Robot {
                     System.out.println("Defending in direction " + dangerDir);
                     int required = dangerDirs[dangerDir.ordinal()] ? 3 : 1;
                     for (int i = required; --i >= 0; ) {
-                        pq.push(new UnitBuild(RobotType.POLITICIAN, 30,
+                        pq.push(new UnitBuild(RobotType.POLITICIAN, 18,
                                 makeMessage(Label.DEFEND, dangerDir.ordinal())), MED);
                     }
                     Direction dir1 = dangerDir.rotateLeft();
                     Direction dir2 = dangerDir.rotateRight();
                     for (int i = required - 2; --i >= 0; ) {
-                        pq.push(new UnitBuild(RobotType.POLITICIAN, 30,
+                        pq.push(new UnitBuild(RobotType.POLITICIAN, 18,
                                 makeMessage(Label.DEFEND, dir1.ordinal())), MED);
-                        pq.push(new UnitBuild(RobotType.POLITICIAN, 30,
+                        pq.push(new UnitBuild(RobotType.POLITICIAN, 18,
                                 makeMessage(Label.DEFEND, dir2.ordinal())), MED);
                     }
                 }
