@@ -139,7 +139,7 @@ public class EnlightenmentCenter extends Robot {
                     case CAPTURE_NEUTRAL_EC:
                         neutralCapturers.add(info.getID());
                         break;
-                    case EXPLODE:
+                    case FINAL_FRONTIER:
                         lastDefender = info.getID();
                         break;
                 }
@@ -168,7 +168,7 @@ public class EnlightenmentCenter extends Robot {
                 nextUnit.influence + influenceMinimum() <= myInfluence) && rc.isReady()) {
             // build a unit
             Direction buildDir = null;
-            if (nextUnit.message.label == Label.EXPLODE) {
+            if (nextUnit.message.label == Label.FINAL_FRONTIER) {
                 for (int i = spawnDirs.length - 1; i >= 0; i--) {
                     if (rc.canBuildRobot(nextUnit.type, spawnDirs[i], nextUnit.influence)) {
                         buildDir = spawnDirs[i];
@@ -205,7 +205,7 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
-        if(state == State.Defend && nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC)
+        if (state == State.Defend && nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC)
             nextUnit = null;
 
         bidController.update();
@@ -413,7 +413,7 @@ public class EnlightenmentCenter extends Robot {
     void immediateDefense() throws GameActionException {
         if (addedExplode) return;
         if (lastDefender == -1 || !rc.canGetFlag(lastDefender)) {
-            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, makeMessage(Label.EXPLODE)), ULTRA_HIGH);
+            pq.push(new UnitBuild(RobotType.POLITICIAN, 40, makeMessage(Label.FINAL_FRONTIER)), ULTRA_HIGH);
             addedExplode = true;
         }
     }
