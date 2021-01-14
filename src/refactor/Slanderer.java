@@ -18,11 +18,7 @@ public class Slanderer extends Robot {
     @Override
     void onAwake() {
         state = State.Hide; // Slanderers always initialize to hiding!
-        if (assignment != null && assignment.label == Communication.Label.HIDE)
-            hideDir = fromOrdinal(assignment.data[0]);
-        else
-            hideDir = randomDirection();
-        Nav.doGoInDir(hideDir);
+        Nav.doGoTo(randomHoverLocation(5));
     }
 
     @Override
