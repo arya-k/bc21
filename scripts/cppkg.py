@@ -11,7 +11,7 @@ def move_package(src, dest):
         with open(path, "r") as f:
             contents = (
                 f.read()
-                .replace(f"package {src};", f"package {dest};")
+                .replace(f"package {src}", f"package {dest}")
                 .replace(f"import {src}.", f"import {dest}.")
                 .replace(f"import static {src}.", f"import static {dest}.")
             )
