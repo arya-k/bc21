@@ -456,6 +456,9 @@ public class EnlightenmentCenter extends Robot {
                         int influence = (int) Math.pow(2, message.data[2]);
                         neutralECLocs[neutralECFound] = neutralECLoc;
                         neutralECInfluence[neutralECFound++] = influence;
+                    } else {
+                        int influence = (int) Math.pow(2, message.data[2]);
+                        neutralECInfluence[knownNeutralEC] = influence;
                     }
                     trackedIds.remove(id);
                     break;

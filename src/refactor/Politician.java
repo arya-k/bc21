@@ -58,7 +58,7 @@ public class Politician extends Robot {
                 defendDir = fromOrdinal(assignment.data[0]);
                 MapLocation targetLoc = rc.getLocation().translate(defendDir.dx * 4, defendDir.dy * 4);
                 targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * 2), defendDir.dy * (int) (Math.random() * 2));
-                if((targetLoc.x + targetLoc.y) % 2 != 0) {
+                if ((targetLoc.x + targetLoc.y) % 2 != 0) {
                     targetLoc = targetLoc.translate(defendDir.dx, 0);
                 }
                 defendLocation = targetLoc;
@@ -218,9 +218,9 @@ public class Politician extends Robot {
                 if (!rc.isReady()) return;
 
                 int enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent()).length;
-                if(enemiesNearby > 5) {
+                if (enemiesNearby > 5) {
                     int radius = getEfficientSpeech(0.1);
-                    if(radius == -1) {
+                    if (radius == -1) {
                         rc.empower(9);
                         return;
                     }
@@ -237,32 +237,27 @@ public class Politician extends Robot {
                 }
 
 
-                boolean foundMuckraker = false;
-                boolean foundPolitician = true;
-                for(RobotInfo bot : nearby) {
-                    if(bot.getType() == RobotType.MUCKRAKER && bot.getTeam() != rc.getTeam()) {
-                        foundMuckraker = true;
-                        Nav.doFollow(bot.getID());
-                        if(bot.getLocation().distanceSquaredTo(currentLocation) == 1) {
-                            rc.empower(1);
-                            return;
+                RobotInfo closestEnemy = null;
+                for (RobotInfo bot : nearby) {
+                    if ((bot.getType() == RobotType.MUCKRAKER || bot.getType() == RobotType.POLITICIAN) && bot.getTeam() != rc.getTeam()) {
+                        if (closestEnemy == null ||
+                                bot.getLocation().distanceSquaredTo(currentLocation)
+                                        < closestEnemy.getLocation().distanceSquaredTo(currentLocation)) {
+                            Nav.doFollow(bot.getID());
+                            closestEnemy = bot;
                         }
-                        break;
-                    } else if (bot.getType() == RobotType.POLITICIAN && bot.getTeam() != rc.getTeam()) {
-                        foundPolitician = true;
-                        Nav.doFollow(bot.getID());
                     }
                 }
-                if(!foundMuckraker && !foundPolitician) {
+                if (closestEnemy == null) {
                     Nav.doGoTo(defendLocation);
                 }
-                int radius = getEfficientSpeech(0.6);
-                if(radius != -1) {
+                int radius = getEfficientSpeech(0.5);
+                if (radius != -1) {
                     rc.empower(radius);
                     return;
                 }
                 Direction move = Nav.tick();
-                if(move != null && rc.canMove(move)) rc.move(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         };
 

@@ -77,6 +77,7 @@ abstract public class Robot {
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
+        currentLocation = rc.getLocation();
         int x = currentLocation.x % 128;
         int y = currentLocation.y % 128;
         int xOff = xMod - x;
