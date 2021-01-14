@@ -205,6 +205,9 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
+        if(state == State.Defend && nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC)
+            nextUnit = null;
+
         bidController.update();
         if (!(underAttack && rc.senseNearbyRobots(2, rc.getTeam().opponent()).length < 8)) {
             bidController.bid();
@@ -256,6 +259,11 @@ public class EnlightenmentCenter extends Robot {
                 }
                 break;
             case CaptureNeutral:
+                if (rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0) {
+                    pq.clear();
+                    state = State.Defend;
+                    return;
+                }
                 if (neutralECFound <= 0) {
                     state = State.Defend;
                     return;
