@@ -76,7 +76,7 @@ public class Politician extends Robot {
                 break;
 
             default:
-                System.out.println("ERROR: Politician has been given a bad assignment: " + assignment.label);
+//                System.out.println("ERROR: Politician has been given a bad assignment: " + assignment.label);
 //                rc.resign(); // TODO: remove before uploading...
         }
     }
@@ -227,9 +227,30 @@ public class Politician extends Robot {
         Explode {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
-
-                RobotInfo[] enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-                if (enemiesNearby.length >= 3) {
+                RobotInfo[] enemiesNearby;
+                int kills = 0;
+                int killRadius = 0;
+                for (int i = 1; i <= 9; i++) {
+                    int currKill = 0;
+                    enemiesNearby = rc.senseNearbyRobots(i, rc.getTeam().opponent());
+                    if (enemiesNearby.length == 0) continue;
+                    int attackPower = (rc.getInfluence()-GameConstants.EMPOWER_TAX)/enemiesNearby.length;
+                    for (RobotInfo enemy: enemiesNearby) {
+                        if (enemy.getType() == RobotType.POLITICIAN && attackPower > enemy.getConviction()) {
+                            currKill++;
+                        };
+                    }
+                    if (currKill > kills) {
+                        kills = currKill;
+                        killRadius = i;
+                    }
+                }
+                if (kills > 0) {
+                    rc.empower(killRadius);
+                    return;
+                }
+                enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
+                if (enemiesNearby.length >= 3 || canBeConverted()) {
                     int radius = getEfficientSpeech(0.1);
                     if (radius == -1) {
                         rc.empower(9);
@@ -238,16 +259,7 @@ public class Politician extends Robot {
                     rc.empower(radius);
                     return;
                 }
-                int closestPolitician = -1;
-                for (RobotInfo enemy: enemiesNearby) {
-                    if (enemy.getType() == RobotType.POLITICIAN) {
-                        int distanceAway = rc.getLocation().distanceSquaredTo(enemy.getLocation());
-                        if (closestPolitician == -1 || distanceAway < closestPolitician)
-                            closestPolitician = distanceAway;
-                    }
-                }
-                if (closestPolitician >= 1)
-                    rc.empower(closestPolitician);
+
             }
         },
         Defend {
@@ -308,6 +320,17 @@ public class Politician extends Robot {
 
         public abstract void act() throws GameActionException;
 
+    }
+
+    static boolean canBeConverted() {
+        RobotInfo[] enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
+        int maximumPossibleAttack = 0;
+        for (RobotInfo enemy: enemiesNearby) {
+            if (enemy.getType() == RobotType.POLITICIAN) {
+                maximumPossibleAttack += enemy.getInfluence()-GameConstants.EMPOWER_TAX;
+            }
+        }
+        return maximumPossibleAttack >= rc.getConviction();
     }
 
 
