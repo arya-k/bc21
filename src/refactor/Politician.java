@@ -277,8 +277,11 @@ public class Politician extends Robot {
         double perUnit = usefulInfluence / numNearby;
         double wastedInfluence = 0;
         int kills = 0;
+        int enemies = 0;
         for (int i = 0; i < numNearby; i++) {
             RobotInfo info = nearbyRobots[i];
+            if (info.getTeam() == opponent)
+                enemies++;
             if (info.getTeam() == opponent && info.getConviction() < perUnit)
                 kills++;
             if (info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER &&
@@ -291,6 +294,8 @@ public class Politician extends Robot {
                 if (perUnit >= info.getInfluence() / 4) return 1;
             }
         }
+        if (enemies == 0)
+            return 0;
         double efficiency = 1 - (wastedInfluence / usefulInfluence);
         if (kills >= 3)
             efficiency += kills;
