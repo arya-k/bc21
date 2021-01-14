@@ -53,6 +53,10 @@ abstract public class Robot {
                 break;
             }
         }
+        if (centerLoc == null) {
+            centerLoc = initLoc;
+            centerID = rc.getID();
+        }
 
         Nav.init();
     }

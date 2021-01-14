@@ -281,10 +281,10 @@ public class Politician extends Robot {
             RobotInfo info = nearbyRobots[i];
             if (info.getTeam() == opponent && info.getConviction() < perUnit)
                 kills++;
-            if (info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER) {
-                // TODO reconsider this
+            if (info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER &&
+                    !info.getLocation().isWithinDistanceSquared(centerLoc, 15)) {
                 wastedInfluence += Math.max(perUnit - info.getConviction(), 0) / 2;
-            } else if (info.getTeam() == myTeam) {
+            } else if (info.getTeam() == myTeam && info.getType() != RobotType.ENLIGHTENMENT_CENTER) {
                 double wasted = Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
                 wastedInfluence += wasted;
             } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
