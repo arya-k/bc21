@@ -13,7 +13,7 @@ public class BidController {
     static int prevBid = 2;
     static int lostInARow = 0;
     static double proportionNeeded = 0.5;
-    static int winsNeeded = 1500;
+    static int winsNeeded = 751;
     static boolean lostLast = false;
 
     public void update() throws GameActionException {
@@ -22,8 +22,8 @@ public class BidController {
         if (prevBid != 0) {
             lostInARow = lostLast ? lostInARow + 1 : 0;
         }
-        winsNeeded = 1500 - rc.getTeamVotes();
-        proportionNeeded = winsNeeded / (2999.0 - rc.getRoundNum());
+        winsNeeded = 751 - rc.getTeamVotes();
+        proportionNeeded = winsNeeded / (1500.0 - rc.getRoundNum());
 
         // state transitioning
         transition();
@@ -46,7 +46,7 @@ public class BidController {
                 return;
         }
 
-        if (lostInARow >= 4 && rc.getRoundNum() < 1500) {
+        if (lostInARow >= 4 && rc.getRoundNum() < 750) {
             // take a break
             bidlessBreak = 50;
             state = State.OnABreak;
@@ -56,7 +56,7 @@ public class BidController {
 
         if (proportionNeeded > 1.0)
             state = State.GiveUp;
-        else if (rc.getRoundNum() > 2500)
+        else if (rc.getRoundNum() > 1200)
             state = State.Endgame;
         else if (rc.getInfluence() > 6 * influenceMinimum() || proportionNeeded > 0.8)
             state = State.ScaleUp;
@@ -87,7 +87,7 @@ public class BidController {
             @Override
             int suggestBid() {
                 int predictedInf = rc.getInfluence() +
-                        (int) (21898 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
+                        (int) (7746 - 2.0 * Math.pow(rc.getRoundNum(), 1.5) / 15);
                 if (Math.random() < proportionNeeded)
                     return predictedInf / winsNeeded;
                 else
