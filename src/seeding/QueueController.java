@@ -31,6 +31,30 @@ public class QueueController {
         calcBestSpawnDirs();
     }
 
+    /* Managing the Queue */
+    public static void push(RobotType type, int influence, Communication.Message message, int level) {
+        pq.push(new UnitBuild(type, influence, message), level);
+    }
+
+    public static void pushMany(RobotType type, int influence, Communication.Message message, int level, int count) {
+        for (int i = count; --i >= 0; )
+            pq.push(new UnitBuild(type, influence, message), level);
+    }
+
+    public static boolean isEmpty() {
+        return pq.isEmpty();
+    }
+
+    public static void clear() {
+        pq.clear();
+    }
+
+    public void cancelNeutralECAttacker() {
+        if (nextUnit != null && nextUnit.message.label == Communication.Label.CAPTURE_NEUTRAL_EC)
+            nextUnit = null;
+    }
+
+    /* Managing Unit Building */
     public static void trackLastBuiltUnit() throws GameActionException {
         if (prevUnit != null) {
             RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(prevDir));
@@ -50,11 +74,6 @@ public class QueueController {
             }
             prevUnit = null;
         }
-    }
-
-    public void cancelNeutralECAttacker() {
-        if (nextUnit != null && nextUnit.message.label == Communication.Label.CAPTURE_NEUTRAL_EC)
-            nextUnit = null;
     }
 
     public void tryUnitBuild() throws GameActionException {
@@ -102,23 +121,7 @@ public class QueueController {
         }
     }
 
-    public static void push(RobotType type, int influence, Communication.Message message, int level) {
-        pq.push(new UnitBuild(type, influence, message), level);
-    }
-
-    public static void pushMany(RobotType type, int influence, Communication.Message message, int level, int count) {
-        for (int i = count; --i >= 0; )
-            pq.push(new UnitBuild(type, influence, message), level);
-    }
-
-    public static boolean isEmpty() {
-        return pq.isEmpty();
-    }
-
-    public static void clear() {
-        pq.clear();
-    }
-
+    /* Utility Functions */
     public static void logNext() {
         if (!pq.isEmpty()) {
             UnitBuild next = pq.peek();
