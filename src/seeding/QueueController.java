@@ -61,6 +61,8 @@ public class QueueController {
         if (nextUnit == null && !pq.isEmpty()) nextUnit = pq.pop(); // We need to find a new unit to build!
 
         int myInfluence = rc.getInfluence();
+        if (nextUnit != null && nextUnit.type == RobotType.SLANDERER)
+            nextUnit.influence = getSlandererInfluence();
         if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
                 nextUnit.influence + influenceMinimum() <= myInfluence) && rc.isReady()) {
             // build a unit
@@ -84,13 +86,9 @@ public class QueueController {
 
             if (buildDir != null) {
                 boolean skipCurrent = false;
-                if (nextUnit.type == RobotType.SLANDERER) {
-                    nextUnit.influence = getSlandererInfluence();
-                    if (muckrakerNearby())
-                        skipCurrent = true;
-                }
-                if (nextUnit.influence < 0)
+                if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby() || nextUnit.influence < 0) {
                     skipCurrent = true;
+                }
                 if (!skipCurrent) {
                     rc.setFlag(encode(nextUnit.message));
                     rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
@@ -147,6 +145,10 @@ public class QueueController {
                 return slandererInfluences[i];
         }
         return slandererInfluences[slandererInfluences.length - 1];
+    }
+
+    public static int getPoliticianInfluence() {
+        return Math.max(18, rc.getInfluence() / 30);
     }
 
     static int influenceMinimum() {

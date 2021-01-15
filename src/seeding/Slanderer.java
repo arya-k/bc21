@@ -75,10 +75,6 @@ public class Slanderer extends Robot {
                     safetyByDir[(safeDir + 2) % 8] += threat;
                 }
 
-                for (int i = 0; i < 8; i++) {
-                    System.out.println(fromOrdinal(i) + " " + safetyByDir[i]);
-                }
-
                 if (rc.isReady()) {
                     // Calculate the maximum safety available
                     double maxSafety = 0;

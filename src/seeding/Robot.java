@@ -48,7 +48,7 @@ abstract public class Robot {
                 Robot.centerID = info.getID();
                 Robot.centerLoc = info.getLocation();
                 int flag = rc.getFlag(Robot.centerID);
-                if(flag != 0)
+                if (flag != 0)
                     Robot.assignment = decode(flag);
                 rc.setFlag(flag); // useful default value: so other bots can know your assignment.
                 break;
@@ -69,7 +69,7 @@ abstract public class Robot {
         currentLocation = rc.getLocation();
         nearby = rc.senseNearbyRobots();
         currentRound = rc.getRoundNum();
-    };
+    }
 
     /* Utility functions */
 

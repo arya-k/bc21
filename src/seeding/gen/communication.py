@@ -11,8 +11,8 @@ class Command:
 
 commands = [
     Command("SCOUT", [3]),
+    Command("SCOUT_LOCATION", [7, 7]),
     Command("EXPLORE", []),
-    Command("SAFE_DIR_EDGE", [3, 3, 6]),
     Command("FLEE", []),
     Command("DEFEND", [3]),
     Command("CURRENTLY_DEFENDING", []),
@@ -22,7 +22,6 @@ commands = [
     Command("ATTACK_LOC", [7, 7]),
     Command("HIDE", []),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
-    Command("STOP_PRODUCING_MUCKRAKERS", []),
 ]
 
 #########################################

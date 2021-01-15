@@ -19,6 +19,7 @@ public class Politician extends Robot {
     /* Defense vars */
     static Direction defendDir;
     static MapLocation defendLocation;
+    static int defendRadius = 4;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -55,11 +56,7 @@ public class Politician extends Robot {
             case DEFEND:
                 state = State.Defend;
                 defendDir = fromOrdinal(assignment.data[0]);
-                MapLocation targetLoc = rc.getLocation().translate(defendDir.dx * 4, defendDir.dy * 4);
-                targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * 2), defendDir.dy * (int) (Math.random() * 2));
-                if ((targetLoc.x + targetLoc.y) % 2 != 0) {
-                    targetLoc = targetLoc.translate(defendDir.dx, 0);
-                }
+                MapLocation targetLoc = getTargetLoc();
                 if (rc.onTheMap(centerLoc.translate(defendDir.dx * 2, defendDir.dy * 2))) {
                     defendLocation = targetLoc;
                     Nav.doGoTo(defendLocation);
@@ -83,29 +80,9 @@ public class Politician extends Robot {
     }
 
     void transition() throws GameActionException {
+
         // Scout -> Explore
         if (state == State.Scout && Nav.currentGoal == Nav.NavGoal.Nothing) {
-            for (Direction d : Direction.cardinalDirections()) {
-                if (!rc.onTheMap(currentLocation.add(d))) {
-                    int offset;
-                    switch (d) {
-                        case EAST:
-                        case WEST:
-                            offset = Math.abs(currentLocation.x - centerLoc.x);
-                            break;
-                        default:
-                            offset = Math.abs(currentLocation.y - centerLoc.y);
-                    }
-                    flagMessage(
-                            Communication.Label.SAFE_DIR_EDGE,
-                            scoutDir.ordinal(),
-                            d.ordinal(),
-                            offset
-                    );
-                    break;
-                }
-            }
-
             state = State.Explore;
             Nav.doExplore();
         }
@@ -113,6 +90,18 @@ public class Politician extends Robot {
         // Explore -> Explode
         if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
             state = State.FinalFrontier; // TODO: we should do something more intelligent here probably.
+        }
+
+        if (state == State.Explore && rc.canGetFlag(centerID)) {
+            int flag = rc.getFlag(centerID);
+            if (flag != 0) {
+                Communication.Message msg = decode(flag);
+                if (msg.label == Communication.Label.ATTACK_LOC) {
+                    state = State.AttackLoc;
+                    targetECLoc = getLocFromMessage(msg.data[0], msg.data[1]);
+                    Nav.doGoTo(targetECLoc);
+                }
+            }
         }
 
         // CaptureNeutralEC -> Explore 
@@ -129,6 +118,7 @@ public class Politician extends Robot {
             @Override
             public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
                 // Note enemy & neutral ECs:
+                boolean alreadySetFlag = false;
                 for (RobotInfo info : nearby) {
                     if (info.getTeam() == rc.getTeam().opponent() &&
                             info.getType() == RobotType.ENLIGHTENMENT_CENTER) { // Enemy EC message...
@@ -140,6 +130,7 @@ public class Politician extends Robot {
                                 loc.y % 128,
                                 (int) log + 1
                         );
+                        alreadySetFlag = true;
                     } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
                         MapLocation loc = info.getLocation();
                         double log = Math.log(info.getConviction()) / Math.log(2);
@@ -149,7 +140,11 @@ public class Politician extends Robot {
                                 loc.y % 128,
                                 (int) log + 1
                         );
+                        alreadySetFlag = true;
                     }
+                }
+                if (!alreadySetFlag) {
+                    flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
                 }
 
                 Direction move = Nav.tick();
@@ -255,8 +250,20 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                if (Nav.currentGoal == Nav.NavGoal.Nothing)
+                if (Nav.currentGoal == Nav.NavGoal.Nothing) {
+                    int numTroopsCloser = 0;
+                    int myDist = centerLoc.distanceSquaredTo(currentLocation);
+                    for (RobotInfo bot : nearby) {
+                        if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
+                            numTroopsCloser++;
+                        }
+                    }
+                    if (numTroopsCloser > 5) {
+                        defendRadius += 2;
+                        defendLocation = getTargetLoc();
+                    }
                     Nav.doGoTo(defendLocation); // Don't allow Nav to quit
+                }
 
 
                 RobotInfo closestEnemy = null;
@@ -311,6 +318,16 @@ public class Politician extends Robot {
 
         public abstract void act() throws GameActionException;
 
+    }
+
+    static MapLocation getTargetLoc() {
+        int radius = defendRadius;
+        MapLocation targetLoc = rc.getLocation().translate(defendDir.dx * radius, defendDir.dy * radius);
+        targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
+        if ((targetLoc.x + targetLoc.y) % 2 != 0) {
+            targetLoc = targetLoc.translate(defendDir.dx, 0);
+        }
+        return targetLoc;
     }
 
     /**
@@ -371,7 +388,7 @@ public class Politician extends Robot {
 
         // calculate efficiency out of non-buff influence
         double efficiency = usefulInfluence / baseInfluence;
-        if (enemies == 0 && efficiency < 1.2) {
+        if (enemies == 0 && efficiency < 3) {
             // only do a friendly explosion with a large buff
             return 0;
         }

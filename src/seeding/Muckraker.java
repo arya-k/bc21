@@ -2,7 +2,7 @@ package seeding;
 
 import battlecode.common.*;
 
-import static seeding.Communication.encode;
+import static seeding.Communication.decode;
 
 public class Muckraker extends Robot {
     static final int CLOG_BEHAVIOR_THRESHOLD = 9; // If we are within this r^2, we manually path instead of using Nav
@@ -72,14 +72,14 @@ public class Muckraker extends Robot {
 
         // Explore -> Clog
         if (state == State.Explore) {
-            for (RobotInfo info : enemies) {
+            for (RobotInfo info : nearby) {
                 if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                     MapLocation loc = info.getLocation();
                     flagMessage(
                             Communication.Label.ENEMY_EC,
                             loc.x % 128,
                             loc.y % 128,
-                            (int) (Math.log(info.getInfluence()) / Math.log(2) + 1)
+                            Math.min(15, (int) (Math.log(info.getInfluence()) / Math.log(2) + 1))
                     );
 
                     // We have seen an enemy EC: we should clog it:
@@ -96,6 +96,18 @@ public class Muckraker extends Robot {
                             loc.y % 128,
                             (int) log + 1
                     );
+                }
+            }
+            // If creating EC says attack location, then switch to Clog
+            if (rc.canGetFlag(centerID)) {
+                int flag = rc.getFlag(centerID);
+                if (flag != 0) {
+                    Communication.Message msg = decode(flag);
+                    if (msg.label == Communication.Label.ATTACK_LOC) {
+                        enemyECLoc = getLocFromMessage(msg.data[0], msg.data[1]);
+                        state = State.Clog;
+                        Nav.doGoTo(enemyECLoc);
+                    }
                 }
             }
         }
