@@ -5,7 +5,7 @@ import battlecode.common.*;
 import static seeding.Communication.decode;
 
 public class Politician extends Robot {
-    public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
+    public static final int NEUTRAL_EC_WAIT_ROUNDS = 15;
 
     static State state = null;
 
@@ -162,7 +162,7 @@ public class Politician extends Robot {
                 if (!rc.isReady()) return;
 
                 // See if offensive speech is possible.
-                int radius = getBestEmpowerRadius(0.8);
+                int radius = getBestEmpowerRadius(0.7);
                 if (radius != -1) {
                     rc.empower(radius);
                     return;
@@ -223,11 +223,14 @@ public class Politician extends Robot {
                 for (int radius = 1; radius <= 9; radius++) {
                     enemiesNearby = rc.senseNearbyRobots(radius, rc.getTeam().opponent());
                     if (enemiesNearby.length == 0) continue;
-                    int attackPower = (rc.getInfluence() - GameConstants.EMPOWER_TAX) / enemiesNearby.length;
+                    int attackPower = (int) (
+                            (rc.getInfluence() * rc.getEmpowerFactor(rc.getTeam(), 0)
+                                    - GameConstants.EMPOWER_TAX) / enemiesNearby.length
+                    );
 
                     int currentKills = 0;
                     for (RobotInfo enemy : enemiesNearby)
-                        if (enemy.getType() == RobotType.POLITICIAN && attackPower > enemy.getConviction())
+                        if (attackPower > enemy.getConviction())
                             currentKills++;
 
                     if (currentKills > maxKills) {
