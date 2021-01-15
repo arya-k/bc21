@@ -272,7 +272,11 @@ public class EnlightenmentCenter extends Robot {
                     int influence = enemyECInfluence[closest];
                     MapLocation best = enemyECLocs[closest];
                     qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                            makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), MED);
+                            makeMessage(Label.ATTACK_LOC,
+                                    best.x % 128,
+                                    best.y % 128,
+                                    rc.getRoundNum() / 6, 0),
+                            MED);
                 }
             }
         };
@@ -319,7 +323,11 @@ public class EnlightenmentCenter extends Robot {
                         enemyECLocs[enemyECFound] = enemyECLoc;
                         enemyECInfluence[enemyECFound++] = (int) Math.pow(2, message.data[2]);
                         push(RobotType.MUCKRAKER, 1,
-                                makeMessage(Label.ATTACK_LOC, enemyECLoc.x % 128, enemyECLoc.y % 128), HIGH);
+                                makeMessage(Label.ATTACK_LOC,
+                                        enemyECLoc.x % 128,
+                                        enemyECLoc.y % 128,
+                                        rc.getRoundNum() / 6, 0),
+                                HIGH);
                     } else {
                         int influence = (int) Math.pow(2, message.data[2]);
                         enemyECInfluence[knownEnemyEC] = influence;

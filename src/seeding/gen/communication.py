@@ -19,7 +19,7 @@ commands = [
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("FINAL_FRONTIER", []),
-    Command("ATTACK_LOC", [7, 7]),
+    Command("ATTACK_LOC", [7, 7, 8, 1]),
     Command("HIDE", []),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
 ]
@@ -46,7 +46,7 @@ def bit_mirror(x, bits):
 
 for c in commands:
     c.header_len = BITS - sum(c.bit_list)
-commands.sort(key=lambda command: command.header_len)
+commands.sort(key=lambda command: -command.header_len)
 
 header_name = {}
 name_header = {}

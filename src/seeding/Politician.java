@@ -3,6 +3,7 @@ package seeding;
 import battlecode.common.*;
 
 import static seeding.Communication.decode;
+import static seeding.Communication.encode;
 
 public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 15;
@@ -196,16 +197,20 @@ public class Politician extends Robot {
         AttackLoc {
             @Override
             public void act() throws GameActionException {
-                if (!rc.isReady()) return;
+                if (rc.isReady()) {
+                    Direction move = Nav.tick();
+                    if (move != null && rc.canMove(move)) rc.move(move);
 
-                Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) rc.move(move);
-
-                if (move == null) { // TODO: part the seas! also don't give up on Nav movement...
-                    int radius = getBestEmpowerRadius(0.6);
-                    if (radius != -1 && rc.canEmpower(radius))
-                        rc.empower(radius);
+                    if (move == null) { // TODO: part the seas! also don't give up on Nav movement...
+                        int radius = getBestEmpowerRadius(0.6);
+                        if (radius != -1 && rc.canEmpower(radius))
+                            rc.empower(radius);
+                        else
+                            Nav.doGoTo(targetECLoc);
+                    }
                 }
+                assignment.data[3] = (rc.getCooldownTurns() <= 1) ? 1 : 0;
+                rc.setFlag(encode(assignment));
             }
         },
         FinalFrontier {
@@ -347,7 +352,7 @@ public class Politician extends Robot {
     }
 
 
-    static double empowerEfficiency(int range) {
+    static double empowerEfficiency(int range) throws GameActionException {
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots(range);
         if (nearbyRobots.length == 0) {
             return 0;
@@ -373,6 +378,10 @@ public class Politician extends Robot {
                     // killing muckrakers far away from our EC is a waste
                     // 65 ~= (4.5 + sqrt(12))^2
                     usefulInfluence += info.getConviction();
+                } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER
+                        && range <= 2 && shouldAttackEC(info)) {
+                    // test if enemy EC is surrounded and we have backup
+                    return 1;
                 } else {
                     usefulInfluence += perUnit;
                 }
@@ -403,7 +412,7 @@ public class Politician extends Robot {
      * @param threshold the minimum speech efficiency to consider
      * @return the best speech radius (-1 if no radius is good)
      */
-    static int getBestEmpowerRadius(double threshold) {
+    static int getBestEmpowerRadius(double threshold) throws GameActionException {
         int bestRad = -1;
         double bestEff = threshold;
 
@@ -416,5 +425,37 @@ public class Politician extends Robot {
         }
 
         return bestRad;
+    }
+
+    static boolean shouldAttackEC(RobotInfo ec) throws GameActionException {
+        if (!(currentLocation.distanceSquaredTo(ec.getLocation()) <= 2))
+            return false;
+        MapLocation ecLoc = ec.getLocation();
+        for (Direction dir : directions) {
+            MapLocation adjLoc = ecLoc.add(dir);
+            if (rc.onTheMap(adjLoc) && rc.senseRobotAtLocation(adjLoc) == null)
+                return false;
+        }
+        int reverseDir = ecLoc.directionTo(currentLocation).ordinal();
+        Direction[] backupDirs = {
+                directions[reverseDir],
+                directions[(reverseDir + 1) % 8],
+                directions[(reverseDir + 7) % 8]
+        };
+        for (Direction dir : backupDirs) {
+            RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(dir));
+            if (info == null || info.getTeam() != rc.getTeam()) continue;
+            Communication.Message message = decode(rc.getFlag(info.getID()));
+            if (message.label == Communication.Label.ATTACK_LOC
+                    && message.data[0] == assignment.data[0]
+                    && message.data[1] == assignment.data[1]
+                    && message.data[2] > assignment.data[2]
+                    && message.data[3] == 1) {
+                System.out.println("expecting backup from " + info.getID());
+                return true;
+            }
+
+        }
+        return false;
     }
 }
