@@ -1,13 +1,21 @@
-package bot;
+package seeding.utils;
 
 public class UnitBuildDPQueue {
     UnitBuildQueue[] queues;
-    int index;
-    int levels;
+    public int index;
+    public int levels;
 
     public UnitBuildDPQueue(int levels) {
         this.levels = levels;
         this.queues = new UnitBuildQueue[levels];
+        for (int i = 0; i < levels; i++) {
+            this.queues[i] = new UnitBuildQueue();
+        }
+        this.index = levels;
+    }
+
+    public void clear() {
+        this.queues = new UnitBuildQueue[this.levels];
         for (int i = 0; i < levels; i++) {
             this.queues[i] = new UnitBuildQueue();
         }

@@ -1,4 +1,4 @@
-package bot;
+package seeding.utils;
 
 public class IterableIdSet {
     private int size = 0;

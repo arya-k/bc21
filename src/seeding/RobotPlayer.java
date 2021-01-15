@@ -1,4 +1,4 @@
-package bot;
+package seeding;
 
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
@@ -28,7 +28,7 @@ public strictfp class RobotPlayer {
                 while (true) {
                     robot.onUpdate();
                     RobotType currType = rc.getType();
-                    if(currType != myType) {
+                    if (currType != myType) {
                         int currCenterId = Robot.centerID;
                         Robot.init(rc);
                         Robot.centerID = currCenterId;

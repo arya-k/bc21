@@ -11,13 +11,18 @@ class Command:
 
 commands = [
     Command("SCOUT", [3]),
-    Command("DANGER_DIR", [3]),
+    Command("EXPLORE", []),
     Command("SAFE_DIR_EDGE", [3, 3, 6]),
-    Command("LATCH", [3]),
-    Command("ATTACK", [3]),
+    Command("FLEE", []),
     Command("DEFEND", [3]),
-    Command("HIDE", [3]),
-    Command("WALL_GAP", [7, 7]),
+    Command("CURRENTLY_DEFENDING", []),
+    Command("ENEMY_EC", [7, 7, 4]),
+    Command("NEUTRAL_EC", [7, 7, 4]),
+    Command("FINAL_FRONTIER", []),
+    Command("ATTACK_LOC", [7, 7]),
+    Command("HIDE", []),
+    Command("CAPTURE_NEUTRAL_EC", [7, 7]),
+    Command("STOP_PRODUCING_MUCKRAKERS", []),
 ]
 
 #########################################
@@ -28,7 +33,7 @@ BITS = 24
 
 import random
 
-MASK = random.randint(5, 2 ** BITS)
+MASK = random.randint(5, 2 ** 24)
 
 
 def bit_mirror(x, bits):
@@ -40,11 +45,9 @@ def bit_mirror(x, bits):
     return result
 
 
-header_len = min(BITS - sum(c.bit_list) for c in commands)
 for c in commands:
-    if sum(c.bit_list) + header_len > BITS:
-        print("ERROR")
-    c.header_len = header_len
+    c.header_len = BITS - sum(c.bit_list)
+commands.sort(key=lambda command: command.header_len)
 
 header_name = {}
 name_header = {}
@@ -89,23 +92,22 @@ for c in commands:
         for i in range(entries)
     ]
     inner_exprs = [x for l in inner_exprs for x in l][:-1]
-    inner_expr = "\n                ".join(inner_exprs)
-    decode_block = f"""
-            case {c.header}:
-                label = Label.{c.name};
-                {f"acc = flag / {2 ** c.header_len};" if inner_exprs else ""}
-                {inner_expr}
-                break;
+    inner_expr = "\n            ".join(inner_exprs)
+    decode_block = f"""        
+if (flag % {2 ** c.header_len} == {c.header}) {{
+            label = Label.{c.name};
+            {f"acc = flag / {2 ** c.header_len};" if inner_exprs else ""}
+            {inner_expr}
+        }}
     """
-    decode_blocks.append(decode_block)
+    decode_block = "\n".join(s for s in decode_block.splitlines() if s.strip())
+    decode_blocks.append(decode_block.strip())
 
 encode = "\n".join(encode_blocks)
 encode = "\n".join(s for s in encode.splitlines() if s.strip())
-decode = "\n".join(decode_blocks)
-decode = "\n".join(s for s in decode.splitlines() if s.strip())
+decode = " else ".join(decode_blocks)
 
-code = f"""package bot;
-
+code = f"""package seeding;
 public class Communication {{
     public enum Label {{
         {", ".join(c.name for c in commands)}
@@ -113,27 +115,22 @@ public class Communication {{
     public static class Message {{
         Label label;
         int[] data;
-
         public Message(Label label, int[] data) {{
             this.label = label;
             this.data = data;
         }}
     }}
-
     public static Message decode(int flag) {{
         flag ^= {MASK};
         flag--;
         int[] data = new int[{max(len(c.bit_list) for c in commands)}];
         Label label;
         int acc;
-        switch (flag % {2 ** header_len}) {{
-{decode}
-            default:
-                throw new RuntimeException("Attempting to decode an invalid flag");
+        {decode} else {{
+            throw new RuntimeException("Attempting to decode an invalid flag");
         }}
         return new Message(label, data);
     }}
-
     public static int encode(Message message) {{
         switch (message.label) {{
 {encode}

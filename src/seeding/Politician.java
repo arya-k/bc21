@@ -1,8 +1,8 @@
-package refactor;
+package seeding;
 
 import battlecode.common.*;
 
-import static refactor.Communication.decode;
+import static seeding.Communication.decode;
 
 public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 10;
@@ -329,37 +329,50 @@ public class Politician extends Robot {
 
     static double empowerEfficiency(int range) {
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots(range);
-        Team myTeam = rc.getTeam();
-        Team opponent = myTeam.opponent();
-        int numNearby = nearbyRobots.length;
-        if (numNearby == 0) return 0;
-        double usefulInfluence = myInfluence * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
-        if (usefulInfluence < 0) return 0;
-        double perUnit = usefulInfluence / numNearby;
-        double wastedInfluence = 0;
-        int kills = 0;
+        if (nearbyRobots.length == 0) {
+            return 0;
+        }
+
+        double effectiveInfluence = myInfluence * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
+        if (effectiveInfluence < 0) {
+            return 0;
+        }
+        double baseInfluence = myInfluence - 10;
+        double perUnit = effectiveInfluence / nearbyRobots.length;
+
+        double usefulInfluence = 0;
         int enemies = 0;
-        for (int i = 0; i < numNearby; i++) {
+
+        for (int i = 0; i < nearbyRobots.length; i++) {
             RobotInfo info = nearbyRobots[i];
-            if (info.getTeam() == opponent)
+            if (info.getTeam() == rc.getTeam().opponent()) {
+                // opponent unit
                 enemies++;
-            if (info.getTeam() == opponent && info.getConviction() < perUnit)
-                kills++;
-            if (info.getTeam() == opponent && info.getType() == RobotType.MUCKRAKER &&
-                    !info.getLocation().isWithinDistanceSquared(centerLoc, 15)) {
-                wastedInfluence += Math.max(perUnit - info.getConviction(), 0) / 2;
-            } else if (info.getTeam() == myTeam && info.getType() != RobotType.ENLIGHTENMENT_CENTER) {
-                double wasted = Math.max(perUnit - (info.getInfluence() - info.getConviction()), 0);
-                wastedInfluence += wasted;
-            } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                if (perUnit >= info.getInfluence() / 4) return 1;
+                if (info.getType() == RobotType.MUCKRAKER &&
+                        !info.getLocation().isWithinDistanceSquared(centerLoc, 65)) {
+                    // killing muckrakers far away from our EC is a waste
+                    // 65 ~= (4.5 + sqrt(12))^2
+                    usefulInfluence += info.getConviction();
+                } else {
+                    usefulInfluence += perUnit;
+                }
+            } else {
+                // friendly / neutral unit
+                if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                    usefulInfluence += perUnit;
+                } else {
+                    usefulInfluence += info.getInfluence() - info.getConviction();
+                }
             }
         }
-        if (enemies == 0)
+
+        // calculate efficiency out of non-buff influence
+        double efficiency = usefulInfluence / baseInfluence;
+        if (enemies == 0 && efficiency < 1.2) {
+            // only do a friendly explosion with a large buff
             return 0;
-        double efficiency = 1 - (wastedInfluence / usefulInfluence);
-        if (kills >= 3)
-            efficiency += kills;
+        }
+
         return efficiency;
     }
 

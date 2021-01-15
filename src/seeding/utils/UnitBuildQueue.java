@@ -1,4 +1,4 @@
-package bot;
+package seeding.utils;
 
 public class UnitBuildQueue {
     UnitBuild[] elements = new UnitBuild[64];

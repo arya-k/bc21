@@ -1,9 +1,9 @@
-package refactor;
+package seeding;
 
 import battlecode.common.GameActionException;
 
-import static refactor.EnlightenmentCenter.influenceMinimum;
-import static refactor.Robot.rc;
+import static seeding.EnlightenmentCenter.influenceMinimum;
+import static seeding.Robot.rc;
 
 public class BidController {
 
