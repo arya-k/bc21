@@ -43,6 +43,26 @@ public class Muckraker extends Robot {
     void transition() throws GameActionException {
         RobotInfo[] enemies = nearby;
 
+        // Chase a Slanderer if possible
+        int slandererNearby = -1;
+        int distanceToSlanderer = -1;
+        for (RobotInfo info : enemies) {
+            if (info.getTeam() != rc.getTeam() && info.getType() == RobotType.SLANDERER) {
+                int distance = rc.getLocation().distanceSquaredTo(info.getLocation());
+                if (slandererNearby == -1 || distance < distanceToSlanderer) {
+                    slandererNearby = info.getID();
+                    distanceToSlanderer = distance;
+                }
+            }
+        }
+        if (slandererNearby == -1 && state == State.ChaseSlanderer) {
+            state = State.Explore;
+            Nav.doExplore();
+        } else if (slandererNearby != -1) {
+            state = State.ChaseSlanderer;
+            Nav.doFollow(slandererNearby);
+        }
+
         // Clog -> Explore (when the enemy EC we wanted to attack has been converted)
         if (state == State.Clog && rc.canSenseLocation(enemyECLoc) &&
                 rc.senseRobotAtLocation(enemyECLoc).getTeam() != rc.getTeam().opponent()) {
@@ -131,6 +151,15 @@ public class Muckraker extends Robot {
                 if (trySlandererKill()) return;
 
                 Nav.doGoInDir(randomDirection());
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+            }
+        },
+        ChaseSlanderer {
+            @Override
+            public void act() throws GameActionException {
+                if (trySlandererKill()) return;
+
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
             }
