@@ -389,7 +389,7 @@ public class Politician extends Robot {
     static int getBestEmpowerRadius(double threshold) {
         int bestRad = -1;
         double bestEff = threshold;
-        // TODO: check from radius 1
+
         for (int i = 1; i <= RobotType.POLITICIAN.actionRadiusSquared; i++) {
             double efficiency = empowerEfficiency(i);
             if (efficiency > bestEff) {

@@ -3,8 +3,6 @@ package seeding;
 import battlecode.common.*;
 
 public class Slanderer extends Robot {
-    static final int ENEMY_FEAR_ROUNDS = 5; // how long until we go back to hiding instead of fleeing
-
     static State state = null;
 
     /* hide vars */
@@ -12,7 +10,10 @@ public class Slanderer extends Robot {
 
     /* flee vars */
     static RobotInfo[] enemies = null;
-    static int[] dangerByDir = new int[8];
+    static double[] safetyByDir = new double[8];
+    static boolean[] viableLoc = new boolean[8];
+    static final double SAFETY_DECAY = 0.9;
+    static final int MAX_DIST_FROM_EC = 50;
     static int enemyLastSeen = 0;
 
     @Override
@@ -36,26 +37,15 @@ public class Slanderer extends Robot {
     void transition() {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
 
-        int numMuckrakers = 0;
-        for (int i = 0; i < enemies.length; i++)
-            if (enemies[i].getType() == RobotType.MUCKRAKER)
-                numMuckrakers++;
-
         // track when we last saw enemies
         enemyLastSeen++;
-        if (numMuckrakers > 0)
+        if (enemies.length > 0)
             enemyLastSeen = 0;
 
         // Hide -> Flee
-        if (state == State.Hide && numMuckrakers > 0) {
+        if (state == State.Hide && enemies.length > 0) {
             state = State.Flee;
-            dangerByDir = new int[8]; // zero out the dangers!
-        }
-
-        // Flee -> Hide
-        if (state == State.Flee && enemyLastSeen > ENEMY_FEAR_ROUNDS) {
-            state = State.Hide;
-            Nav.doGoTo(randomHoverLocation(HIDE_RAD));
+            safetyByDir = new double[8]; // zero out the dangers!
         }
     }
 
@@ -75,35 +65,55 @@ public class Slanderer extends Robot {
             public void act() throws GameActionException {
                 // Update the danger estimation
                 for (RobotInfo enemy : enemies) {
-                    if (enemy.type != RobotType.MUCKRAKER) continue;
+                    int threat = enemy.type == RobotType.MUCKRAKER ? 2 : 1;
+                    int safeDir = centerLoc.directionTo(enemy.location).opposite().ordinal();
 
-                    int dangerDir = currentLocation.directionTo(enemy.location).ordinal();
-
-                    dangerByDir[(dangerDir + 7) % 8]++;
-                    dangerByDir[dangerDir] += 2;
-                    dangerByDir[(dangerDir + 1) % 8]++;
+                    safetyByDir[(safeDir + 6) % 8] += threat;
+                    safetyByDir[(safeDir + 7) % 8] += 3 * threat;
+                    safetyByDir[(safeDir)] += 5 * threat;
+                    safetyByDir[(safeDir + 1) % 8] += 3 * threat;
+                    safetyByDir[(safeDir + 2) % 8] += threat;
                 }
 
-                // Calculate the minimum danger available
-                int minDanger = Integer.MAX_VALUE;
-                for (int i = 0; i < 8; i++)
-                    minDanger = Math.min(minDanger, dangerByDir[i]);
-
-                // Of the minimum dangers, pick the one with the highest passability.
-                int dir = -1;
-                double dirPassability = 0.0;
                 for (int i = 0; i < 8; i++) {
-                    if (rc.canMove(fromOrdinal(i)) && dangerByDir[i] == minDanger) {
-                        double passability = rc.sensePassability(currentLocation.add(fromOrdinal(i)));
-                        if (passability > dirPassability) {
-                            dirPassability = passability;
-                            dir = i;
+                    System.out.println(fromOrdinal(i) + " " + safetyByDir[i]);
+                }
+
+                if (rc.isReady()) {
+                    // Calculate the maximum safety available
+                    double maxSafety = 0;
+                    for (int i = 0; i < 8; i++) {
+                        safetyByDir[i] = safetyByDir[i] * SAFETY_DECAY;
+                        if (safetyByDir[i] < 0.1)
+                            safetyByDir[i] = 0;
+
+                        viableLoc[i] = rc.canMove(fromOrdinal(i)) && (enemies.length > 0
+                                || rc.getLocation()
+                                .add(fromOrdinal(i))
+                                .isWithinDistanceSquared(centerLoc, MAX_DIST_FROM_EC)
+                        );
+                        if (viableLoc[i])
+                            maxSafety = Math.max(maxSafety, safetyByDir[i]);
+                    }
+
+                    // Of the maximum safeties, pick the one with the highest passability.
+                    int dir = -1;
+                    double dirPassability = 0.0;
+                    for (int i = 0; i < 8; i++) {
+                        if (viableLoc[i] && Math.abs(safetyByDir[i] - maxSafety) < 0.5) {
+                            double passability = rc.sensePassability(currentLocation.add(fromOrdinal(i)));
+                            if (passability > dirPassability) {
+                                dirPassability = passability;
+                                dir = i;
+                            }
                         }
                     }
+
+                    // Move in direction of max safety
+                    if (dir != -1) rc.move(fromOrdinal(dir));
                 }
 
-                // Move in direction of least danger!
-                if (dir != -1) rc.move(fromOrdinal(dir));
+
             }
         };
 

@@ -218,7 +218,7 @@ public class EnlightenmentCenter extends Robot {
                 System.out.println("number neutral found: " + neutralECFound);
                 if (neutralECFound > 0) {
                     int closest = getBestNeutralEC();
-                    int influence = neutralECInfluence[closest];
+                    int influence = Math.max(neutralECInfluence[closest], 8);
                     MapLocation best = neutralECLocs[closest];
                     qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
                             makeMessage(Label.CAPTURE_NEUTRAL_EC, best.x % 128, best.y % 128), MED);
