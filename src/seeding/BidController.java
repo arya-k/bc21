@@ -2,7 +2,7 @@ package seeding;
 
 import battlecode.common.GameActionException;
 
-import static seeding.EnlightenmentCenter.influenceMinimum;
+import static seeding.QueueController.influenceMinimum;
 import static seeding.Robot.rc;
 
 public class BidController {
