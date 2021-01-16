@@ -281,7 +281,6 @@ public class EnlightenmentCenter extends Robot {
             qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), ULTRA_HIGH);
             addedFinalDefender = true;
         }
-        for ()
     }
 
     void processFlags() throws GameActionException {
