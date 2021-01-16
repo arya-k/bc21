@@ -121,7 +121,8 @@ public class EnlightenmentCenter extends Robot {
 
     static void transition() throws GameActionException {
         // * -> Defense
-        if (rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0) {
+        underAttack = rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0;
+        if (underAttack) {
             if (state != State.Defend) {
                 qc.clear();
                 state = State.Defend;
@@ -280,6 +281,7 @@ public class EnlightenmentCenter extends Robot {
             qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), ULTRA_HIGH);
             addedFinalDefender = true;
         }
+        for ()
     }
 
     void processFlags() throws GameActionException {
