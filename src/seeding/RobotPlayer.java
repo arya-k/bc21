@@ -29,10 +29,12 @@ public strictfp class RobotPlayer {
                     robot.onUpdate();
                     RobotType currType = rc.getType();
                     if (currType != myType) {
+                        // switching slanderer to politician
                         int currCenterId = Robot.centerID;
                         Robot.init(rc);
                         Robot.centerID = currCenterId;
                         robot = getRobot(currType);
+                        Robot.assignment = Robot.makeMessage(Communication.Label.DEFEND, Robot.randomDirection().ordinal());
                         robot.onAwake();
                         myType = currType;
                     }

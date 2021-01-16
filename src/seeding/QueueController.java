@@ -106,7 +106,9 @@ public class QueueController {
             prevUnit = nextUnit;
             prevDir = buildDir;
             nextUnit = null;
+            return;
         }
+        return;
     }
 
     /* Utility Functions */
@@ -129,7 +131,7 @@ public class QueueController {
     public static int getSlandererInfluence() {
         int useInfluence = rc.getInfluence() - influenceMinimum();
         if (useInfluence < slandererInfluences[0]) return -1;
-        
+
         for (int i = 0; i < slandererInfluences.length - 1; i++)
             if (useInfluence < slandererInfluences[i + 1])
                 return slandererInfluences[i];

@@ -1,7 +1,7 @@
 package seeding;
 public class Communication {
     public enum Label {
-        EXPLORE, FLEE, CURRENTLY_DEFENDING, FINAL_FRONTIER, HIDE, SCOUT, DEFEND, SCOUT_LOCATION, CAPTURE_NEUTRAL_EC, ENEMY_EC, NEUTRAL_EC, ATTACK_LOC
+        EXPLORE, FLEE, CURRENTLY_DEFENDING, FINAL_FRONTIER, SCOUT, DEFEND, SAFE_DIR, SCOUT_LOCATION, CAPTURE_NEUTRAL_EC, ENEMY_EC, NEUTRAL_EC, ATTACK_LOC
     }
     public static class Message {
         Label label;
@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 6057126;
+        flag ^= 14717098;
         flag--;
         int[] data = new int[4];
         Label label;
@@ -25,14 +25,16 @@ public class Communication {
             label = Label.CURRENTLY_DEFENDING;
         } else if (flag % 16777216 == 12582912) {
             label = Label.FINAL_FRONTIER;
-        } else if (flag % 16777216 == 2097152) {
-            label = Label.HIDE;
         } else if (flag % 2097152 == 1048576) {
             label = Label.SCOUT;
             acc = flag / 2097152;
             data[0] = acc % 8;
         } else if (flag % 2097152 == 524288) {
             label = Label.DEFEND;
+            acc = flag / 2097152;
+            data[0] = acc % 8;
+        } else if (flag % 2097152 == 1572864) {
+            label = Label.SAFE_DIR;
             acc = flag / 2097152;
             data[0] = acc % 8;
         } else if (flag % 1024 == 512) {
@@ -81,29 +83,29 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 6057126 ^ (1 + (0) * 16777216 + 0);
+                return 14717098 ^ (1 + (0) * 16777216 + 0);
             case FLEE:
-                return 6057126 ^ (1 + (0) * 16777216 + 8388608);
+                return 14717098 ^ (1 + (0) * 16777216 + 8388608);
             case CURRENTLY_DEFENDING:
-                return 6057126 ^ (1 + (0) * 16777216 + 4194304);
+                return 14717098 ^ (1 + (0) * 16777216 + 4194304);
             case FINAL_FRONTIER:
-                return 6057126 ^ (1 + (0) * 16777216 + 12582912);
-            case HIDE:
-                return 6057126 ^ (1 + (0) * 16777216 + 2097152);
+                return 14717098 ^ (1 + (0) * 16777216 + 12582912);
             case SCOUT:
-                return 6057126 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case DEFEND:
-                return 6057126 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
+                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
+            case SAFE_DIR:
+                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 1572864);
             case SCOUT_LOCATION:
-                return 6057126 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
+                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
             case CAPTURE_NEUTRAL_EC:
-                return 6057126 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 256);
+                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 256);
             case ENEMY_EC:
-                return 6057126 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
+                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case NEUTRAL_EC:
-                return 6057126 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
+                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
             case ATTACK_LOC:
-                return 6057126 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 4194304) * 2 + 1);
+                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 4194304) * 2 + 1);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }
