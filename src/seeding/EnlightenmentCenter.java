@@ -500,6 +500,7 @@ public class EnlightenmentCenter extends Robot {
     static boolean getUnderAttack() {
         int nearbyEnemyInfluence = 0;
         for (RobotInfo info : nearby) {
+            if (info.getTeam() == rc.getTeam()) continue;
             if (info.getType() == RobotType.MUCKRAKER)
                 return true;
             if (info.getType() == RobotType.POLITICIAN)
