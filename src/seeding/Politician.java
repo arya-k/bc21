@@ -25,6 +25,9 @@ public class Politician extends Robot {
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
 
+    /* EC tracking vars */
+    static MapLocation closestECLoc = centerLoc;
+
     @Override
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we just explore!
@@ -75,6 +78,9 @@ public class Politician extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
+
+        calculateClosestEC();
+
         transition();
         state.act();
         Clock.yield();
@@ -374,7 +380,7 @@ public class Politician extends Robot {
                 // opponent unit
                 enemies++;
                 if (info.getType() == RobotType.MUCKRAKER &&
-                        !info.getLocation().isWithinDistanceSquared(centerLoc, 65)) {
+                        !info.getLocation().isWithinDistanceSquared(closestECLoc, 65)) {
                     // killing muckrakers far away from our EC is a waste
                     // 65 ~= (4.5 + sqrt(12))^2
                     usefulInfluence += info.getConviction();
@@ -457,5 +463,20 @@ public class Politician extends Robot {
 
         }
         return false;
+    }
+
+    static void calculateClosestEC() {
+        int closestECDist = rc.getLocation().distanceSquaredTo(closestECLoc);
+        for (RobotInfo n : nearby) {
+            if (n.getType() == RobotType.ENLIGHTENMENT_CENTER
+                    && n.getTeam() == rc.getTeam()) {
+                MapLocation curLoc = n.getLocation();
+                int curDist = rc.getLocation().distanceSquaredTo(curLoc);
+                if (curDist < closestECDist) {
+                    closestECLoc = curLoc;
+                    closestECDist = curDist;
+                }
+            }
+        }
     }
 }
