@@ -13,7 +13,7 @@ import static seeding.Communication.encode;
 public class QueueController {
     private static RobotController rc;
 
-    private static UnitBuildDPQueue pq = new UnitBuildDPQueue(4);
+    private static final UnitBuildDPQueue pq = new UnitBuildDPQueue(4);
     public static final int ULTRA_HIGH = 0, HIGH = 1, MED = 2, LOW = 3;
 
     // tracking builds
@@ -78,46 +78,34 @@ public class QueueController {
 
     public void tryUnitBuild() throws GameActionException {
         if (nextUnit == null && !pq.isEmpty()) nextUnit = pq.pop(); // We need to find a new unit to build!
+        if (!rc.isReady() || nextUnit == null) return;
 
         int myInfluence = rc.getInfluence();
-        if (nextUnit != null && nextUnit.type == RobotType.SLANDERER)
-            nextUnit.influence = getSlandererInfluence();
-        if (nextUnit != null && ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
-                nextUnit.influence + influenceMinimum() <= myInfluence) && rc.isReady()) {
-            // build a unit
+        if (nextUnit.type == RobotType.SLANDERER)
+            nextUnit.influence = getSlandererInfluence(); // Slanderer influence is always chosen dynamically.
+
+        if ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
+                nextUnit.influence + influenceMinimum() <= myInfluence) { // build a unit
+
             Direction buildDir = null;
-            if (nextUnit.message.label == Communication.Label.FINAL_FRONTIER) {
-                for (int i = spawnDirs.length - 1; i >= 0; i--) {
-                    if (rc.canBuildRobot(nextUnit.type, spawnDirs[i], nextUnit.influence)) {
-                        buildDir = spawnDirs[i];
-                        break;
-                    }
+            for (Direction spawnDir : spawnDirs) {
+                if (rc.canBuildRobot(nextUnit.type, spawnDir, nextUnit.influence)) {
+                    buildDir = spawnDir;
+                    break;
                 }
+            }
+            if (nextUnit.message.label == Communication.Label.FINAL_FRONTIER)
                 EnlightenmentCenter.addedFinalDefender = false; // NOTE: Shared with EnlightenmentCenter
-            } else {
-                for (Direction spawnDir : spawnDirs) {
-                    if (rc.canBuildRobot(nextUnit.type, spawnDir, nextUnit.influence)) {
-                        buildDir = spawnDir;
-                        break;
-                    }
-                }
-            }
 
-            if (buildDir != null) {
-                boolean skipCurrent = false;
-                if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby() || nextUnit.influence < 0) {
-                    skipCurrent = true;
-                }
-                if (!skipCurrent) {
-                    rc.setFlag(encode(nextUnit.message));
-                    rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+            if (buildDir == null || nextUnit.type == RobotType.SLANDERER && muckrakerNearby() || nextUnit.influence < 0)
+                return;
 
+            rc.setFlag(encode(nextUnit.message)); // Do the build!
+            rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
 
-                    prevUnit = nextUnit;
-                    prevDir = buildDir;
-                }
-                nextUnit = null;
-            }
+            prevUnit = nextUnit;
+            prevDir = buildDir;
+            nextUnit = null;
         }
     }
 
@@ -132,21 +120,19 @@ public class QueueController {
     }
 
     static boolean muckrakerNearby() {
-        for (RobotInfo bot : rc.senseNearbyRobots(24)) {
-            if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
+        for (RobotInfo bot : rc.senseNearbyRobots(24))
+            if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER)
                 return true;
-            }
-        }
         return false;
     }
 
     public static int getSlandererInfluence() {
         int useInfluence = rc.getInfluence() - influenceMinimum();
         if (useInfluence < slandererInfluences[0]) return -1;
-        for (int i = 0; i < slandererInfluences.length - 1; i++) {
+        
+        for (int i = 0; i < slandererInfluences.length - 1; i++)
             if (useInfluence < slandererInfluences[i + 1])
                 return slandererInfluences[i];
-        }
         return slandererInfluences[slandererInfluences.length - 1];
     }
 

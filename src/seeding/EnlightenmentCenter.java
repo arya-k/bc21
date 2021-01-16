@@ -41,6 +41,7 @@ public class EnlightenmentCenter extends Robot {
     static int enemyECFound = 0;
 
     static boolean enemyECNearby = false;
+    static boolean underAttack = false;
 
     @Override
     void onAwake() throws GameActionException {
@@ -86,9 +87,7 @@ public class EnlightenmentCenter extends Robot {
         qc.trackLastBuiltUnit();
 
         processFlags(); // TODO: check this!
-
         transition(); // TODO: check this!
-
         immediateDefense(); // TODO: check this!
 
         // queue the next unit to build
@@ -96,8 +95,7 @@ public class EnlightenmentCenter extends Robot {
         qc.tryUnitBuild();
 
         // Cancel the next build unit
-        if (state == State.Defend)
-            qc.cancelNeutralECAttacker();
+        if (state == State.Defend) qc.cancelNeutralECAttacker();
 
         // Consider bidding
         bidController.update();
@@ -113,95 +111,87 @@ public class EnlightenmentCenter extends Robot {
     static int getWeakestEnemyEC() {
         if (enemyECFound <= 0) return -1;
         int weakest = 0;
-        for (int i = 1; i < enemyECFound; i++) {
+        for (int i = 1; i < enemyECFound; i++)
             if (enemyECInfluence[weakest] > enemyECInfluence[i])
                 weakest = i;
-        }
         return weakest;
     }
 
     /* Production and Stimulus Logic */
 
     static void transition() throws GameActionException {
-        int weakest;
-        switch (state) {
-            case Defend:
-                if (rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length > 0) {
-                    return;
-                }
-                if (qc.isEmpty()) {
-                    weakest = getWeakestEnemyEC();
-                    if (rc.getRoundNum() > 350 && weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
-                        state = State.AttackEnemy;
-                    } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
-                        state = State.CaptureNeutral;
-                    } else if (bestDangerDir() == null) {
-                        state = State.SlandererEconomy;
-                    }
-                }
-                break;
-            case CaptureNeutral:
-                if (rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0) {
-                    qc.clear();
-                    state = State.Defend;
-                    return;
-                }
-                if (neutralECFound <= 0) {
-                    state = State.Defend;
-                    return;
-                }
-                int[] ids = neutralCapturers.getKeys();
-                if (ids.length == 0) break;
-                boolean stillCapturing = false;
-                for (int id : neutralCapturers.getKeys()) {
-                    if (rc.canGetFlag(id)) {
-                        int flag = rc.getFlag(id);
-                        if (flag != 0 && decode(flag).label == Label.CAPTURE_NEUTRAL_EC) {
-                            stillCapturing = true;
-                        } else {
-                            neutralCapturers.remove(id);
-                        }
+        // * -> Defense
+        if (rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0) {
+            if (state != State.Defend) {
+                qc.clear();
+                state = State.Defend;
+            }
+            return;
+        }
+
+        // CaptureNeutral -> Defend
+        if (state == State.CaptureNeutral) {
+            if (neutralECFound <= 0) {
+                state = State.Defend;
+                return;
+            }
+            int[] ids = neutralCapturers.getKeys();
+            if (ids.length == 0) return;
+            boolean stillCapturing = false;
+            for (int id : neutralCapturers.getKeys()) {
+                if (rc.canGetFlag(id)) {
+                    int flag = rc.getFlag(id);
+                    if (flag != 0 && decode(flag).label == Label.CAPTURE_NEUTRAL_EC) {
+                        stillCapturing = true;
                     } else {
                         neutralCapturers.remove(id);
                     }
+                } else {
+                    neutralCapturers.remove(id);
                 }
-                if (!stillCapturing) {
-                    int closest = getBestNeutralEC();
-                    neutralECFound--;
-                    neutralECLocs[closest] = neutralECLocs[neutralECFound];
-                    neutralECInfluence[closest] = neutralECInfluence[neutralECFound];
-                    state = State.Defend;
-                    qc.clear();
-                }
-                break;
-            case AttackEnemy:
-                if (rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length > 0) {
-                    qc.clear();
-                    state = State.Defend;
-                    return;
-                }
-                weakest = getWeakestEnemyEC();
-                if (weakest == -1 || rc.getInfluence() - enemyECInfluence[weakest] < 500) {
-                    state = State.Defend;
-                }
-                break;
-            case SlandererEconomy:
-                if (rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length > 0) {
-                    qc.clear();
-                    state = State.Defend;
-                    return;
-                }
-                if (qc.isEmpty()) {
-                    weakest = getWeakestEnemyEC();
-                    if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
-                        state = State.AttackEnemy;
-                    } else if (bestDangerDir() != null) {
-                        state = State.Defend;
-                    } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
-                        state = State.CaptureNeutral;
-                    }
-                }
-                break;
+            }
+            if (!stillCapturing) {
+                int closest = getBestNeutralEC();
+                neutralECFound--;
+                neutralECLocs[closest] = neutralECLocs[neutralECFound];
+                neutralECInfluence[closest] = neutralECInfluence[neutralECFound];
+                state = State.Defend;
+                qc.clear();
+            }
+            return;
+        }
+
+        int weakest = getWeakestEnemyEC();
+
+        // Defend -> Other
+        if (state == State.Defend && qc.isEmpty()) {
+            if (rc.getRoundNum() > 350 && weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
+                state = State.AttackEnemy;
+            } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+                state = State.CaptureNeutral;
+            } else if (bestDangerDir() == null) {
+                state = State.SlandererEconomy;
+            }
+            return;
+        }
+
+        // AttackEnemy -> Defense
+        if (state == State.AttackEnemy) {
+            if (weakest == -1 || rc.getInfluence() - enemyECInfluence[weakest] < 500) {
+                state = State.Defend;
+                qc.clear();
+            }
+        }
+
+        // SlandererEconomy -> Other
+        if (state == State.SlandererEconomy && qc.isEmpty()) {
+            if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
+                state = State.AttackEnemy;
+            } else if (bestDangerDir() != null) {
+                state = State.Defend;
+            } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+                state = State.CaptureNeutral;
+            }
         }
     }
 
@@ -284,8 +274,6 @@ public class EnlightenmentCenter extends Robot {
         abstract void refillQueue() throws GameActionException;
     }
 
-    static boolean underAttack = false;
-
     void immediateDefense() {
         if (addedFinalDefender) return;
         if (lastDefender == -1 || !rc.canGetFlag(lastDefender)) {
@@ -337,7 +325,6 @@ public class EnlightenmentCenter extends Robot {
 
                 case NEUTRAL_EC:
                     MapLocation neutralECLoc = getLocFromMessage(message.data[0], message.data[1]);
-                    System.out.println("Found Neutral EC @ " + neutralECLoc);
 
                     int knownNeutralEC = -1;
                     for (int i = neutralECFound; --i >= 0; ) {
@@ -357,6 +344,7 @@ public class EnlightenmentCenter extends Robot {
                     }
                     trackedIds.remove(id);
                     break;
+
                 case SCOUT_LOCATION:
                     MapLocation loc = getLocFromMessage(message.data[0], message.data[1]);
                     int ord = rc.getLocation().directionTo(loc).ordinal();
@@ -370,7 +358,7 @@ public class EnlightenmentCenter extends Robot {
 
     /* Helpers and Utilities */
 
-    static int getBestNeutralEC() { // TODO: why is this like this
+    static int getBestNeutralEC() {
         if (neutralECFound <= 0) return -1;
         int best = 0;
         for (int i = 1; i < neutralECFound; i++) {
@@ -392,7 +380,6 @@ public class EnlightenmentCenter extends Robot {
      *
      * @return a direction
      */
-
     static Direction bestDangerDir() throws GameActionException {
         int[] defendersIn = {0, 0, 0, 0, 0, 0, 0, 0};
         for (RobotInfo bot : nearby) {
