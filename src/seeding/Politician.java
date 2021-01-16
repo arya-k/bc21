@@ -22,6 +22,7 @@ public class Politician extends Robot {
     static MapLocation defendLocation;
     static int defendRadius = 4;
     static int followingTurns = 0;
+    static int failedToMoveTurns = 0;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -107,6 +108,12 @@ public class Politician extends Robot {
         if (state == State.CaptureNeutralEC && waitingRounds >= NEUTRAL_EC_WAIT_ROUNDS && !foundNeutralNeighbor) {
             state = State.Explore;
             Nav.doExplore();
+            flagMessage(Communication.Label.EXPLORE);
+        }
+
+        if (state == State.Defend && failedToMoveTurns > 20) {
+            defendDir = defendDir.rotateLeft();
+            defendLocation = getTargetLoc();
         }
 
         if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.Nothing) {
@@ -117,7 +124,7 @@ public class Politician extends Robot {
                     numAlliesCloser++;
                 }
             }
-            if (numAlliesCloser > 8) {
+            if (numAlliesCloser > 12) {
                 defendRadius++;
                 defendLocation = getTargetLoc();
             }
@@ -324,16 +331,24 @@ public class Politician extends Robot {
                 }
 
                 // Consider exploding
-                double threshold = followingTurns > 4 ? 0.1 : 0.5;
+                int alliesNearby = 0;
+                for (RobotInfo bot : nearby) {
+                    if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN)
+                        alliesNearby++;
+                }
+                double threshold = followingTurns > 4 || alliesNearby > 4 ? 0.0 : 0.5;
                 int radius = getBestEmpowerRadius(threshold);
                 if (radius != -1) rc.empower(radius);
 
                 // Consider moving
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) {
+                    failedToMoveTurns = 0;
                     if (Nav.currentGoal == Nav.NavGoal.Follow)
                         followingTurns++;
                     rc.move(move);
+                } else {
+                    failedToMoveTurns++;
                 }
             }
         };
@@ -349,8 +364,8 @@ public class Politician extends Robot {
         if ((targetLoc.x + targetLoc.y) % 2 != 0) {
             targetLoc = targetLoc.translate(defendDir.dx, 0);
         }
-        if (!rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
-            defendDir = defendDir.rotateLeft();
+        if (radius > 4 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
+            defendDir = randomDirection();
             defendRadius = 4;
             return getTargetLoc();
         }

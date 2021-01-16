@@ -72,11 +72,9 @@ public class EnlightenmentCenter extends Robot {
         // initialize priority queue
 
 
-        if (!wasANeutralEC) {
-            qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), ULTRA_HIGH); // Econ slanderer
-        }
+        qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), ULTRA_HIGH); // Econ slanderer
         for (Direction dir : Robot.directions) {
-            qc.push(RobotType.POLITICIAN, wasANeutralEC ? 1 : 13,
+            qc.push(RobotType.POLITICIAN, 1,
                     makeMessage(Label.SCOUT, dir.ordinal()), HIGH); // Scout politician
         }
 
@@ -151,7 +149,7 @@ public class EnlightenmentCenter extends Robot {
 
         // CaptureNeutral -> Defend
         if (state == State.CaptureNeutral) {
-            if (neutralECFound <= 0) {
+            if (neutralECFound <= 0 || rc.getRoundNum() > 500) {
                 state = State.Defend;
                 return;
             }
@@ -309,6 +307,8 @@ public class EnlightenmentCenter extends Robot {
 
     void updateDangerDirs() {
         for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
+            if (bot.getType() == RobotType.POLITICIAN && bot.getInfluence() <= GameConstants.EMPOWER_TAX)
+                continue;
             int ord = currentLocation.directionTo(bot.getLocation()).ordinal();
             if (lastSeenInDirection[ord] == rc.getRoundNum() - 1)
                 seenConsecutiveInDir[ord]++;
@@ -426,6 +426,7 @@ public class EnlightenmentCenter extends Robot {
 
     static int[] requiredInAllDirections() throws GameActionException {
         int[] defendersIn = {0, 0, 0, 0, 0, 0, 0, 0};
+        nearby = rc.senseNearbyRobots();
         for (RobotInfo bot : nearby) {
             if (bot.getTeam() == rc.getTeam() && rc.canGetFlag(bot.getID())) {
                 int flag = rc.getFlag(bot.getID());
