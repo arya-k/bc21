@@ -3,6 +3,7 @@
 import argparse
 import itertools
 import multiprocessing
+import os
 import re
 import subprocess
 import time
@@ -39,15 +40,17 @@ MAPS = None
 VERBOSE = False
 JAR_PATH = None
 
+### Statics ###
+WORK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 ### Info gathering ###
 def get_players() -> List[str]:
     """ Returns a list of all players we can use """
     global PLAYERS
     if PLAYERS is None:
-        raw_output = subprocess.check_output(["../gradlew", "listPlayers"]).decode(
-            "utf-8"
-        )
+        raw_output = subprocess.check_output(
+            ["./gradlew", "listPlayers"], cwd=WORK_DIR
+        ).decode("utf-8")
         PLAYERS = [
             line[8:] for line in raw_output.splitlines() if line.startswith("PLAYER: ")
         ]
@@ -58,7 +61,9 @@ def get_maps() -> List[str]:
     """ Returns a list of all maps that we can play on """
     global MAPS
     if MAPS is None:
-        raw_output = subprocess.check_output(["../gradlew", "listMaps"]).decode("utf-8")
+        raw_output = subprocess.check_output(
+            ["./gradlew", "listMaps"], cwd=WORK_DIR
+        ).decode("utf-8")
         MAPS = [
             line[5:] for line in raw_output.splitlines() if line.startswith("MAP: ")
         ]
@@ -90,6 +95,7 @@ def run_match(pairing: Pairing) -> Result:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,  # you can make this None
             universal_newlines=False,
+            cwd=WORK_DIR,
         )
         while True:
             b = popen.stdout.readline()
@@ -112,8 +118,8 @@ def run_match(pairing: Pairing) -> Result:
             "-classpath",
             JAR_PATH,
             "-Dbc.server.mode=headless",
-            "-Dbc.game.team-a=bot",
-            "-Dbc.game.team-b=bot",
+            "-Dbc.game.team-a=" + pairing.a,
+            "-Dbc.game.team-b=" + pairing.b,
             "-Dbc.server.map-path=maps",
             "-Dbc.server.debug=false",
             "-Dbc.game.maps=" + pairing.m,
@@ -149,14 +155,14 @@ def run_matches(teamA, teamB, maps, games_per_match=1, stats=True) -> List[Resul
 
     # build in advance
     assert not subprocess.run(
-        ["../gradlew", "build"], stdout=subprocess.DEVNULL
+        ["./gradlew", "build"], stdout=subprocess.DEVNULL, cwd=WORK_DIR
     ).returncode
 
     # get jar path:
     global JAR_PATH
-    buildOutput = subprocess.check_output(["../gradlew", "listBattleCodeJar"]).decode(
-        "utf-8"
-    )
+    buildOutput = subprocess.check_output(
+        ["./gradlew", "listBattleCodeJar"], cwd=WORK_DIR
+    ).decode("utf-8")
     JAR_PATH = re.search("[^\n]*\.jar", buildOutput).group(0)
 
     cores = min(multiprocessing.cpu_count(), 40)
