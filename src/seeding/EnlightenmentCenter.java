@@ -20,7 +20,7 @@ public class EnlightenmentCenter extends Robot {
     static QueueController qc = new QueueController();
 
     // production state
-    static State state = State.SlandererEconomy;
+    static State state = State.CaptureNeutral;
 
     // bidding controller
     BidController bidController = new BidController();
