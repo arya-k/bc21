@@ -429,7 +429,9 @@ public class EnlightenmentCenter extends Robot {
         for (RobotInfo bot : nearby) {
             if (bot.getTeam() == rc.getTeam() && rc.canGetFlag(bot.getID())) {
                 int flag = rc.getFlag(bot.getID());
-                if (flag != 0 && decode(flag).label == Label.DEFEND) {
+                if (flag == 0) continue;
+                Label label = decode(flag).label;
+                if (label == Label.DEFEND || label == Label.CURRENTLY_DEFENDING) {
                     defendersIn[currentLocation.directionTo(bot.getLocation()).ordinal()]++;
                 }
             }
