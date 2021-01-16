@@ -406,7 +406,7 @@ public class Politician extends Robot {
             } else {
                 // friendly / neutral unit
                 if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    if (perUnit > info.getConviction())
+                    if (info.getTeam() == Team.NEUTRAL && perUnit > info.getConviction())
                         return 100;
                     usefulInfluence += perUnit;
                 } else {
