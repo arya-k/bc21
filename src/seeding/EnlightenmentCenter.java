@@ -73,7 +73,7 @@ public class EnlightenmentCenter extends Robot {
 
 
         if (!wasANeutralEC) {
-            qc.push(RobotType.SLANDERER, 41, makeMessage(Label.HIDE), ULTRA_HIGH); // Econ slanderer
+            qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), ULTRA_HIGH); // Econ slanderer
         }
         for (Direction dir : Robot.directions) {
             qc.push(RobotType.POLITICIAN, wasANeutralEC ? 1 : 13,
@@ -235,13 +235,8 @@ public class EnlightenmentCenter extends Robot {
                             makeMessage(Label.DEFEND, rightOrd), MED, requiredIn[rightOrd]);
                     int influence = getSlandererInfluence();
                     if (influence > 0 && !underAttack) {
-                        qc.push(RobotType.SLANDERER, influence, makeMessage(Label.HIDE), MED);
+                        qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
                         Message msg = makeMessage(Label.EXPLORE);
-                        int weakest = getWeakestEnemyEC();
-                        if (weakest != -1) {
-                            MapLocation enemyLoc = enemyECLocs[weakest];
-                            msg = makeMessage(Label.ATTACK_LOC, enemyLoc.x % 128, enemyLoc.y % 128, rc.getRoundNum() / 6, 0);
-                        }
                         qc.push(RobotType.MUCKRAKER, 1, msg, MED);
                     }
                 }
@@ -265,7 +260,7 @@ public class EnlightenmentCenter extends Robot {
             void refillQueue() throws GameActionException {
                 int influence = getSlandererInfluence();
                 if (influence > 0) {
-                    qc.push(RobotType.SLANDERER, influence, makeMessage(Label.HIDE), MED);
+                    qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
                     int politicianInfluence = getPoliticianInfluence();
                     Direction politicianDir = bestDangerDir();
                     if (politicianDir == null)
@@ -325,8 +320,10 @@ public class EnlightenmentCenter extends Robot {
             boolean update = seenConsecutiveInDir[i] > 2;
             if (currentDangerDirs[i] != update)
                 lastUpdated[i] = rc.getRoundNum();
-            if (rc.getRoundNum() - lastUpdated[i] > 10)
+            if (update || rc.getRoundNum() - lastUpdated[i] > 100) {
+                lastUpdated[i] = rc.getRoundNum();
                 currentDangerDirs[i] = update;
+            }
         }
     }
 
@@ -369,12 +366,6 @@ public class EnlightenmentCenter extends Robot {
                         dangerDirs[dangerDir.ordinal()] = true;
                         enemyECLocs[enemyECFound] = enemyECLoc;
                         enemyECInfluence[enemyECFound++] = (int) Math.pow(2, message.data[2]);
-                        push(RobotType.MUCKRAKER, 1,
-                                makeMessage(Label.ATTACK_LOC,
-                                        enemyECLoc.x % 128,
-                                        enemyECLoc.y % 128,
-                                        rc.getRoundNum() / 6, 0),
-                                HIGH);
                     } else {
                         int influence = (int) Math.pow(2, message.data[2]);
                         enemyECInfluence[knownEnemyEC] = influence;
@@ -476,6 +467,16 @@ public class EnlightenmentCenter extends Robot {
             }
         }
         return dangerDir;
+    }
+
+    static Direction safestDir() throws GameActionException {
+        int[] requiredIn = requiredInAllDirections();
+        int safest = 0;
+        for (int i = 0; i < 8; i++) {
+            if (currentDangerDirs[i] || dangerDirs[i]) continue;
+            if (requiredIn[safest] > requiredIn[i]) safest = i;
+        }
+        return fromOrdinal(safest);
     }
 
     static void updateDirOpenness() {

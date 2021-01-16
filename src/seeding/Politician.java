@@ -64,9 +64,6 @@ public class Politician extends Robot {
                 defendLocation = getTargetLoc();
                 Nav.doGoTo(defendLocation);
                 break;
-
-            case HIDE: // We were once a slanderer! TODO return to sender?
-                break;
         }
     }
 
@@ -120,7 +117,7 @@ public class Politician extends Robot {
                     numAlliesCloser++;
                 }
             }
-            if (numAlliesCloser > 6 && defendRadius < 13) {
+            if (numAlliesCloser > 8) {
                 defendRadius++;
                 defendLocation = getTargetLoc();
             }
@@ -128,6 +125,13 @@ public class Politician extends Robot {
         }
 
         // TODO: AttackLoc -> Explore if our target EC is now on our team!
+        if (state == State.AttackLoc) {
+            if (Nav.currentGoal == Nav.NavGoal.Nothing
+                    || (rc.canSenseLocation(targetECLoc) && rc.senseRobotAtLocation(targetECLoc).getTeam() == rc.getTeam())) {
+                state = State.Explore;
+                Nav.doExplore();
+            }
+        }
     }
 
     private enum State {

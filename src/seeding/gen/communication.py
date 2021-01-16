@@ -15,12 +15,12 @@ commands = [
     Command("EXPLORE", []),
     Command("FLEE", []),
     Command("DEFEND", [3]),
+    Command("SAFE_DIR", [3]),
     Command("CURRENTLY_DEFENDING", []),
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("FINAL_FRONTIER", []),
     Command("ATTACK_LOC", [7, 7, 8, 1]),
-    Command("HIDE", []),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
 ]
 

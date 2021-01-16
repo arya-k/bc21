@@ -2,6 +2,8 @@ package seeding;
 
 import battlecode.common.*;
 
+import static seeding.Communication.decode;
+
 public class Slanderer extends Robot {
     static State state = null;
 
@@ -34,8 +36,20 @@ public class Slanderer extends Robot {
      * Takes into account the factors around it to determine whether or not to switch state.
      * If switching state, updates the state variables accordingly.
      */
-    void transition() {
+    void transition() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+
+        if (centerID != rc.getID()) {
+            int flag = rc.getFlag(centerID);
+            if (flag != 0) {
+                Communication.Message msg = decode(flag);
+                if (msg.label == Communication.Label.SAFE_DIR) {
+                    safetyByDir = new double[8];
+                    safetyByDir[msg.data[0]] = 1000;
+                    state = State.Flee;
+                }
+            }
+        }
 
         // track when we last saw enemies
         enemyLastSeen++;
@@ -45,7 +59,6 @@ public class Slanderer extends Robot {
         // Hide -> Flee
         if (state == State.Hide && enemies.length > 0) {
             state = State.Flee;
-            safetyByDir = new double[8]; // zero out the dangers!
         }
     }
 
