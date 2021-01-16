@@ -21,6 +21,7 @@ public class Politician extends Robot {
     static Direction defendDir;
     static MapLocation defendLocation;
     static int defendRadius = 4;
+    static int followingTurns = 0;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -57,14 +58,8 @@ public class Politician extends Robot {
             case DEFEND:
                 state = State.Defend;
                 defendDir = fromOrdinal(assignment.data[0]);
-                MapLocation targetLoc = getTargetLoc();
-                if (rc.onTheMap(centerLoc.translate(defendDir.dx * 2, defendDir.dy * 2))) {
-                    defendLocation = targetLoc;
-                    Nav.doGoTo(defendLocation);
-                } else {
-                    Nav.doExplore();
-                    state = State.Explore;
-                }
+                defendLocation = getTargetLoc();
+                Nav.doGoTo(defendLocation);
                 break;
 
             case HIDE: // We were once a slanderer! TODO return to sender?
@@ -109,6 +104,21 @@ public class Politician extends Robot {
         if (state == State.CaptureNeutralEC && waitingRounds >= NEUTRAL_EC_WAIT_ROUNDS && !foundNeutralNeighbor) {
             state = State.Explore;
             Nav.doExplore();
+        }
+
+        if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.Nothing) {
+            int numAlliesCloser = 0;
+            int myDist = centerLoc.distanceSquaredTo(currentLocation);
+            for (RobotInfo bot : nearby) {
+                if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
+                    numAlliesCloser++;
+                }
+            }
+            if (numAlliesCloser > 6 && defendRadius < 13) {
+                defendRadius++;
+                defendLocation = getTargetLoc();
+            }
+            Nav.doGoTo(defendLocation); // Don't allow Nav to quit
         }
 
         // TODO: AttackLoc -> Explore if our target EC is now on our team!
@@ -255,21 +265,6 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                if (Nav.currentGoal == Nav.NavGoal.Nothing) {
-                    int numTroopsCloser = 0;
-                    int myDist = centerLoc.distanceSquaredTo(currentLocation);
-                    for (RobotInfo bot : nearby) {
-                        if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
-                            numTroopsCloser++;
-                        }
-                    }
-                    if (numTroopsCloser > 5) {
-                        defendRadius += 2;
-                        defendLocation = getTargetLoc();
-                    }
-                    Nav.doGoTo(defendLocation); // Don't allow Nav to quit
-                }
-
 
                 RobotInfo closestEnemy = null;
                 for (RobotInfo enemy : nearby) {
@@ -278,6 +273,8 @@ public class Politician extends Robot {
                         if (closestEnemy == null ||
                                 enemy.getLocation().distanceSquaredTo(currentLocation)
                                         < closestEnemy.getLocation().distanceSquaredTo(currentLocation)) {
+                            if (enemy.getType() == RobotType.POLITICIAN && enemy.getInfluence() < GameConstants.EMPOWER_TAX)
+                                continue;
                             Nav.doFollow(enemy.getID());
                             closestEnemy = enemy;
                         }
@@ -307,17 +304,23 @@ public class Politician extends Robot {
                 }
 
                 if (closestEnemy == null) { // Generic defense.
+                    followingTurns = 0;
                     Nav.doGoTo(defendLocation);
                     flagMessage(Communication.Label.DEFEND, defendDir.ordinal());
                 }
 
                 // Consider exploding
-                int radius = getBestEmpowerRadius(0.5);
+                double threshold = followingTurns > 4 ? 0.1 : 0.5;
+                int radius = getBestEmpowerRadius(threshold);
                 if (radius != -1) rc.empower(radius);
 
                 // Consider moving
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) rc.move(move);
+                if (move != null && rc.canMove(move)) {
+                    if (Nav.currentGoal == Nav.NavGoal.Follow)
+                        followingTurns++;
+                    rc.move(move);
+                }
             }
         };
 
@@ -325,12 +328,17 @@ public class Politician extends Robot {
 
     }
 
-    static MapLocation getTargetLoc() {
+    static MapLocation getTargetLoc() throws GameActionException {
         int radius = defendRadius;
-        MapLocation targetLoc = rc.getLocation().translate(defendDir.dx * radius, defendDir.dy * radius);
+        MapLocation targetLoc = centerLoc.translate(defendDir.dx * radius, defendDir.dy * radius);
         targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
         if ((targetLoc.x + targetLoc.y) % 2 != 0) {
             targetLoc = targetLoc.translate(defendDir.dx, 0);
+        }
+        if (!rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
+            defendDir = defendDir.rotateLeft();
+            defendRadius = 4;
+            return getTargetLoc();
         }
         return targetLoc;
     }
@@ -382,7 +390,7 @@ public class Politician extends Robot {
                         && range <= 2 && shouldAttackEC(info)) {
                     // test if enemy EC is surrounded and we have backup
                     return 1;
-                } else {
+                } else if (info.getType() != RobotType.POLITICIAN || info.getInfluence() > GameConstants.EMPOWER_TAX) {
                     usefulInfluence += perUnit;
                 }
             } else {
@@ -397,7 +405,7 @@ public class Politician extends Robot {
 
         // calculate efficiency out of non-buff influence
         double efficiency = usefulInfluence / baseInfluence;
-        if (enemies == 0 && efficiency < 3) {
+        if (enemies == 0 && efficiency < 10) {
             // only do a friendly explosion with a large buff
             return 0;
         }
