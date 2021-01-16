@@ -48,8 +48,13 @@ public class EnlightenmentCenter extends Robot {
     static boolean enemyECNearby = false;
     static boolean underAttack = false;
 
+    // whether or not we used to be a neutral EC
+    static boolean wasANeutralEC = false;
+
     @Override
     void onAwake() throws GameActionException {
+        if (rc.getInfluence() != 150 || rc.senseNearbyRobots().length != 0)
+            wasANeutralEC = true;
         qc.init(); // Initialize the queue controller!
 
         for (RobotInfo bot : rc.senseNearbyRobots()) { // Find nearby enlightenment centers
@@ -65,14 +70,21 @@ public class EnlightenmentCenter extends Robot {
         }
 
         // initialize priority queue
-        for (Direction dir : Robot.directions) {
-            qc.push(RobotType.POLITICIAN, 1, makeMessage(Label.SCOUT, dir.ordinal()), HIGH); // Scout politician
+
+
+        if (!wasANeutralEC) {
+            qc.push(RobotType.SLANDERER, 41, makeMessage(Label.HIDE), ULTRA_HIGH); // Econ slanderer
         }
-        qc.push(RobotType.SLANDERER, 41, makeMessage(Label.HIDE), ULTRA_HIGH); // Econ slanderer
+        for (Direction dir : Robot.directions) {
+            qc.push(RobotType.POLITICIAN, wasANeutralEC ? 1 : 13,
+                    makeMessage(Label.SCOUT, dir.ordinal()), HIGH); // Scout politician
+        }
+
         qc.pushMany(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE), LOW, 5); // Exploring muckrakers
     }
 
     void lowPriorityLogging() {
+        System.out.println(wasANeutralEC ? "Neutral EC" : "Starter EC");
         System.out.println("Influence: " + myInfluence);
         System.out.println("Production state: " + state);
         System.out.println("Bidding state: " + BidController.state);
@@ -128,7 +140,7 @@ public class EnlightenmentCenter extends Robot {
 
     static void transition() throws GameActionException {
         // * -> Defense
-        underAttack = rc.senseNearbyRobots(16, rc.getTeam().opponent()).length > 0;
+        underAttack = getUnderAttack();
         if (underAttack) {
             if (state != State.Defend) {
                 qc.clear();
@@ -222,7 +234,7 @@ public class EnlightenmentCenter extends Robot {
                     qc.pushMany(RobotType.POLITICIAN, politicianInfluence,
                             makeMessage(Label.DEFEND, rightOrd), MED, requiredIn[rightOrd]);
                     int influence = getSlandererInfluence();
-                    if (influence > 0) {
+                    if (influence > 0 && !underAttack) {
                         qc.push(RobotType.SLANDERER, influence, makeMessage(Label.HIDE), MED);
                         Message msg = makeMessage(Label.EXPLORE);
                         int weakest = getWeakestEnemyEC();
@@ -483,5 +495,18 @@ public class EnlightenmentCenter extends Robot {
             best = Math.max(best, directionOpenness[i]);
         }
         return best;
+    }
+
+    static boolean getUnderAttack() {
+        int nearbyEnemyInfluence = 0;
+        for (RobotInfo info : nearby) {
+            if (info.getType() == RobotType.MUCKRAKER)
+                return true;
+            if (info.getType() == RobotType.POLITICIAN)
+                nearbyEnemyInfluence += info.getInfluence();
+        }
+        if (nearbyEnemyInfluence > rc.getInfluence() / 2)
+            return true;
+        return false;
     }
 }

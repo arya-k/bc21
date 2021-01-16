@@ -164,6 +164,10 @@ public class Politician extends Robot {
                     flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
                 }
 
+                int radius = getBestEmpowerRadius(0.3);
+                if (radius != -1 && rc.isReady())
+                    rc.empower(radius);
+
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
             }
@@ -402,6 +406,8 @@ public class Politician extends Robot {
             } else {
                 // friendly / neutral unit
                 if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
+                    if (perUnit > info.getConviction())
+                        return 100;
                     usefulInfluence += perUnit;
                 } else {
                     usefulInfluence += info.getInfluence() - info.getConviction();
