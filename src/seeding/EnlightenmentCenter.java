@@ -236,7 +236,7 @@ public class EnlightenmentCenter extends Robot {
                 int influence = ECInfluence[bestEnemyEC];
                 MapLocation best = ECLocs[bestEnemyEC];
                 qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128, rc.getRoundNum() / 6, 0), MED);
+                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), MED);
 
             }
         };

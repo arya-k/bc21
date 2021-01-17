@@ -3,7 +3,6 @@ package seeding;
 import battlecode.common.*;
 
 import static seeding.Communication.decode;
-import static seeding.Communication.encode;
 
 public class Politician extends Robot {
     public static final int NEUTRAL_EC_WAIT_ROUNDS = 15;
@@ -132,7 +131,7 @@ public class Politician extends Robot {
                     flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
 
                 if (!rc.isReady()) return;
-                
+
                 int radius = getBestEmpowerRadius(0.3);
                 if (radius != -1 && rc.isReady())
                     rc.empower(radius);
@@ -182,6 +181,11 @@ public class Politician extends Robot {
         AttackLoc {
             @Override
             public void act() throws GameActionException {
+                // if we are in range of our attacking location, switch to attacking message
+                if (currentLocation.isWithinDistanceSquared(targetECLoc, 36)) {
+                    int readyToGo = (rc.getCooldownTurns() <= 1) ? 1 : 0;
+                    flagMessage(Communication.Label.ATTACKING, firstTurn / 6, readyToGo);
+                }
                 if (rc.isReady()) {
                     Direction move = Nav.tick();
                     if (move != null && rc.canMove(move)) rc.move(move);
@@ -194,8 +198,6 @@ public class Politician extends Robot {
                             Nav.doGoTo(targetECLoc);
                     }
                 }
-                assignment.data[3] = (rc.getCooldownTurns() <= 1) ? 1 : 0;
-                rc.setFlag(encode(assignment));
             }
         },
         FinalFrontier {
@@ -484,11 +486,9 @@ public class Politician extends Robot {
             RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(dir));
             if (info == null || info.getTeam() != rc.getTeam()) continue;
             Communication.Message message = decode(rc.getFlag(info.getID()));
-            if (message.label == Communication.Label.ATTACK_LOC
-                    && message.data[0] == assignment.data[0]
-                    && message.data[1] == assignment.data[1]
-                    && message.data[2] > assignment.data[2]
-                    && message.data[3] == 1) {
+            if (message.label == Communication.Label.ATTACKING
+                    && message.data[0] > assignment.data[0]
+                    && message.data[1] == 1) {
                 System.out.println("expecting backup from " + info.getID());
                 return true;
             }
