@@ -34,16 +34,14 @@ public class EnlightenmentCenter extends Robot {
     static int[] lastUpdated = new int[8];
 
 
-    // neutral ECs that have been found so far
-    static MapLocation[] neutralECLocs = new MapLocation[6];
-    static int[] neutralECInfluence = new int[6];
-    static int neutralECFound = 0;
+    // Non-self ECs that have been found so far
+    static MapLocation[] ECLocs = new MapLocation[11];
+    static int[] ECInfluence = new int[11];
+    static Team[] ECTeam = new Team[11];
+    static int[] ECLastQueued = {-100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100};
+    static int ECFound = 0;
 
-    // enemy ECs that have been found so far
-    static MapLocation[] enemyECLocs = new MapLocation[9];
-    static int[] enemyECInfluence = new int[9];
-    static int enemyECFound = 0;
-
+    // TODO: we need to do something with this info!
     static boolean enemyECNearby = false;
     static boolean underAttack = false;
 
@@ -57,14 +55,10 @@ public class EnlightenmentCenter extends Robot {
 
         for (RobotInfo bot : rc.senseNearbyRobots()) { // Find nearby enlightenment centers
             if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
-            if (bot.getTeam() == rc.getTeam().opponent()) {
-                enemyECInfluence[enemyECFound] = bot.getInfluence();
-                enemyECLocs[enemyECFound++] = bot.getLocation();
+            addOrUpdateEC(bot.getLocation(), bot.getTeam(), bot.getInfluence());
+
+            if (bot.getTeam() == rc.getTeam().opponent())
                 enemyECNearby = true;
-            } else if (bot.getTeam() == Team.NEUTRAL) {
-                neutralECInfluence[neutralECFound] = bot.getInfluence();
-                neutralECLocs[neutralECFound++] = bot.getLocation();
-            }
         }
 
         // initialize priority queue
@@ -86,8 +80,8 @@ public class EnlightenmentCenter extends Robot {
             if (!dangerDirs[i]) continue;
             System.out.println("DANGEROUS: " + fromOrdinal(i));
         }
-        for (int i = 0; i < neutralECFound; i++) {
-            System.out.println("neutral EC @ " + neutralECLocs[i] + " with inf = " + neutralECInfluence[i]);
+        for (int i = 0; i < ECFound; i++) {
+            System.out.println("" + ECTeam[i] + " EC @ " + ECLocs[i] + " with inf = " + ECInfluence[i]);
         }
         qc.logNext();
     }
@@ -113,18 +107,9 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
 
         // End turn.
-        if (currentRound % 25 == 0) lowPriorityLogging();
+//        if (currentRound % 25 == 0) lowPriorityLogging();
         Clock.yield();
 
-    }
-
-    static int getWeakestEnemyEC() {
-        if (enemyECFound <= 0) return -1;
-        int weakest = 0;
-        for (int i = 1; i < enemyECFound; i++)
-            if (enemyECInfluence[weakest] > enemyECInfluence[i])
-                weakest = i;
-        return weakest;
     }
 
     /* Production and Stimulus Logic */
@@ -139,19 +124,21 @@ public class EnlightenmentCenter extends Robot {
             return;
         }
 
+        int targetEnemyEC = getWeakestEnemyEC();
+        int targetNeutralEC = getBestNeutralEC();
+
         // CaptureNeutral -> Defense
         if (state == State.CaptureNeutral) {
-            if (neutralECFound == 0 || 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] <= influenceMinimum()) {
+            if (targetNeutralEC == -1 || 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] <= influenceMinimum()) {
                 state = State.Defend;
             }
         }
 
         // Defend -> Other
-        int weakest = getWeakestEnemyEC();
         if (state == State.Defend && qc.isEmpty()) {
-            if (rc.getRoundNum() > 350 && weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
+            if (rc.getRoundNum() > 350 && targetEnemyEC != -1 && rc.getInfluence() - ECInfluence[targetEnemyEC] > 1000) {
                 state = State.AttackEnemy;
-            } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+            } else if (targetNeutralEC != -1 && 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                 state = State.CaptureNeutral;
             } else if (bestDangerDir() == null) {
                 state = State.SlandererEconomy;
@@ -161,7 +148,7 @@ public class EnlightenmentCenter extends Robot {
 
         // AttackEnemy -> Defense
         if (state == State.AttackEnemy) {
-            if (weakest == -1 || rc.getInfluence() - enemyECInfluence[weakest] < 500) {
+            if (targetEnemyEC == -1 || rc.getInfluence() - ECInfluence[targetEnemyEC] < 500) {
                 state = State.Defend;
             }
             return;
@@ -169,11 +156,11 @@ public class EnlightenmentCenter extends Robot {
 
         // SlandererEconomy -> Other
         if (state == State.SlandererEconomy && qc.isEmpty()) {
-            if (weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
+            if (targetEnemyEC != -1 && rc.getInfluence() - ECInfluence[targetEnemyEC] > 1000) {
                 state = State.AttackEnemy;
             } else if (bestDangerDir() != null) {
                 state = State.Defend;
-            } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+            } else if (targetNeutralEC != -1 && 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                 state = State.CaptureNeutral;
             }
             return;
@@ -211,18 +198,16 @@ public class EnlightenmentCenter extends Robot {
         CaptureNeutral {
             @Override
             void refillQueue() {
-                if (neutralECFound > 0) {
-                    int bestNeutralECIndex = getBestNeutralEC();
-                    int influence = neutralECInfluence[bestNeutralECIndex];
-                    MapLocation neutralECLoc = neutralECLocs[bestNeutralECIndex];
-                    qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                            makeMessage(Label.CAPTURE_NEUTRAL_EC, neutralECLoc.x % 128, neutralECLoc.y % 128), MED);
-                    System.out.println("QUEUED A CAPTURE OF " + neutralECLoc);
+                int bestNeutralECIndex = getBestNeutralEC();
+                if (bestNeutralECIndex == -1) return; // No one to attack right now
 
-                    neutralECFound--;
-                    neutralECLocs[bestNeutralECIndex] = neutralECLocs[neutralECFound];
-                    neutralECInfluence[bestNeutralECIndex] = neutralECInfluence[neutralECFound];
-                }
+                int influence = ECInfluence[bestNeutralECIndex];
+                MapLocation neutralECLoc = ECLocs[bestNeutralECIndex];
+                qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
+                        makeMessage(Label.CAPTURE_NEUTRAL_EC, neutralECLoc.x % 128, neutralECLoc.y % 128), MED);
+                System.out.println("QUEUED A CAPTURE OF " + neutralECLoc);
+
+                ECLastQueued[bestNeutralECIndex] = rc.getRoundNum();
             }
         },
         SlandererEconomy {
@@ -243,30 +228,19 @@ public class EnlightenmentCenter extends Robot {
         AttackEnemy {
             @Override
             void refillQueue() {
-                if (enemyECFound > 0) {
-                    int closest = 0;
-                    for (int i = 1; i < enemyECFound; i++) {
-                        MapLocation loc = enemyECLocs[i];
-                        MapLocation curr = enemyECLocs[closest];
-                        int newDist = loc.distanceSquaredTo(currentLocation);
-                        int oldDist = curr.distanceSquaredTo(currentLocation);
-                        if (oldDist > newDist) {
-                            closest = i;
-                        }
-                    }
-                    int influence = enemyECInfluence[closest];
-                    MapLocation best = enemyECLocs[closest];
-                    qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                            makeMessage(Label.ATTACK_LOC,
-                                    best.x % 128,
-                                    best.y % 128,
-                                    rc.getRoundNum() / 6, 0),
-                            MED);
-                }
+                int bestEnemyEC = getWeakestEnemyEC();
+                if (bestEnemyEC == -1) return; // No enemies to attack right now
+
+                int influence = ECInfluence[bestEnemyEC];
+                MapLocation best = ECLocs[bestEnemyEC];
+                qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
+                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128, rc.getRoundNum() / 6, 0), MED);
+
             }
         };
 
         abstract void refillQueue() throws GameActionException;
+
     }
 
     void immediateDefense() {
@@ -322,44 +296,15 @@ public class EnlightenmentCenter extends Robot {
             switch (message.label) {
                 case ENEMY_EC:
                     MapLocation enemyECLoc = getLocFromMessage(message.data[0], message.data[1]);
+                    addOrUpdateEC(enemyECLoc, rc.getTeam().opponent(), (int) Math.pow(2, message.data[2]));
 
-                    int knownEnemyEC = -1;
-                    for (int i = enemyECFound; --i >= 0; ) {
-                        if (enemyECLocs[i].equals(enemyECLoc)) {
-                            knownEnemyEC = i;
-                            break;
-                        }
-                    }
-
-                    if (knownEnemyEC == -1) {
-                        Direction dangerDir = currentLocation.directionTo(enemyECLoc);
-                        dangerDirs[dangerDir.ordinal()] = true;
-                        enemyECLocs[enemyECFound] = enemyECLoc;
-                        enemyECInfluence[enemyECFound++] = (int) Math.pow(2, message.data[2]);
-                    } else {
-                        int influence = (int) Math.pow(2, message.data[2]);
-                        enemyECInfluence[knownEnemyEC] = influence;
-                    }
+                    Direction dangerDir = currentLocation.directionTo(enemyECLoc);
+                    dangerDirs[dangerDir.ordinal()] = true;
                     break;
 
                 case NEUTRAL_EC:
                     MapLocation neutralECLoc = getLocFromMessage(message.data[0], message.data[1]);
-
-                    int knownNeutralEC = -1;
-                    for (int i = neutralECFound; --i >= 0; ) {
-                        if (neutralECLocs[i].equals(neutralECLoc)) {
-                            knownNeutralEC = i;
-                            break;
-                        }
-                    }
-
-                    int influence = (int) Math.pow(2, message.data[2]);
-                    if (knownNeutralEC == -1) {
-                        neutralECLocs[neutralECFound] = neutralECLoc;
-                        neutralECInfluence[neutralECFound++] = influence;
-                    } else {
-                        neutralECInfluence[knownNeutralEC] = influence;
-                    }
+                    addOrUpdateEC(neutralECLoc, Team.NEUTRAL, (int) Math.pow(2, message.data[2]));
                     break;
 
                 case SCOUT_LOCATION:
@@ -371,24 +316,55 @@ public class EnlightenmentCenter extends Robot {
                     break;
             }
         }
-        cursor = (cursor + Math.min(MAX_IDS_TO_PROCESS_IN_TURN, trackedIds.getSize())) % trackedIds.getSize();
+        if (trackedIds.getSize() != 0)
+            cursor = (cursor + Math.min(MAX_IDS_TO_PROCESS_IN_TURN, trackedIds.getSize())) % trackedIds.getSize();
     }
 
     /* Helpers and Utilities */
 
+    static int addOrUpdateEC(MapLocation loc, Team team, int influence) {
+        int idx = ECFound;
+        for (int i = 0; i < ECFound; i++)
+            if (ECLocs[i].isWithinDistanceSquared(loc, 0))
+                idx = i;
+        if (idx == ECFound) ECFound++;
+
+        ECLocs[idx] = loc;
+        ECTeam[idx] = team;
+        ECInfluence[idx] = influence;
+
+        return idx;
+    }
+
+
+    static int getWeakestEnemyEC() {
+        Team enemy = rc.getTeam().opponent();
+
+        int weakest = -1;
+        for (int i = 0; i < ECFound; i++) {
+            if (ECTeam[i] != enemy) continue;
+            if (weakest == -1 || ECInfluence[weakest] > ECInfluence[i])
+                weakest = i;
+        }
+        return weakest;
+    }
+
+    static final int NEUTRAL_WAITING_ROUNDS = 50; // How long until we try to attack it again
+
     static int getBestNeutralEC() {
-        if (neutralECFound == 0) return -1;
-        int best = 0;
-        for (int i = 1; i < neutralECFound; i++) {
-            MapLocation newLoc = neutralECLocs[i];
-            MapLocation oldLoc = neutralECLocs[best];
+        int best = -1;
+        for (int i = 0; i < ECFound; i++) {
+            if (ECTeam[i] != Team.NEUTRAL || rc.getRoundNum() - ECLastQueued[i] < NEUTRAL_WAITING_ROUNDS) continue;
+            if (best == -1) {
+                best = i;
+                continue;
+            }
+            MapLocation newLoc = ECLocs[i], oldLoc = ECLocs[best];
             int newDist = newLoc.distanceSquaredTo(currentLocation);
             int oldDist = oldLoc.distanceSquaredTo(currentLocation);
-            int newInf = neutralECInfluence[i];
-            int oldInf = neutralECInfluence[best];
-            if (newDist + newInf < oldDist + oldInf) {
-                best = i;
-            }
+            int newInf = ECInfluence[i], oldInf = ECInfluence[best];
+
+            if (newDist + newInf < oldDist + oldInf) best = i;
         }
         return best;
     }
