@@ -12,7 +12,6 @@ public class EnlightenmentCenter extends Robot {
 
     // set of ids for tracking robot messages
     static IterableIdSet trackedIds = new IterableIdSet(); // NOTE: Shared with QueueController
-    static IterableIdSet neutralCapturers = new IterableIdSet(); // NOTE: Shared with QueueController
     static boolean addedFinalDefender = false;  // NOTE: Shared with QueueController
     static int lastDefender = -1; // NOTE: Shared with QueueController
 
@@ -53,8 +52,7 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onAwake() throws GameActionException {
-        if (rc.getInfluence() != 150 || rc.senseNearbyRobots().length != 0)
-            wasANeutralEC = true;
+        if (rc.getRoundNum() > 5) wasANeutralEC = true;
         qc.init(); // Initialize the queue controller!
 
         for (RobotInfo bot : rc.senseNearbyRobots()) { // Find nearby enlightenment centers
@@ -70,8 +68,6 @@ public class EnlightenmentCenter extends Robot {
         }
 
         // initialize priority queue
-
-
         qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), ULTRA_HIGH); // Econ slanderer
         for (Direction dir : Robot.directions) {
             qc.push(RobotType.POLITICIAN, 1,
@@ -103,16 +99,13 @@ public class EnlightenmentCenter extends Robot {
 
         updateDangerDirs();
 
-        processFlags(); // TODO: check this!
-        transition(); // TODO: check this!
-        immediateDefense(); // TODO: check this!
+        processFlags();
+        transition();
+        immediateDefense();
 
         // queue the next unit to build
         if (qc.isEmpty()) state.refillQueue();
         qc.tryUnitBuild();
-
-        // Cancel the next build unit
-        if (state == State.Defend) qc.cancelNeutralECAttacker();
 
         // Consider bidding
         bidController.update();
@@ -141,47 +134,20 @@ public class EnlightenmentCenter extends Robot {
         underAttack = getUnderAttack();
         if (underAttack) {
             if (state != State.Defend) {
-                qc.clear();
                 state = State.Defend;
             }
             return;
         }
 
-        // CaptureNeutral -> Defend
+        // CaptureNeutral -> Defense
         if (state == State.CaptureNeutral) {
-            if (neutralECFound <= 0 || rc.getRoundNum() > 500) {
+            if (neutralECFound == 0 || 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] <= influenceMinimum()) {
                 state = State.Defend;
-                return;
             }
-            int[] ids = neutralCapturers.getKeys();
-            if (ids.length == 0) return;
-            boolean stillCapturing = false;
-            for (int id : neutralCapturers.getKeys()) {
-                if (rc.canGetFlag(id)) {
-                    int flag = rc.getFlag(id);
-                    if (flag != 0 && decode(flag).label == Label.CAPTURE_NEUTRAL_EC) {
-                        stillCapturing = true;
-                    } else {
-                        neutralCapturers.remove(id);
-                    }
-                } else {
-                    neutralCapturers.remove(id);
-                }
-            }
-            if (!stillCapturing) {
-                int closest = getBestNeutralEC();
-                neutralECFound--;
-                neutralECLocs[closest] = neutralECLocs[neutralECFound];
-                neutralECInfluence[closest] = neutralECInfluence[neutralECFound];
-                state = State.Defend;
-                qc.clear();
-            }
-            return;
         }
-
-        int weakest = getWeakestEnemyEC();
 
         // Defend -> Other
+        int weakest = getWeakestEnemyEC();
         if (state == State.Defend && qc.isEmpty()) {
             if (rc.getRoundNum() > 350 && weakest != -1 && rc.getInfluence() - enemyECInfluence[weakest] > 1000) {
                 state = State.AttackEnemy;
@@ -197,8 +163,8 @@ public class EnlightenmentCenter extends Robot {
         if (state == State.AttackEnemy) {
             if (weakest == -1 || rc.getInfluence() - enemyECInfluence[weakest] < 500) {
                 state = State.Defend;
-                qc.clear();
             }
+            return;
         }
 
         // SlandererEconomy -> Other
@@ -210,6 +176,7 @@ public class EnlightenmentCenter extends Robot {
             } else if (neutralECFound > 0 && 2 * rc.getInfluence() - neutralECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                 state = State.CaptureNeutral;
             }
+            return;
         }
     }
 
@@ -224,13 +191,14 @@ public class EnlightenmentCenter extends Robot {
                     int politicianInfluence = getPoliticianInfluence();
                     int required = requiredIn[dangerDir.ordinal()];
                     qc.pushMany(RobotType.POLITICIAN, politicianInfluence,
-                            makeMessage(Label.DEFEND, dangerDir.ordinal()), MED, required);
+                            makeMessage(Label.DEFEND, dangerDir.ordinal()), HIGH, required);
                     int leftOrd = dangerDir.rotateLeft().ordinal();
                     qc.pushMany(RobotType.POLITICIAN, politicianInfluence,
-                            makeMessage(Label.DEFEND, leftOrd), MED, requiredIn[leftOrd]);
+                            makeMessage(Label.DEFEND, leftOrd), HIGH, requiredIn[leftOrd]);
                     int rightOrd = dangerDir.rotateRight().ordinal();
                     qc.pushMany(RobotType.POLITICIAN, politicianInfluence,
-                            makeMessage(Label.DEFEND, rightOrd), MED, requiredIn[rightOrd]);
+                            makeMessage(Label.DEFEND, rightOrd), HIGH, requiredIn[rightOrd]);
+
                     int influence = getSlandererInfluence();
                     if (influence > 0 && !underAttack) {
                         qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
@@ -243,13 +211,17 @@ public class EnlightenmentCenter extends Robot {
         CaptureNeutral {
             @Override
             void refillQueue() {
-                System.out.println("number neutral found: " + neutralECFound);
                 if (neutralECFound > 0) {
-                    int closest = getBestNeutralEC();
-                    int influence = neutralECInfluence[closest];
-                    MapLocation best = neutralECLocs[closest];
+                    int bestNeutralECIndex = getBestNeutralEC();
+                    int influence = neutralECInfluence[bestNeutralECIndex];
+                    MapLocation neutralECLoc = neutralECLocs[bestNeutralECIndex];
                     qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                            makeMessage(Label.CAPTURE_NEUTRAL_EC, best.x % 128, best.y % 128), MED);
+                            makeMessage(Label.CAPTURE_NEUTRAL_EC, neutralECLoc.x % 128, neutralECLoc.y % 128), MED);
+                    System.out.println("QUEUED A CAPTURE OF " + neutralECLoc);
+
+                    neutralECFound--;
+                    neutralECLocs[bestNeutralECIndex] = neutralECLocs[neutralECFound];
+                    neutralECInfluence[bestNeutralECIndex] = neutralECInfluence[neutralECFound];
                 }
             }
         },
@@ -327,21 +299,19 @@ public class EnlightenmentCenter extends Robot {
         }
     }
 
-    static boolean dangerNearby() throws GameActionException {
-        for (RobotInfo bot : nearby) {
-            if (bot.getTeam() != rc.getTeam()) {
-                if (bot.getType() == RobotType.MUCKRAKER
-                        || (bot.getType() == RobotType.POLITICIAN && bot.getInfluence() > GameConstants.EMPOWER_TAX))
-                    return true;
-            }
-        }
-        return false;
-    }
+    static final int MAX_IDS_TO_PROCESS_IN_TURN = 100;
+    static int cursor = 0;
 
     void processFlags() throws GameActionException {
-        for (int id : trackedIds.getKeys()) {
+        if (trackedIds.getSize() == 0) return;
+
+        for (int j = 0; j < Math.min(MAX_IDS_TO_PROCESS_IN_TURN, trackedIds.getSize()); j++) {
+            int index = (cursor + j) % trackedIds.getSize();
+            int id = trackedIds.indexToID(index * 5 + 1);
+
             if (!rc.canGetFlag(id)) {
                 trackedIds.remove(id);
+                j--;
                 continue;
             }
 
@@ -370,7 +340,6 @@ public class EnlightenmentCenter extends Robot {
                         int influence = (int) Math.pow(2, message.data[2]);
                         enemyECInfluence[knownEnemyEC] = influence;
                     }
-                    trackedIds.remove(id);
                     break;
 
                 case NEUTRAL_EC:
@@ -391,7 +360,6 @@ public class EnlightenmentCenter extends Robot {
                     } else {
                         neutralECInfluence[knownNeutralEC] = influence;
                     }
-                    trackedIds.remove(id);
                     break;
 
                 case SCOUT_LOCATION:
@@ -403,12 +371,13 @@ public class EnlightenmentCenter extends Robot {
                     break;
             }
         }
+        cursor = (cursor + Math.min(MAX_IDS_TO_PROCESS_IN_TURN, trackedIds.getSize())) % trackedIds.getSize();
     }
 
     /* Helpers and Utilities */
 
     static int getBestNeutralEC() {
-        if (neutralECFound <= 0) return -1;
+        if (neutralECFound == 0) return -1;
         int best = 0;
         for (int i = 1; i < neutralECFound; i++) {
             MapLocation newLoc = neutralECLocs[i];
@@ -433,7 +402,7 @@ public class EnlightenmentCenter extends Robot {
                 if (flag == 0) continue;
                 Label label = decode(flag).label;
                 if (label == Label.DEFEND || label == Label.CURRENTLY_DEFENDING) {
-                    defendersIn[currentLocation.directionTo(bot.getLocation()).ordinal()]++;
+                    defendersIn[rc.getLocation().directionTo(bot.getLocation()).ordinal()]++;
                 }
             }
         }
@@ -464,8 +433,7 @@ public class EnlightenmentCenter extends Robot {
         for (int i = 0; i < 8; i++) {
             int remaining = requiredIn[i];
             if (remaining > 0) {
-                if (dangerDir == null
-                        || remaining > requiredIn[dangerDir.ordinal()])
+                if (dangerDir == null || remaining > requiredIn[dangerDir.ordinal()])
                     dangerDir = fromOrdinal(i);
             }
         }

@@ -39,7 +39,7 @@ public class Slanderer extends Robot {
     void transition() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
 
-        if (centerID != rc.getID()) {
+        if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
@@ -83,7 +83,7 @@ public class Slanderer extends Robot {
 
                     safetyByDir[(safeDir + 6) % 8] += threat;
                     safetyByDir[(safeDir + 7) % 8] += 3 * threat;
-                    safetyByDir[(safeDir)] += 5 * threat;
+                    safetyByDir[(safeDir) % 8] += 5 * threat;
                     safetyByDir[(safeDir + 1) % 8] += 3 * threat;
                     safetyByDir[(safeDir + 2) % 8] += threat;
                 }

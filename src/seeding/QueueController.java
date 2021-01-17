@@ -49,11 +49,6 @@ public class QueueController {
         pq.clear();
     }
 
-    public void cancelNeutralECAttacker() {
-        if (nextUnit != null && nextUnit.message.label == Communication.Label.CAPTURE_NEUTRAL_EC)
-            nextUnit = null;
-    }
-
     /* Managing Unit Building */
     public static void trackLastBuiltUnit() throws GameActionException {
         if (prevUnit != null) {
@@ -65,7 +60,6 @@ public class QueueController {
                         EnlightenmentCenter.trackedIds.add(info.getID()); // NOTE: Shared with EnlightenmentCenter
                         break;
                     case CAPTURE_NEUTRAL_EC:
-                        EnlightenmentCenter.neutralCapturers.add(info.getID()); // NOTE: Shared with EnlightenmentCenter
                         break;
                     case FINAL_FRONTIER:
                         EnlightenmentCenter.lastDefender = info.getID(); // NOTE: Shared with EnlightenmentCenter

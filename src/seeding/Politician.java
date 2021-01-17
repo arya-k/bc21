@@ -10,10 +10,6 @@ public class Politician extends Robot {
 
     static State state = null;
 
-    /* NeutralEC vars */
-    static int waitingRounds = 0;
-    static boolean foundNeutralNeighbor = false;
-
     /* Scout vars */
     static Direction scoutDir;
 
@@ -105,7 +101,8 @@ public class Politician extends Robot {
         }
 
         // CaptureNeutralEC -> Explore 
-        if (state == State.CaptureNeutralEC && waitingRounds >= NEUTRAL_EC_WAIT_ROUNDS && !foundNeutralNeighbor) {
+        if (state == State.CaptureNeutralEC && rc.canSenseLocation(targetECLoc) &&
+                rc.senseRobotAtLocation(targetECLoc).getTeam() != Team.NEUTRAL) {
             state = State.Explore;
             Nav.doExplore();
             flagMessage(Communication.Label.EXPLORE);
@@ -209,20 +206,15 @@ public class Politician extends Robot {
                 if (move != null) {
                     if (rc.canMove(move)) rc.move(move);
                     return;
+                } else if (rc.getLocation().distanceSquaredTo(targetECLoc) > 2) {
+                    Nav.doGoTo(targetECLoc); // Nav not allowed to quit
                 }
 
-                // We are at the destination- hopefully adjacent!
-                waitingRounds++;
-                RobotInfo[] neighbors = rc.senseNearbyRobots(2);
-                for (RobotInfo nbor : neighbors) {
-                    if (nbor.getTeam() == Team.NEUTRAL) {
-                        foundNeutralNeighbor = true;
-                        if ((waitingRounds > NEUTRAL_EC_WAIT_ROUNDS ||
-                                nbor.getConviction() < (myInfluence - 10) / neighbors.length / 2) && rc.canEmpower(2)) {
-                            rc.empower(2);
-                        }
-                    }
-                }
+                if (!rc.getLocation().isWithinDistanceSquared(targetECLoc, rc.getType().actionRadiusSquared)) return;
+
+                // should be able to convert the EC
+                int radius = getBestEmpowerRadius(1);
+                if (radius != -1) rc.empower(radius);
             }
         },
         AttackLoc {
