@@ -84,34 +84,6 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void lowPriorityLogging() {
-        System.out.println("Influence: " + myInfluence);
-        System.out.println("Production state: " + state);
-        System.out.println("Bidding state: " + BidController.state);
-        for (int i = 0; i < 8; i++) {
-            if (!dangerDirs[i]) continue;
-            System.out.println("DANGEROUS: " + fromOrdinal(i));
-        }
-//        for (Direction dir : Direction.cardinalDirections()) {
-//            int ord = dir.ordinal();
-//            if (edgeOffsets[ord] == 100) continue;
-//            System.out.println(dir + " offset " + edgeOffsets[ord]);
-//        }
-//        for (Direction dir : directions) {
-//            System.out.println("safety of " + dir + " = " + directionOpenness[dir.ordinal()]);
-//        }
-        for (int i = 0; i < neutralECFound; i++) {
-            System.out.println("neutral EC @ " + neutralECLocs[i] + " with inf = " + neutralECInfluence[i]);
-        }
-        if (!pq.isEmpty()) {
-            UnitBuild next = pq.peek();
-            System.out.println("Next unit: " + next.type + " " + next.priority + " " + next.influence);
-        } else {
-            System.out.println("PQ empty");
-        }
-
-    }
-
     // tracking builds
     static UnitBuild nextUnit = null;
     static UnitBuild prevUnit = null;
@@ -126,7 +98,7 @@ public class EnlightenmentCenter extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
-        // System.out.println("Currently in state " + state);
+
         // get the id of the previously build unit
         if (prevUnit != null) {
             RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(prevDir));
@@ -153,9 +125,6 @@ public class EnlightenmentCenter extends Robot {
 
         immediateDefense();
 
-        if (currentRound % 25 == 0) {
-            lowPriorityLogging();
-        }
 
         // queue the next unit to build
         boolean empty = pq.isEmpty();
@@ -213,10 +182,6 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
         }
 
-
-        if (currentRound % 25 == 0) {
-            lowPriorityLogging();
-        }
         Clock.yield();
 
     }
@@ -337,7 +302,7 @@ public class EnlightenmentCenter extends Robot {
             void refillQueue() throws GameActionException {
                 Direction dangerDir = bestDangerDir();
                 if (dangerDir != null) {
-                    System.out.println("Defending in direction " + dangerDir);
+
                     int required = dangerDirs[dangerDir.ordinal()] ? 3 : 1;
                     for (int i = required; --i >= 0; ) {
                         pq.push(new UnitBuild(RobotType.POLITICIAN, 18,
@@ -360,7 +325,7 @@ public class EnlightenmentCenter extends Robot {
         CaptureNeutral {
             @Override
             void refillQueue() {
-                System.out.println("number neutral found: " + neutralECFound);
+
                 if (neutralECFound > 0) {
                     int closest = getBestNeutralEC();
                     int influence = neutralECInfluence[closest];
@@ -470,7 +435,7 @@ public class EnlightenmentCenter extends Robot {
 
                 case NEUTRAL_EC:
                     MapLocation neutralECLoc = getLocFromMessage(message.data[0], message.data[1]);
-                    System.out.println("Found Neutral EC @ " + neutralECLoc);
+
 
                     int knownNeutralEC = -1;
                     for (int i = neutralECFound; --i >= 0; ) {

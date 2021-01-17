@@ -26,9 +26,6 @@ public class Muckraker extends Robot {
                 enemyECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
                 Nav.doGoTo(enemyECLoc);
                 break;
-            default:
-                System.out.println("ERROR: Muckraker has been given a bad assignment");
-//                rc.resign(); // TODO: remove this before we submit...
         }
     }
 
