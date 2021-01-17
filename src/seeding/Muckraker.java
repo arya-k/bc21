@@ -2,6 +2,7 @@ package seeding;
 
 import battlecode.common.*;
 
+import static seeding.Communication.Label.*;
 import static seeding.Communication.decode;
 
 public class Muckraker extends Robot {
@@ -33,7 +34,6 @@ public class Muckraker extends Robot {
                 break;
             default:
                 System.out.println("ERROR: Muckraker has been given a bad assignment");
-//                rc.resign(); // TODO: remove this before we submit...
         }
     }
 
@@ -46,24 +46,11 @@ public class Muckraker extends Robot {
     }
 
     void transition() throws GameActionException {
-        RobotInfo[] enemies = nearby;
-
-        // Chase a Slanderer if possible
-        int slandererNearby = -1;
-        int distanceToSlanderer = -1;
-        for (RobotInfo info : enemies) {
-            if (info.getTeam() != rc.getTeam() && info.getType() == RobotType.SLANDERER) {
-                int distance = rc.getLocation().distanceSquaredTo(info.getLocation());
-                if (slandererNearby == -1 || distance < distanceToSlanderer) {
-                    slandererNearby = info.getID();
-                    distanceToSlanderer = distance;
-                }
-            }
-        }
-        if (slandererNearby == -1 && state == State.ChaseSlanderer) {
+        int slandererNearby = closestSlanderer();
+        if (slandererNearby == -1 && state == State.ChaseSlanderer) { // ChaseSlanderer -> Explore
             state = State.Explore;
             Nav.doExplore();
-        } else if (slandererNearby != -1) {
+        } else if (slandererNearby != -1) { // Explore -> ChaseSlanderer
             state = State.ChaseSlanderer;
             Nav.doFollow(slandererNearby);
         }
@@ -77,32 +64,24 @@ public class Muckraker extends Robot {
 
         // Explore -> Clog
         if (state == State.Explore) {
+            // If we see a nearby enemy EC we should clog it:
             for (RobotInfo info : nearby) {
-                if (info.getTeam() == rc.getTeam().opponent() && info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    MapLocation loc = info.getLocation();
-                    flagMessage(
-                            Communication.Label.ENEMY_EC,
-                            loc.x % 128,
-                            loc.y % 128,
-                            Math.min(15, (int) (Math.log(info.getInfluence()) / Math.log(2) + 1))
-                    );
+                if (info.getType() != RobotType.ENLIGHTENMENT_CENTER || info.getTeam() == rc.getTeam()) continue;
 
+                MapLocation loc = info.getLocation();
+                int log = (int) (Math.log(info.getInfluence()) / Math.log(2) + 1);
+                if (info.getTeam() == Team.NEUTRAL) {
+                    flagMessage(NEUTRAL_EC, loc.x % 128, loc.y % 128, log);
+                } else {
+                    flagMessage(ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
                     // We have seen an enemy EC: we should clog it:
                     enemyECLoc = info.getLocation();
                     Nav.doGoTo(enemyECLoc);
                     state = State.Clog;
                     break;
-                } else if (info.getTeam() == Team.NEUTRAL) {
-                    MapLocation loc = info.getLocation();
-                    double log = Math.log(info.getConviction()) / Math.log(2);
-                    flagMessage(
-                            Communication.Label.NEUTRAL_EC,
-                            loc.x % 128,
-                            loc.y % 128,
-                            (int) log + 1
-                    );
                 }
             }
+
             // If creating EC says attack location, then switch to Clog
             if (rc.canGetFlag(centerID)) {
                 int flag = rc.getFlag(centerID);
@@ -128,32 +107,48 @@ public class Muckraker extends Robot {
             public void act() throws GameActionException {
                 if (trySlandererKill()) return;
 
-                if (Nav.currentGoal != Nav.NavGoal.GoTo)
-                    Nav.doGoTo(enemyECLoc); // don't allow Nav.goTo to quit
+                // See if we need to move out of the way for a politician
+                RobotInfo attackingPolitician = adjacentAttackingPolitician();
+                if (attackingPolitician != null) { // adjacent
+                    MapLocation loc = attackingPolitician.getLocation();
+                    int awayDir = enemyECLoc.directionTo(loc).ordinal();
 
+                    for (int rot : new int[]{6, 2, 7, 1, 0}) { // ideally we move perpendicular.
+                        Direction targetDir = fromOrdinal((awayDir + rot) % 8);
+                        if (rc.canMove(targetDir)) {
+                            rc.move(targetDir);
+                            return;
+                        }
+                    }
+                }
+
+                if (Nav.currentGoal != Nav.NavGoal.GoTo) Nav.doGoTo(enemyECLoc); // don't allow Nav to quit!
+
+                // Just move in the direction of the enemyEC.
                 if (currentLocation.distanceSquaredTo(enemyECLoc) > CLOG_BEHAVIOR_THRESHOLD) {
                     Direction move = Nav.tick();
                     if (move != null && rc.canMove(move)) rc.move(move);
+                    return;
+                }
 
-                } else {
-                    // Manually try and find the location closest to the enemy EC to target:
-                    for (int[] translation : TRANSLATIONS) {
-                        MapLocation target = enemyECLoc.translate(translation[0], translation[1]);
+                // Manually try and find the location closest to the enemy EC to target:
+                int currDistToEnemyLoc = enemyECLoc.distanceSquaredTo(currentLocation);
+                for (int[] translation : TRANSLATIONS) { // closest to furthest away
+                    MapLocation target = enemyECLoc.translate(translation[0], translation[1]);
+                    if (target.distanceSquaredTo(enemyECLoc) >= currDistToEnemyLoc) break;
 
-                        // If this location is available, and closer than we currently are:
-                        if (rc.canDetectLocation(target) && !rc.isLocationOccupied(target) &&
-                                enemyECLoc.distanceSquaredTo(target) < enemyECLoc.distanceSquaredTo(currentLocation)) {
-                            Nav.doGoTo(target);
-                            Direction move = Nav.tick();
-                            if (move != null && rc.canMove(move)) {
-                                rc.move(move);
-                                break;
-                            }
+                    if (rc.canDetectLocation(target) && !rc.isLocationOccupied(target)) {
+                        Nav.doGoTo(target);
+                        Direction move = Nav.tick();
+                        if (move != null && rc.canMove(move)) {
+                            rc.move(move);
+                            break;
                         }
                     }
                 }
             }
         },
+
         Explore {
             @Override
             public void act() throws GameActionException {
@@ -183,11 +178,11 @@ public class Muckraker extends Robot {
                     } else {
                         flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
                     }
-
                     return;
                 }
             }
         },
+
         ChillAroundEC {
             @Override
             public void act() throws GameActionException {
@@ -198,6 +193,7 @@ public class Muckraker extends Robot {
                 if (move != null && rc.canMove(move)) rc.move(move);
             }
         },
+
         ChaseSlanderer {
             @Override
             public void act() throws GameActionException {
@@ -209,6 +205,43 @@ public class Muckraker extends Robot {
         };
 
         public abstract void act() throws GameActionException;
+
+    }
+
+    static RobotInfo adjacentAttackingPolitician() throws GameActionException {
+        RobotInfo biggestPolitician = null;
+        int myDir = currentLocation.directionTo(enemyECLoc).ordinal();
+
+        for (RobotInfo info : rc.senseNearbyRobots(2, rc.getTeam())) {
+            // Must be an attacking politician on our team
+            int flag = rc.getFlag(info.ID);
+            if (flag == 0 || decode(flag).label != ATTACKING) continue;
+
+            // must not already be adjacent to an enemy EC:
+            if (info.location.isWithinDistanceSquared(enemyECLoc, 2)) continue;
+
+            // must be within 45 degrees of us
+            if (Math.abs(myDir - info.location.directionTo(enemyECLoc).ordinal()) >= 2) continue;
+
+            // pick the closest one
+            if (biggestPolitician == null || info.influence > biggestPolitician.influence)
+                biggestPolitician = info;
+        }
+        return biggestPolitician;
+    }
+
+    static int closestSlanderer() {
+        int slandererNearby = -1, distanceToSlanderer = -1;
+        for (RobotInfo info : nearby) {
+            if (info.getTeam() != rc.getTeam() && info.getType() == RobotType.SLANDERER) {
+                int distance = rc.getLocation().distanceSquaredTo(info.getLocation());
+                if (slandererNearby == -1 || distance < distanceToSlanderer) {
+                    slandererNearby = info.getID();
+                    distanceToSlanderer = distance;
+                }
+            }
+        }
+        return slandererNearby;
     }
 
     static boolean trySlandererKill() throws GameActionException {

@@ -5,8 +5,6 @@ import battlecode.common.*;
 import static seeding.Communication.decode;
 
 public class Politician extends Robot {
-    public static final int NEUTRAL_EC_WAIT_ROUNDS = 15;
-
     static State state = null;
 
     /* Scout vars */
@@ -92,7 +90,7 @@ public class Politician extends Robot {
         }
 
         // Explore -> AttackLoc
-        if (state == State.Explore && rc.canGetFlag(centerID)) {
+        if (state == State.Explore && rc.getInfluence() > GameConstants.EMPOWER_TAX && rc.canGetFlag(centerID)) {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
@@ -186,17 +184,17 @@ public class Politician extends Robot {
                     int readyToGo = (rc.getCooldownTurns() <= 1) ? 1 : 0;
                     flagMessage(Communication.Label.ATTACKING, firstTurn / 6, readyToGo);
                 }
-                if (rc.isReady()) {
-                    Direction move = Nav.tick();
-                    if (move != null && rc.canMove(move)) rc.move(move);
+                if (!rc.isReady()) return;
 
-                    if (move == null) { // TODO: part the seas! also don't give up on Nav movement...
-                        int radius = getBestEmpowerRadius(0.6);
-                        if (radius != -1 && rc.canEmpower(radius))
-                            rc.empower(radius);
-                        else
-                            Nav.doGoTo(targetECLoc);
-                    }
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) rc.move(move);
+
+                if (move == null) {
+                    int radius = getBestEmpowerRadius(0.6);
+                    if (radius != -1 && rc.canEmpower(radius))
+                        rc.empower(radius);
+                    else
+                        Nav.doGoTo(targetECLoc);
                 }
             }
         },
