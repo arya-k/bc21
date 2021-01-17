@@ -266,8 +266,6 @@ public class EnlightenmentCenter extends Robot {
         if (newDanger > dangerousness[ord] || rc.getRoundNum() - dangerUpdateRound[ord] > 15) {
             dangerUpdateRound[ord] = rc.getRoundNum();
             dangerousness[ord] = newDanger;
-            if (newDanger > 0.75)
-                System.out.println("Marking as dangerous: " + dir);
         }
     }
 
@@ -445,7 +443,6 @@ public class EnlightenmentCenter extends Robot {
             for (int i = 1; i < 8; i++) {
                 if (muckrakerInDir[i] || dangerousness[safest] > dangerousness[i]) safest = i;
             }
-            System.out.println(fromOrdinal(safest));
             return fromOrdinal(safest);
         } else {
             // CASE 2: we get the opposite of the average muckraker direction
@@ -455,7 +452,6 @@ public class EnlightenmentCenter extends Robot {
             Direction ret = kindOfOptimalDir;
             if (dangerousness[ret.ordinal()] > dangerousness[oneLeft.ordinal()]) ret = oneLeft;
             if (dangerousness[ret.ordinal()] > dangerousness[oneRight.ordinal()]) ret = oneRight;
-            System.out.println(ret);
             return ret;
         }
 
