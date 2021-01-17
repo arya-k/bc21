@@ -111,8 +111,10 @@ public class BidController {
 
     /* Helper Functions */
     static int maxBid() {
-        if (rc.getRoundNum() < 1450)
-            return Math.max(Math.min(rc.getInfluence() - 2 * influenceMinimum(), rc.getInfluence() / 5), 0);
+        int round = rc.getRoundNum();
+        int factor = round < 300 ? 15 : 7;
+        if (round < 1450)
+            return Math.max(Math.min(rc.getInfluence() - 2 * influenceMinimum(), rc.getInfluence() / factor), 0);
         return rc.getInfluence();
     }
 }
