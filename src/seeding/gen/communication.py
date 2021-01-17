@@ -19,6 +19,7 @@ commands = [
     Command("CURRENTLY_DEFENDING", []),
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
+    Command("OUR_EC", [7, 7]),
     Command("FINAL_FRONTIER", []),
     Command("ATTACK_LOC", [7, 7, 8, 1]),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),

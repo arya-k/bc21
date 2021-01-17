@@ -25,9 +25,13 @@ public class Politician extends Robot {
 
     /* EC tracking vars */
     static MapLocation closestECLoc = centerLoc;
+    static int[] seenECs = new int[12];
+    static int numSeenECs = 0;
 
     @Override
     void onAwake() throws GameActionException {
+        seenECs[numSeenECs++] = centerID;
+
         state = State.Explore; // By default, we just explore!
         Nav.doExplore();
 
@@ -88,6 +92,7 @@ public class Politician extends Robot {
             state = State.FinalFrontier; // TODO: we should do something more intelligent here probably.
         }
 
+        // Explore -> AttackLoc
         if (state == State.Explore && rc.canGetFlag(centerID)) {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
@@ -105,30 +110,9 @@ public class Politician extends Robot {
                 rc.senseRobotAtLocation(targetECLoc).getTeam() != Team.NEUTRAL) {
             state = State.Explore;
             Nav.doExplore();
-            flagMessage(Communication.Label.EXPLORE);
         }
 
-        if (state == State.Defend && failedToMoveTurns > 20) {
-            defendDir = defendDir.rotateLeft();
-            defendLocation = getTargetLoc();
-        }
-
-        if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.Nothing) {
-            int numAlliesCloser = 0;
-            int myDist = centerLoc.distanceSquaredTo(currentLocation);
-            for (RobotInfo bot : nearby) {
-                if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
-                    numAlliesCloser++;
-                }
-            }
-            if (numAlliesCloser > 12) {
-                defendRadius++;
-                defendLocation = getTargetLoc();
-            }
-            Nav.doGoTo(defendLocation); // Don't allow Nav to quit
-        }
-
-        // TODO: AttackLoc -> Explore if our target EC is now on our team!
+        // AttackLoc -> Explore if the EC is on our team!
         if (state == State.AttackLoc) {
             if (Nav.currentGoal == Nav.NavGoal.Nothing
                     || (rc.canSenseLocation(targetECLoc) && rc.senseRobotAtLocation(targetECLoc).getTeam() == rc.getTeam())) {
@@ -142,36 +126,13 @@ public class Politician extends Robot {
         Scout {
             @Override
             public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
-                // Note enemy & neutral ECs:
-                boolean alreadySetFlag = false;
-                for (RobotInfo info : nearby) {
-                    if (info.getTeam() == rc.getTeam().opponent() &&
-                            info.getType() == RobotType.ENLIGHTENMENT_CENTER) { // Enemy EC message...
-                        MapLocation loc = info.getLocation();
-                        double log = Math.log(info.getConviction()) / Math.log(2);
-                        flagMessage(
-                                Communication.Label.ENEMY_EC,
-                                loc.x % 128,
-                                loc.y % 128,
-                                (int) log + 1
-                        );
-                        alreadySetFlag = true;
-                    } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
-                        MapLocation loc = info.getLocation();
-                        double log = Math.log(info.getConviction()) / Math.log(2);
-                        flagMessage(
-                                Communication.Label.NEUTRAL_EC,
-                                loc.x % 128,
-                                loc.y % 128,
-                                (int) log + 1
-                        );
-                        alreadySetFlag = true;
-                    }
-                }
-                if (!alreadySetFlag) {
-                    flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
-                }
+                boolean alreadySetFlag = noteNearbyECs();
 
+                if (!alreadySetFlag)
+                    flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
+
+                if (!rc.isReady()) return;
+                
                 int radius = getBestEmpowerRadius(0.3);
                 if (radius != -1 && rc.isReady())
                     rc.empower(radius);
@@ -183,6 +144,7 @@ public class Politician extends Robot {
         Explore {
             @Override
             public void act() throws GameActionException {
+                noteNearbyECs();
                 if (!rc.isReady()) return;
 
                 // See if offensive speech is possible.
@@ -278,6 +240,25 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
+                if (failedToMoveTurns > 20) {
+                    defendDir = defendDir.rotateLeft();
+                    defendLocation = getTargetLoc();
+                }
+
+                if (Nav.currentGoal == Nav.NavGoal.Nothing) {
+                    int numAlliesCloser = 0;
+                    int myDist = centerLoc.distanceSquaredTo(currentLocation);
+                    for (RobotInfo bot : nearby) {
+                        if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
+                            numAlliesCloser++;
+                        }
+                    }
+                    if (numAlliesCloser > 12) {
+                        defendRadius++;
+                        defendLocation = getTargetLoc();
+                    }
+                    Nav.doGoTo(defendLocation); // Don't allow Nav to quit
+                }
 
                 RobotInfo closestEnemy = null;
                 for (RobotInfo enemy : nearby) {
@@ -362,6 +343,32 @@ public class Politician extends Robot {
             return getTargetLoc();
         }
         return targetLoc;
+    }
+
+    static boolean noteNearbyECs() throws GameActionException {
+        for (RobotInfo info : nearby) {
+            if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+
+            if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
+                    seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||
+                    seenECs[8] == info.ID || seenECs[9] == info.ID || seenECs[10] == info.ID || seenECs[11] == info.ID) {
+                continue; // we don't want to note it again
+            }
+            seenECs[(numSeenECs++) % 12] = info.getID();
+
+            MapLocation loc = info.getLocation();
+            if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
+                double log = Math.log(info.getConviction()) / Math.log(2);
+                flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+            } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
+                double log = Math.log(info.getConviction()) / Math.log(2);
+                flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+            } else {
+                flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
+            }
+            return true; // noted an EC
+        }
+        return false; // did not note an EC
     }
 
     /**

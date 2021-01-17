@@ -12,8 +12,13 @@ public class Muckraker extends Robot {
     /* clog vars */
     static MapLocation enemyECLoc;
 
+    /* ec tracking vars */
+    static int[] seenECs = new int[12];
+    static int numSeenECs = 0;
+
     @Override
     void onAwake() {
+        seenECs[numSeenECs++] = centerID;
         state = State.ChillAroundEC; // by default, just sit around the EC
 
         switch (assignment.label) {
@@ -120,7 +125,7 @@ public class Muckraker extends Robot {
     private enum State {
         Clog {
             @Override
-            public void act() throws GameActionException { // TODO: consider STOP_MUCKRAKER_SPAWN
+            public void act() throws GameActionException {
                 if (trySlandererKill()) return;
 
                 if (Nav.currentGoal != Nav.NavGoal.GoTo)
@@ -155,6 +160,32 @@ public class Muckraker extends Robot {
                 if (trySlandererKill()) return;
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) rc.move(move);
+
+                // Inform about nearby ECs
+                for (RobotInfo info : rc.senseNearbyRobots()) {
+                    if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+
+                    if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
+                            seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||
+                            seenECs[8] == info.ID || seenECs[9] == info.ID || seenECs[10] == info.ID || seenECs[11] == info.ID) {
+                        continue; // we don't want to note it again
+                    }
+                    seenECs[(numSeenECs++) % 12] = info.getID();
+
+                    MapLocation loc = info.getLocation();
+
+                    if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
+                        double log = Math.log(info.getConviction()) / Math.log(2);
+                        flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+                    } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
+                        double log = Math.log(info.getConviction()) / Math.log(2);
+                        flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+                    } else {
+                        flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
+                    }
+
+                    return;
+                }
             }
         },
         ChillAroundEC {

@@ -1,7 +1,7 @@
 package seeding;
 public class Communication {
     public enum Label {
-        EXPLORE, FLEE, CURRENTLY_DEFENDING, FINAL_FRONTIER, SCOUT, DEFEND, SAFE_DIR, SCOUT_LOCATION, CAPTURE_NEUTRAL_EC, ENEMY_EC, NEUTRAL_EC, ATTACK_LOC
+        EXPLORE, FLEE, CURRENTLY_DEFENDING, FINAL_FRONTIER, SCOUT, DEFEND, SAFE_DIR, SCOUT_LOCATION, OUR_EC, CAPTURE_NEUTRAL_EC, ENEMY_EC, NEUTRAL_EC, ATTACK_LOC
     }
     public static class Message {
         Label label;
@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 14717098;
+        flag ^= 587919;
         flag--;
         int[] data = new int[4];
         Label label;
@@ -44,6 +44,12 @@ public class Communication {
             acc = acc / 128;
             data[1] = acc % 128;
         } else if (flag % 1024 == 256) {
+            label = Label.OUR_EC;
+            acc = flag / 1024;
+            data[0] = acc % 128;
+            acc = acc / 128;
+            data[1] = acc % 128;
+        } else if (flag % 1024 == 768) {
             label = Label.CAPTURE_NEUTRAL_EC;
             acc = flag / 1024;
             data[0] = acc % 128;
@@ -83,29 +89,31 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 14717098 ^ (1 + (0) * 16777216 + 0);
+                return 587919 ^ (1 + (0) * 16777216 + 0);
             case FLEE:
-                return 14717098 ^ (1 + (0) * 16777216 + 8388608);
+                return 587919 ^ (1 + (0) * 16777216 + 8388608);
             case CURRENTLY_DEFENDING:
-                return 14717098 ^ (1 + (0) * 16777216 + 4194304);
+                return 587919 ^ (1 + (0) * 16777216 + 4194304);
             case FINAL_FRONTIER:
-                return 14717098 ^ (1 + (0) * 16777216 + 12582912);
+                return 587919 ^ (1 + (0) * 16777216 + 12582912);
             case SCOUT:
-                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 587919 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case DEFEND:
-                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
+                return 587919 ^ (1 + (message.data[0] * 1) * 2097152 + 524288);
             case SAFE_DIR:
-                return 14717098 ^ (1 + (message.data[0] * 1) * 2097152 + 1572864);
+                return 587919 ^ (1 + (message.data[0] * 1) * 2097152 + 1572864);
             case SCOUT_LOCATION:
-                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
+            case OUR_EC:
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 256);
             case CAPTURE_NEUTRAL_EC:
-                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 256);
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 768);
             case ENEMY_EC:
-                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case NEUTRAL_EC:
-                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
             case ATTACK_LOC:
-                return 14717098 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 4194304) * 2 + 1);
+                return 587919 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384 + message.data[3] * 4194304) * 2 + 1);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

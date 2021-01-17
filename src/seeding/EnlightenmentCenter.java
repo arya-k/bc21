@@ -81,7 +81,10 @@ public class EnlightenmentCenter extends Robot {
             System.out.println("DANGEROUS: " + fromOrdinal(i));
         }
         for (int i = 0; i < ECFound; i++) {
-            System.out.println("" + ECTeam[i] + " EC @ " + ECLocs[i] + " with inf = " + ECInfluence[i]);
+            String teamMessage = "Neutral";
+            if (ECTeam[i] == rc.getTeam()) teamMessage = "Our";
+            if (ECTeam[i] == rc.getTeam().opponent()) teamMessage = "Enemy";
+            System.out.println(teamMessage + " EC @ " + ECLocs[i] + " with inf = " + ECInfluence[i]);
         }
         qc.logNext();
     }
@@ -107,7 +110,7 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
 
         // End turn.
-//        if (currentRound % 25 == 0) lowPriorityLogging();
+        if (currentRound % 25 == 0) lowPriorityLogging();
         Clock.yield();
 
     }
@@ -163,7 +166,6 @@ public class EnlightenmentCenter extends Robot {
             } else if (targetNeutralEC != -1 && 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] > influenceMinimum()) {
                 state = State.CaptureNeutral;
             }
-            return;
         }
     }
 
@@ -307,6 +309,10 @@ public class EnlightenmentCenter extends Robot {
                     addOrUpdateEC(neutralECLoc, Team.NEUTRAL, (int) Math.pow(2, message.data[2]));
                     break;
 
+                case OUR_EC:
+                    MapLocation ourECLoc = getLocFromMessage(message.data[0], message.data[1]);
+                    addOrUpdateEC(ourECLoc, rc.getTeam(), 0);
+
                 case SCOUT_LOCATION:
                     MapLocation loc = getLocFromMessage(message.data[0], message.data[1]);
                     int ord = rc.getLocation().directionTo(loc).ordinal();
@@ -322,7 +328,7 @@ public class EnlightenmentCenter extends Robot {
 
     /* Helpers and Utilities */
 
-    static int addOrUpdateEC(MapLocation loc, Team team, int influence) {
+    static void addOrUpdateEC(MapLocation loc, Team team, int influence) {
         int idx = ECFound;
         for (int i = 0; i < ECFound; i++)
             if (ECLocs[i].isWithinDistanceSquared(loc, 0))
@@ -332,8 +338,6 @@ public class EnlightenmentCenter extends Robot {
         ECLocs[idx] = loc;
         ECTeam[idx] = team;
         ECInfluence[idx] = influence;
-
-        return idx;
     }
 
 
@@ -454,8 +458,6 @@ public class EnlightenmentCenter extends Robot {
             if (info.getType() == RobotType.POLITICIAN)
                 nearbyEnemyInfluence += info.getInfluence();
         }
-        if (nearbyEnemyInfluence > rc.getInfluence() / 2)
-            return true;
-        return false;
+        return nearbyEnemyInfluence > rc.getInfluence() / 2;
     }
 }
