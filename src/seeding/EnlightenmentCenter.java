@@ -132,7 +132,7 @@ public class EnlightenmentCenter extends Robot {
 
         // CaptureNeutral -> Defense
         if (state == State.CaptureNeutral) {
-            if (targetNeutralEC == -1 || 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] <= influenceMinimum()) {
+            if (targetNeutralEC == -1) {
                 state = State.Defend;
             }
         }
@@ -141,7 +141,7 @@ public class EnlightenmentCenter extends Robot {
         if (state == State.Defend && qc.isEmpty()) {
             if (rc.getRoundNum() > 350 && targetEnemyEC != -1 && rc.getInfluence() - ECInfluence[targetEnemyEC] > 1000) {
                 state = State.AttackEnemy;
-            } else if (targetNeutralEC != -1 && 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+            } else if (targetNeutralEC != -1) {
                 state = State.CaptureNeutral;
             } else if (bestDangerDir() == null) {
                 state = State.SlandererEconomy;
@@ -163,7 +163,7 @@ public class EnlightenmentCenter extends Robot {
                 state = State.AttackEnemy;
             } else if (bestDangerDir() != null) {
                 state = State.Defend;
-            } else if (targetNeutralEC != -1 && 2 * rc.getInfluence() - ECInfluence[getBestNeutralEC()] > influenceMinimum()) {
+            } else if (targetNeutralEC != -1) {
                 state = State.CaptureNeutral;
             }
         }
@@ -358,17 +358,28 @@ public class EnlightenmentCenter extends Robot {
     static int getBestNeutralEC() {
         int best = -1;
         for (int i = 0; i < ECFound; i++) {
-            if (ECTeam[i] != Team.NEUTRAL || rc.getRoundNum() - ECLastQueued[i] < NEUTRAL_WAITING_ROUNDS) continue;
+            if (ECTeam[i] != Team.NEUTRAL || rc.getRoundNum() - ECLastQueued[i] < NEUTRAL_WAITING_ROUNDS)
+                continue;
+
+            MapLocation location = ECLocs[i];
+            int distance = location.distanceSquaredTo(currentLocation);
+            int influence = ECInfluence[i];
+
+            int actingInfluence = 2 * rc.getInfluence();
+            if (actingInfluence - influence <= influenceMinimum())
+                continue;
+
             if (best == -1) {
                 best = i;
                 continue;
             }
-            MapLocation newLoc = ECLocs[i], oldLoc = ECLocs[best];
-            int newDist = newLoc.distanceSquaredTo(currentLocation);
-            int oldDist = oldLoc.distanceSquaredTo(currentLocation);
-            int newInf = ECInfluence[i], oldInf = ECInfluence[best];
 
-            if (newDist + newInf < oldDist + oldInf) best = i;
+            MapLocation bestLocation = ECLocs[best];
+            int bestDistance = bestLocation.distanceSquaredTo(currentLocation);
+            int bestInfluence = ECInfluence[best];
+
+            if (distance + influence < bestDistance + bestInfluence)
+                best = i;
         }
         return best;
     }

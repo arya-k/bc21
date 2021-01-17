@@ -309,7 +309,7 @@ public class Politician extends Robot {
                     if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN)
                         alliesNearby++;
                 }
-                double threshold = followingTurns > 4 || alliesNearby > 4 ? 0.0 : 0.5;
+                double threshold = followingTurns > 6 || alliesNearby > 15 ? 0.1 : 0.6;
                 int radius = getBestEmpowerRadius(threshold);
                 if (radius != -1) rc.empower(radius);
 

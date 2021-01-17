@@ -107,7 +107,9 @@ public class QueueController {
 
     /* Utility Functions */
     public static void logNext() {
-        if (!pq.isEmpty()) {
+        if (nextUnit != null) {
+            System.out.println("Next unit: " + nextUnit.type + " " + nextUnit.priority + " " + nextUnit.influence);
+        } else if (!pq.isEmpty()) {
             UnitBuild next = pq.peek();
             System.out.println("Next unit: " + next.type + " " + next.priority + " " + next.influence);
         } else {
