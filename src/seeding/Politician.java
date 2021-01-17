@@ -123,10 +123,7 @@ public class Politician extends Robot {
         Scout {
             @Override
             public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
-                boolean alreadySetFlag = noteNearbyECs();
-
-                if (!alreadySetFlag)
-                    flagMessage(Communication.Label.SCOUT_LOCATION, currentLocation.x % 128, currentLocation.y % 128);
+                noteNearbyECs();
 
                 if (!rc.isReady()) return;
 
@@ -345,7 +342,7 @@ public class Politician extends Robot {
         return targetLoc;
     }
 
-    static boolean noteNearbyECs() throws GameActionException {
+    static void noteNearbyECs() throws GameActionException {
         for (RobotInfo info : nearby) {
             if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
 
@@ -366,9 +363,7 @@ public class Politician extends Robot {
             } else {
                 flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
             }
-            return true; // noted an EC
         }
-        return false; // did not note an EC
     }
 
     /**
