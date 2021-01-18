@@ -13,8 +13,10 @@ import static seeding.Communication.encode;
 public class QueueController {
     private static RobotController rc;
 
-    private static final UnitBuildDPQueue pq = new UnitBuildDPQueue(4);
+    private static final int LEVELS = 4;
     public static final int ULTRA_HIGH = 0, HIGH = 1, MED = 2, LOW = 3;
+    private static final UnitBuildDPQueue pq = new UnitBuildDPQueue(LEVELS);
+    private static int[] queuedInfluence = new int[LEVELS];
 
     // tracking builds
     private static UnitBuild prevUnit = null;
@@ -33,11 +35,13 @@ public class QueueController {
     /* Managing the Queue */
     public static void push(RobotType type, int influence, Communication.Message message, int level) {
         pq.push(new UnitBuild(type, influence, message), level);
+        queuedInfluence[level] += influence;
     }
 
     public static void pushMany(RobotType type, int influence, Communication.Message message, int level, int count) {
         for (int i = count; --i >= 0; )
             pq.push(new UnitBuild(type, influence, message), level);
+        queuedInfluence[level] += count * influence;
     }
 
     public static boolean isEmpty() {
@@ -46,6 +50,7 @@ public class QueueController {
 
     public static void clear() {
         pq.clear();
+        queuedInfluence = new int[LEVELS];
     }
 
     /* Managing Unit Building */
@@ -79,15 +84,16 @@ public class QueueController {
         UnitBuild nextUnit = pq.peek(); // We need to find a new unit to build!
 
         int myInfluence = rc.getInfluence();
+        int nextUnitInfluence = nextUnit.influence;
         if (nextUnit.type == RobotType.SLANDERER)
-            nextUnit.influence = getSlandererInfluence(); // Slanderer influence is always chosen dynamically.
+            nextUnitInfluence = getSlandererInfluence(); // Slanderer influence is always chosen dynamically.
 
-        if ((nextUnit.priority <= ULTRA_HIGH && nextUnit.influence <= myInfluence) ||
-                nextUnit.influence + influenceMinimum() <= myInfluence) { // build a unit
+        if ((nextUnit.priority <= ULTRA_HIGH && nextUnitInfluence <= myInfluence) ||
+                nextUnitInfluence + influenceMinimum() <= myInfluence) { // build a unit
 
             Direction buildDir = null;
             for (Direction spawnDir : spawnDirs) {
-                if (rc.canBuildRobot(nextUnit.type, spawnDir, nextUnit.influence)) {
+                if (rc.canBuildRobot(nextUnit.type, spawnDir, nextUnitInfluence)) {
                     buildDir = spawnDir;
                     break;
                 }
@@ -100,17 +106,54 @@ public class QueueController {
                 pq.pop();
                 return false;
             }
-            if (buildDir == null || nextUnit.influence < 0) return false;
+            if (buildDir == null || nextUnitInfluence < 0) return false;
 
             rc.setFlag(encode(nextUnit.message)); // Do the build!
-            rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+            rc.buildRobot(nextUnit.type, buildDir, nextUnitInfluence);
             pq.pop();
+            queuedInfluence[nextUnit.priority] -= nextUnit.influence;
 
             prevUnit = nextUnit;
             prevDir = buildDir;
             return true;
         }
         return true;
+    }
+
+    /* Some Helpful Access Functions */
+
+    /**
+     * @param above an int specifying a priority level
+     * @return total influence minus influence in the queue at least the given `level`
+     */
+    public static int effectiveInfluenceAbove(int above) {
+        return rc.getInfluence() - queuedInfluenceAbove(above);
+    }
+
+    /**
+     * @return total influence minus influence in the queue
+     */
+    public static int effectiveInfluence() {
+        return rc.getInfluence() - queuedInfluence();
+    }
+
+    /**
+     * @return the amount of influence in the queue
+     */
+    public static int queuedInfluence() {
+        return queuedInfluenceAbove(LEVELS - 1);
+    }
+
+    /**
+     * @param above an int specifying a priority level
+     * @return the amount of influence queued at a priority of at least `level`
+     */
+    public static int queuedInfluenceAbove(int above) {
+        int sum = 0;
+        for (int i = 0; i <= above; i++) {
+            sum += queuedInfluence[i];
+        }
+        return sum;
     }
 
     /* Utility Functions */
@@ -123,7 +166,7 @@ public class QueueController {
         }
     }
 
-    static boolean muckrakerNearby() {
+    public static boolean muckrakerNearby() {
         for (RobotInfo bot : rc.senseNearbyRobots(24))
             if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER)
                 return true;
@@ -144,7 +187,7 @@ public class QueueController {
         return Math.max(18, rc.getInfluence() / 30);
     }
 
-    static int influenceMinimum() {
+    public static int influenceMinimum() {
         return 20 + (int) (rc.getRoundNum() * 0.1);
     }
 
