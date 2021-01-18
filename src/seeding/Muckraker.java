@@ -73,7 +73,7 @@ public class Muckraker extends Robot {
                 MapLocation loc = info.getLocation();
                 int log = (int) (Math.log(info.getInfluence()) / Math.log(2) + 1);
                 if (info.getTeam() == Team.NEUTRAL) {
-                    flagMessage(NEUTRAL_EC, loc.x % 128, loc.y % 128, log);
+                    flagMessage(NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
                 } else {
                     flagMessage(ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
                     enemyECLoc = info.getLocation();
@@ -174,13 +174,11 @@ public class Muckraker extends Robot {
                     seenECs[(numSeenECs++) % 12] = info.getID();
 
                     MapLocation loc = info.getLocation();
-
+                    int log = (int) (Math.log(info.getConviction()) / Math.log(2)) + 1;
                     if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
-                        double log = Math.log(info.getConviction()) / Math.log(2);
-                        flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+                        flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
                     } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
-                        double log = Math.log(info.getConviction()) / Math.log(2);
-                        flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, (int) log + 1);
+                        flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
                     } else {
                         flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
                     }
