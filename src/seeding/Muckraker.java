@@ -12,6 +12,8 @@ public class Muckraker extends Robot {
 
     /* clog vars */
     static MapLocation enemyECLoc;
+    static MapLocation[] cloggedEnemies = new MapLocation[12];
+    static int numCloggedEnemies = 0;
 
     /* ec tracking vars */
     static int[] seenECs = new int[12];
@@ -55,9 +57,9 @@ public class Muckraker extends Robot {
             Nav.doFollow(slandererNearby);
         }
 
-        // Clog -> Explore (when the enemy EC we wanted to attack has been converted)
-        if (state == State.Clog && rc.canSenseLocation(enemyECLoc) &&
-                rc.senseRobotAtLocation(enemyECLoc).getTeam() != rc.getTeam().opponent()) {
+        // Clog -> Explore (when the enemy EC we wanted to attack has been converted or clogged)
+        if (state == State.Clog && (rc.canSenseLocation(enemyECLoc) &&
+                rc.senseRobotAtLocation(enemyECLoc).getTeam() != rc.getTeam().opponent()) || isKnownClogged(enemyECLoc)) {
             state = State.Explore;
             Nav.doExplore();
         }
@@ -74,11 +76,13 @@ public class Muckraker extends Robot {
                     flagMessage(NEUTRAL_EC, loc.x % 128, loc.y % 128, log);
                 } else {
                     flagMessage(ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
-                    // We have seen an enemy EC: we should clog it:
                     enemyECLoc = info.getLocation();
-                    Nav.doGoTo(enemyECLoc);
-                    state = State.Clog;
-                    break;
+
+                    if (!isKnownClogged(enemyECLoc)) { // We have seen an enemy EC: we should clog it:
+                        Nav.doGoTo(enemyECLoc);
+                        state = State.Clog;
+                        break;
+                    }
                 }
             }
 
@@ -89,8 +93,10 @@ public class Muckraker extends Robot {
                     Communication.Message msg = decode(flag);
                     if (msg.label == Communication.Label.ATTACK_LOC) {
                         enemyECLoc = getLocFromMessage(msg.data[0], msg.data[1]);
-                        state = State.Clog;
-                        Nav.doGoTo(enemyECLoc);
+                        if (!isKnownClogged(enemyECLoc)) {
+                            state = State.Clog;
+                            Nav.doGoTo(enemyECLoc);
+                        }
                     }
                 }
             }
@@ -262,6 +268,30 @@ public class Muckraker extends Robot {
             rc.expose(best.getLocation());
             return true;
         }
+        return false;
+    }
+
+    static boolean isKnownClogged(MapLocation targetEC) {
+        if (targetEC == null || currentLocation.isWithinDistanceSquared(targetEC, 2))
+            return false; // invalid target OR part of the essential clog
+
+        boolean[] cloggedInDir = new boolean[8];
+        for (RobotInfo info : nearby)
+            if (info.getTeam() == rc.getTeam() && info.location.isWithinDistanceSquared(targetEC, 2) &&
+                    info.getType() != RobotType.ENLIGHTENMENT_CENTER)
+                cloggedInDir[targetEC.directionTo(info.location).ordinal()] = true;
+
+        // can see it- update the cache
+        if (cloggedInDir[0] && cloggedInDir[1] && cloggedInDir[2] && cloggedInDir[3] &&
+                cloggedInDir[4] && cloggedInDir[5] && cloggedInDir[6] && cloggedInDir[7]) {
+            cloggedEnemies[(numCloggedEnemies++) % 12] = targetEC;
+            return true;
+        }
+
+        // can't see it- check the cache
+        for (int i = 0; i < Math.min(numCloggedEnemies, 12); i++)
+            if (cloggedEnemies[i].distanceSquaredTo(targetEC) == 0)
+                return true;
         return false;
     }
 
