@@ -181,6 +181,16 @@ def run_matches(teamA, teamB, maps, games_per_match=1, stats=True) -> List[Resul
 
 
 ### Final Stats ###
+def print_all_results(results):
+    data = [["A", "B", "Map", "Winner"]]
+    for result in results:
+        data.append(
+            [result.a, result.b, result.m, result.a if (result.w == "A") else result.b]
+        )
+
+    print(tabulate(data, headers="firstrow", tablefmt="presto"))
+
+
 def print_winrate_matrix(teamA, teamB, results: List[Result]):
     """
     Prints a matrix of win rates between one team and other teams...
@@ -259,6 +269,10 @@ def print_winrate_by_map(bot, maps, results: List[Result]):
 
 def print_stats(teamA, teamB, maps, results):
     """ Prints aggregate stats in various formats """
+
+    print("\033[93m" + f"--- All Match results ---" + "\033[0m\n")
+    print_all_results(results)
+    print()
 
     if len(teamA) == 1 or len(teamB) == 1:
         bot = teamA[0] if len(teamA) == 1 else teamB[0]
