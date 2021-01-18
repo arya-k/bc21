@@ -25,13 +25,10 @@ public class EnlightenmentCenter extends Robot {
     BidController bidController = new BidController();
 
     // collected information about the map
-    static boolean[] dangerDirs = new boolean[8];
-    static boolean[] currentDangerDirs = new boolean[8];
-    static int[] edgeOffsets = new int[8]; // only the cardinal directions matter here.
-    static int[] directionOpenness = new int[8]; // lower numbers are "safer"
-    static int[] lastSeenInDirection = new int[8];
-    static int[] seenConsecutiveInDir = new int[8];
-    static int[] lastUpdated = new int[8];
+    static boolean[] enemyECDirs = new boolean[8];
+    static double[] dangerousness = new double[8];
+    static int[] dangerUpdateRound = new int[8];
+    static boolean[] muckrakerInDir = new boolean[8];
 
 
     // Non-self ECs that have been found so far
@@ -77,8 +74,8 @@ public class EnlightenmentCenter extends Robot {
         System.out.println("Production state: " + state);
         System.out.println("Bidding state: " + BidController.state);
         for (int i = 0; i < 8; i++) {
-            if (!dangerDirs[i]) continue;
-            System.out.println("DANGEROUS: " + fromOrdinal(i));
+            if (!enemyECDirs[i] && dangerousness[i] < 0.75) continue;
+            System.out.println("DANGEROUS DIRECTION: " + fromOrdinal(i));
         }
         for (int i = 0; i < ECFound; i++) {
             String teamMessage = "Neutral";
@@ -92,22 +89,25 @@ public class EnlightenmentCenter extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
-        qc.trackLastBuiltUnit();
-
-        updateDangerDirs();
+        boolean tracked = qc.trackLastBuiltUnit();
 
         processFlags();
+        invalidateOldDangerousness();
         transition();
         immediateDefense();
 
         // queue the next unit to build
         if (qc.isEmpty()) state.refillQueue();
-        qc.tryUnitBuild();
+        boolean built = qc.tryUnitBuild();
 
         // Consider bidding
         bidController.update();
         if (!(underAttack && rc.senseNearbyRobots(2, rc.getTeam().opponent()).length < 8))
             bidController.bid();
+
+        if (!tracked && !built) {
+            flagMessage(Label.SAFE_DIR, safestDir().ordinal());
+        }
 
         // End turn.
         if (currentRound % 25 == 0) lowPriorityLogging();
@@ -120,7 +120,7 @@ public class EnlightenmentCenter extends Robot {
     static void transition() throws GameActionException {
         // * -> Defense
         underAttack = getUnderAttack();
-        if (underAttack) {
+        if (underAttack || bestDangerDir() != null) {
             if (state != State.Defend) {
                 state = State.Defend;
             }
@@ -188,12 +188,12 @@ public class EnlightenmentCenter extends Robot {
                     qc.pushMany(RobotType.POLITICIAN, politicianInfluence,
                             makeMessage(Label.DEFEND, rightOrd), HIGH, requiredIn[rightOrd]);
 
-                    int influence = getSlandererInfluence();
-                    if (influence > 0 && !underAttack) {
-                        qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
-                        Message msg = makeMessage(Label.EXPLORE);
-                        qc.push(RobotType.MUCKRAKER, 1, msg, MED);
-                    }
+//                    int influence = getSlandererInfluence();
+//                    if (influence > 0 && !underAttack) {
+//                        qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
+//                        Message msg = makeMessage(Label.EXPLORE);
+//                        qc.push(RobotType.MUCKRAKER, 1, msg, MED);
+//                    }
                 }
             }
         },
@@ -253,29 +253,32 @@ public class EnlightenmentCenter extends Robot {
         }
     }
 
-    void updateDangerDirs() {
-        for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
-            if (bot.getType() == RobotType.POLITICIAN && bot.getInfluence() <= GameConstants.EMPOWER_TAX)
-                continue;
-            int ord = currentLocation.directionTo(bot.getLocation()).ordinal();
-            if (lastSeenInDirection[ord] == rc.getRoundNum() - 1)
-                seenConsecutiveInDir[ord]++;
-            lastSeenInDirection[ord] = rc.getRoundNum();
+    void updateDangerousness(MapLocation updateLoc, int num_enemies, int sawHeavy, boolean sawMuckraker) {
+        if (num_enemies == 0) return;
+        Direction dir = rc.getLocation().directionTo(updateLoc);
+        int ord = dir.ordinal();
+        double distance = Math.sqrt(rc.getLocation().distanceSquaredTo(updateLoc));
+        if (sawMuckraker)
+            muckrakerInDir[ord] = true;
+        double sawHeavyFactor = 36.0 / distance;
+        double baseDanger = num_enemies * 4 / distance;
+        double newDanger = baseDanger + (sawHeavyFactor * sawHeavy);
+        if (newDanger > dangerousness[ord] || rc.getRoundNum() - dangerUpdateRound[ord] > 15) {
+            dangerUpdateRound[ord] = rc.getRoundNum();
+            dangerousness[ord] = newDanger;
         }
+    }
+
+    void invalidateOldDangerousness() {
         for (int i = 0; i < 8; i++) {
-            if (lastSeenInDirection[i] != rc.getRoundNum())
-                seenConsecutiveInDir[i] = 0;
-            boolean update = seenConsecutiveInDir[i] > 2;
-            if (currentDangerDirs[i] != update)
-                lastUpdated[i] = rc.getRoundNum();
-            if (update || rc.getRoundNum() - lastUpdated[i] > 100) {
-                lastUpdated[i] = rc.getRoundNum();
-                currentDangerDirs[i] = update;
+            if (rc.getRoundNum() - dangerUpdateRound[i] > 200) {
+                dangerousness[i] = 0;
+                muckrakerInDir[i] = false;
             }
         }
     }
 
-    static final int MAX_IDS_TO_PROCESS_IN_TURN = 100;
+    static final int MAX_IDS_TO_PROCESS_IN_TURN = 75;
     static int cursor = 0;
 
     void processFlags() throws GameActionException {
@@ -301,7 +304,7 @@ public class EnlightenmentCenter extends Robot {
                     addOrUpdateEC(enemyECLoc, rc.getTeam().opponent(), (int) Math.pow(2, message.data[2]));
 
                     Direction dangerDir = currentLocation.directionTo(enemyECLoc);
-                    dangerDirs[dangerDir.ordinal()] = true;
+                    enemyECDirs[dangerDir.ordinal()] = true;
                     break;
 
                 case NEUTRAL_EC:
@@ -313,13 +316,12 @@ public class EnlightenmentCenter extends Robot {
                     MapLocation ourECLoc = getLocFromMessage(message.data[0], message.data[1]);
                     addOrUpdateEC(ourECLoc, rc.getTeam(), 0);
 
-                case SCOUT_LOCATION:
-                    MapLocation loc = getLocFromMessage(message.data[0], message.data[1]);
-                    int ord = rc.getLocation().directionTo(loc).ordinal();
-                    int offset = (int) (Math.sqrt(rc.getLocation().distanceSquaredTo(loc)));
-                    edgeOffsets[ord] = offset;
-                    updateDirOpenness();
-                    break;
+                case DANGER_INFO:
+                    MapLocation dangerLoc = getLocFromMessage(message.data[0], message.data[1]);
+                    int num_enemies = message.data[2];
+                    int sawHeavyTroop = message.data[4];
+                    boolean sawMuckraker = message.data[3] == 1;
+                    updateDangerousness(dangerLoc, num_enemies, sawHeavyTroop, sawMuckraker);
             }
         }
         if (trackedIds.getSize() != 0)
@@ -384,29 +386,19 @@ public class EnlightenmentCenter extends Robot {
         return best;
     }
 
-    static int[] requiredInAllDirections() throws GameActionException {
+    static int[] requiredInAllDirections() {
         int[] defendersIn = {0, 0, 0, 0, 0, 0, 0, 0};
         nearby = rc.senseNearbyRobots();
         for (RobotInfo bot : nearby) {
-            if (bot.getTeam() == rc.getTeam() && rc.canGetFlag(bot.getID())) {
-                int flag = rc.getFlag(bot.getID());
-                if (flag == 0) continue;
-                Label label = decode(flag).label;
-                if (label == Label.DEFEND || label == Label.CURRENTLY_DEFENDING) {
-                    defendersIn[rc.getLocation().directionTo(bot.getLocation()).ordinal()]++;
-                }
+            if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN && bot.getInfluence() > GameConstants.EMPOWER_TAX) {
+                defendersIn[rc.getLocation().directionTo(bot.getLocation()).ordinal()]++;
             }
         }
-        double mostOpen = mostOpenDirectionValue();
         int[] requiredIn = {0, 0, 0, 0, 0, 0, 0, 0};
-        int multiplier = (rc.getRoundNum() / 250) + 1;
-        int dangerAdd = (rc.getRoundNum() / 125) + 2;
         for (int i = 0; i < 8; i++) {
-            boolean isDangerous = dangerDirs[i] || currentDangerDirs[i];
-            int toAdd = isDangerous ? dangerAdd : 0;
-            double openness = directionOpenness[i];
-            double normalized = openness / mostOpen;
-            int required = (int) (normalized * multiplier) + toAdd;
+            boolean isDangerous = enemyECDirs[i] || dangerousness[i] > 0.75;
+            int required = isDangerous ? (int) ((rc.getRoundNum() / 125 + 1) * dangerousness[i])
+                    : (int) ((rc.getRoundNum() / 250) * dangerousness[i]);
             requiredIn[i] = Math.min(6, required) - defendersIn[i];
         }
         return requiredIn;
@@ -431,34 +423,40 @@ public class EnlightenmentCenter extends Robot {
         return dangerDir;
     }
 
-    static Direction safestDir() throws GameActionException {
-        int[] requiredIn = requiredInAllDirections();
-        int safest = 0;
+    static Direction safestDir() {
+        int dx = 0;
+        int dy = 0;
         for (int i = 0; i < 8; i++) {
-            if (currentDangerDirs[i] || dangerDirs[i]) continue;
-            if (requiredIn[safest] > requiredIn[i]) safest = i;
+            Direction dir = fromOrdinal(i);
+            if (enemyECDirs[i] || muckrakerInDir[i]) {
+                dx += dir.dx;
+                dy += dir.dy;
+            }
         }
-        return fromOrdinal(safest);
+        MapLocation temp = rc.getLocation().translate(dx, dy);
+        Direction kindOfOptimalDir = rc.getLocation().directionTo(temp).opposite();
+        if (kindOfOptimalDir == Direction.CENTER) {
+            // CASE 1: OPPOSITE DIRECTIONS END UP HAVING MUCKRAKERS
+            // We choose the direction with least danger
+            // and no muckrakers
+            int safest = 0;
+            for (int i = 1; i < 8; i++) {
+                if (muckrakerInDir[i] || dangerousness[safest] > dangerousness[i]) safest = i;
+            }
+            return fromOrdinal(safest);
+        } else {
+            // CASE 2: we get the opposite of the average muckraker direction
+            // pick the best of the three rotations
+            Direction oneLeft = kindOfOptimalDir.rotateLeft();
+            Direction oneRight = kindOfOptimalDir.rotateRight();
+            Direction ret = kindOfOptimalDir;
+            if (dangerousness[ret.ordinal()] > dangerousness[oneLeft.ordinal()]) ret = oneLeft;
+            if (dangerousness[ret.ordinal()] > dangerousness[oneRight.ordinal()]) ret = oneRight;
+            return ret;
+        }
+
     }
 
-    static void updateDirOpenness() {
-        directionOpenness[0] = edgeOffsets[0] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
-        directionOpenness[1] = edgeOffsets[0] + edgeOffsets[2];
-        directionOpenness[2] = edgeOffsets[2] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
-        directionOpenness[3] = edgeOffsets[2] + edgeOffsets[4];
-        directionOpenness[4] = edgeOffsets[4] + (edgeOffsets[2] + edgeOffsets[6]) / 2;
-        directionOpenness[5] = edgeOffsets[4] + edgeOffsets[6];
-        directionOpenness[6] = edgeOffsets[6] + (edgeOffsets[0] + edgeOffsets[4]) / 2;
-        directionOpenness[7] = edgeOffsets[0] + edgeOffsets[6];
-    }
-
-    static int mostOpenDirectionValue() {
-        int best = directionOpenness[7];
-        for (int i = 7; --i >= 0; ) {
-            best = Math.max(best, directionOpenness[i]);
-        }
-        return best;
-    }
 
     static boolean getUnderAttack() {
         int nearbyEnemyInfluence = 0;

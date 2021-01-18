@@ -17,7 +17,7 @@ public class QueueController {
     public static final int ULTRA_HIGH = 0, HIGH = 1, MED = 2, LOW = 3;
 
     // tracking builds
-    private static UnitBuild nextUnit = null;
+//    private static UnitBuild nextUnit = null;
     private static UnitBuild prevUnit = null;
     private static Direction prevDir = null;
 
@@ -50,7 +50,7 @@ public class QueueController {
     }
 
     /* Managing Unit Building */
-    public static void trackLastBuiltUnit() throws GameActionException {
+    public static boolean trackLastBuiltUnit() throws GameActionException {
         if (prevUnit != null) {
             RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(prevDir));
             if (info != null) {
@@ -67,18 +67,20 @@ public class QueueController {
                 }
             }
             prevUnit = null;
+            return true;
         }
+        return false;
     }
 
-    public void tryUnitBuild() throws GameActionException {
-        if (nextUnit == null && !pq.isEmpty()) nextUnit = pq.pop(); // We need to find a new unit to build!
-        if (!rc.isReady() || nextUnit == null) return;
+    public boolean tryUnitBuild() throws GameActionException {
+        if (!rc.isReady() || pq.isEmpty()) return false;
+        UnitBuild nextUnit = pq.peek(); // We need to find a new unit to build!
 
         int myInfluence = rc.getInfluence();
         if (nextUnit.type == RobotType.SLANDERER)
             nextUnit.influence = getSlandererInfluence(); // Slanderer influence is always chosen dynamically.
 
-        if ((nextUnit.priority <= HIGH && nextUnit.influence <= myInfluence) ||
+        if ((nextUnit.priority <= ULTRA_HIGH && nextUnit.influence <= myInfluence) ||
                 nextUnit.influence + influenceMinimum() <= myInfluence) { // build a unit
 
             Direction buildDir = null;
@@ -92,24 +94,22 @@ public class QueueController {
                 EnlightenmentCenter.addedFinalDefender = false; // NOTE: Shared with EnlightenmentCenter
 
             if (buildDir == null || nextUnit.type == RobotType.SLANDERER && muckrakerNearby() || nextUnit.influence < 0)
-                return;
+                return false;
 
             rc.setFlag(encode(nextUnit.message)); // Do the build!
             rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
+            pq.pop();
 
             prevUnit = nextUnit;
             prevDir = buildDir;
-            nextUnit = null;
-            return;
+            return true;
         }
-        return;
+        return true;
     }
 
     /* Utility Functions */
     public static void logNext() {
-        if (nextUnit != null) {
-            System.out.println("Next unit: " + nextUnit.type + " " + nextUnit.priority + " " + nextUnit.influence);
-        } else if (!pq.isEmpty()) {
+        if (!pq.isEmpty()) {
             UnitBuild next = pq.peek();
             System.out.println("Next unit: " + next.type + " " + next.priority + " " + next.influence);
         } else {

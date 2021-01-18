@@ -69,6 +69,25 @@ abstract public class Robot {
         currentLocation = rc.getLocation();
         nearby = rc.senseNearbyRobots();
         currentRound = rc.getRoundNum();
+        if (rc.getType() != RobotType.ENLIGHTENMENT_CENTER) {
+            int num_enemies = 0;
+            boolean sawMuckraker = false;
+            boolean sawHeavy = false;
+            MapLocation locationToSend = currentLocation;
+            for (RobotInfo bot : nearby) {
+                if (bot.getTeam() == rc.getTeam()) continue;
+                if (bot.getType() == RobotType.ENLIGHTENMENT_CENTER || bot.getType() == RobotType.SLANDERER) continue;
+                if (bot.getType() == RobotType.POLITICIAN && bot.getInfluence() < GameConstants.EMPOWER_TAX) continue;
+                if (bot.getType() == RobotType.MUCKRAKER) sawMuckraker = true;
+                if (bot.getInfluence() > Math.max(40, rc.getRoundNum() / 4)) sawHeavy = true;
+                if (locationToSend.equals(currentLocation)) locationToSend = bot.getLocation();
+                if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
+                    locationToSend = bot.getLocation();
+                num_enemies++;
+            }
+            flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
+                    Math.min(num_enemies, 15), sawMuckraker ? 1 : 0, sawHeavy ? 1 : 0);
+        }
     }
 
     /* Utility functions */
