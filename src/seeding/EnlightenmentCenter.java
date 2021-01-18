@@ -371,7 +371,7 @@ public class EnlightenmentCenter extends Robot {
         Team enemy = rc.getTeam().opponent();
         enemyECNearby = false;
         for (int i = 0; i < ECFound; i++) {
-            if (rc.canDetectLocation(ECLocs[i])) {
+            if (rc.canSenseLocation(ECLocs[i])) {
                 RobotInfo ec = rc.senseRobotAtLocation(ECLocs[i]);
                 ECInfluence[i] = ec.getInfluence();
                 if (ec.getTeam() == enemy)
