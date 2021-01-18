@@ -10,14 +10,13 @@ public class Muckraker extends Robot {
 
     static State state = null;
 
+    /* Scout vars */
+    static Direction scoutDir;
+
     /* clog vars */
     static MapLocation enemyECLoc;
     static MapLocation[] cloggedEnemies = new MapLocation[12];
     static int numCloggedEnemies = 0;
-
-    /* ec tracking vars */
-    static int[] seenECs = new int[12];
-    static int numSeenECs = 0;
 
     @Override
     void onAwake() {
@@ -25,6 +24,11 @@ public class Muckraker extends Robot {
         state = State.ChillAroundEC; // by default, just sit around the EC
 
         switch (assignment.label) {
+            case SCOUT:
+                state = State.Scout;
+                scoutDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(scoutDir);
+                break;
             case EXPLORE:
                 state = State.Explore;
                 Nav.doExplore();
@@ -48,11 +52,17 @@ public class Muckraker extends Robot {
     }
 
     void transition() throws GameActionException {
+        // Scout -> Explore
+        if (state == State.Scout && Nav.currentGoal == Nav.NavGoal.Nothing) {
+            state = State.Explore;
+            Nav.doExplore();
+        }
+
         int slandererNearby = closestSlanderer();
         if (slandererNearby == -1 && state == State.ChaseSlanderer) { // ChaseSlanderer -> Explore
             state = State.Explore;
             Nav.doExplore();
-        } else if (slandererNearby != -1) { // Explore -> ChaseSlanderer
+        } else if (slandererNearby != -1 && state != State.Scout) { // Explore -> ChaseSlanderer
             state = State.ChaseSlanderer;
             Nav.doFollow(slandererNearby);
         }
@@ -108,6 +118,19 @@ public class Muckraker extends Robot {
     }
 
     private enum State {
+        Scout {
+            @Override
+            public void act() throws GameActionException {
+                noteNearbyECs();
+
+                if (!rc.isReady()) return;
+
+                if (trySlandererKill()) return;
+
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) takeMove(move);
+            }
+        },
         Clog {
             @Override
             public void act() throws GameActionException {
@@ -158,6 +181,7 @@ public class Muckraker extends Robot {
         Explore {
             @Override
             public void act() throws GameActionException {
+                noteNearbyECs();
                 if (trySlandererKill()) return;
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) takeMove(move);

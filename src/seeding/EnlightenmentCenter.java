@@ -4,6 +4,7 @@ import battlecode.common.*;
 import seeding.Communication.Label;
 import seeding.Communication.Message;
 import seeding.utils.IterableIdSet;
+import seeding.utils.UnitBuild;
 
 import static seeding.Communication.decode;
 import static seeding.QueueController.*;
@@ -31,6 +32,7 @@ public class EnlightenmentCenter extends Robot {
     static double[] dangerousness = new double[8];
     static int[] dangerUpdateRound = new int[8];
     static boolean[] muckrakerInDir = new boolean[8];
+    static Direction currentSafestDir = null;
 
 
     // Non-self ECs that have been found so far
@@ -69,7 +71,7 @@ public class EnlightenmentCenter extends Robot {
         // initialize priority queue
         qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), HIGH); // Econ slanderer
         for (Direction dir : Robot.directions) // Scout politician
-            qc.push(RobotType.POLITICIAN, 1, makeMessage(Label.SCOUT, dir.ordinal()), MED);
+            qc.push(RobotType.MUCKRAKER, 1, makeMessage(Label.SCOUT, dir.ordinal()), MED);
         qc.pushMany(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE), LOW, 5); // Exploring muckrakers
     }
 
@@ -115,7 +117,13 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
 
         if (!tracked && !built) {
-            flagMessage(Label.SAFE_DIR, safestDir().ordinal());
+            Direction safeDir = safestDir();
+            if (currentSafestDir == null || !safeDir.equals(currentSafestDir)) {
+                currentSafestDir = safeDir;
+                flagMessage(Label.SAFE_DIR, safeDir.ordinal());
+            } else {
+                rc.setFlag(0);
+            }
         }
 
         // End turn.
@@ -232,7 +240,7 @@ public class EnlightenmentCenter extends Robot {
                     qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), MED);
                 }
                 qc.pushMany(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE), LOW, 3);
-                qc.push(RobotType.POLITICIAN, Math.max(11, getPoliticianInfluence() / 3), makeMessage(Label.EXPLORE), LOW);
+                qc.push(RobotType.POLITICIAN, Math.max(11, getPoliticianInfluence() / 2), makeMessage(Label.EXPLORE), LOW);
             }
         },
         AttackEnemy {
@@ -276,6 +284,14 @@ public class EnlightenmentCenter extends Robot {
         if (bufferID != -1 && !rc.canGetFlag(bufferID)) {
             addedBuffer = false;
             bufferID = -1;
+        }
+
+        int influence = getSlandererInfluence();
+        UnitBuild nextUnit = qc.peek();
+        if (nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC) {
+            if (influence > 0 && rc.getInfluence() < nextUnit.influence) {
+                qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), HIGH);
+            }
         }
     }
 
@@ -406,7 +422,7 @@ public class EnlightenmentCenter extends Robot {
             int distance = location.distanceSquaredTo(currentLocation);
             int influence = ECInfluence[i];
 
-            int actingInfluence = 2 * rc.getInfluence();
+            int actingInfluence = (int) (1.7 * rc.getInfluence());
             if (actingInfluence - influence <= influenceMinimum())
                 continue;
 
@@ -438,7 +454,7 @@ public class EnlightenmentCenter extends Robot {
             boolean isDangerous = enemyECDirs[i] || dangerousness[i] > 0.75;
             int required = isDangerous ? (int) ((rc.getRoundNum() / 125 + 1) * dangerousness[i])
                     : (int) ((rc.getRoundNum() / 250) * dangerousness[i]);
-            requiredIn[i] = Math.min(4, required) - defendersIn[i];
+            requiredIn[i] = Math.min(3, required) - defendersIn[i];
         }
         return requiredIn;
     }

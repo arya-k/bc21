@@ -35,6 +35,11 @@ abstract public class Robot {
             Direction.NORTHWEST,
     };
 
+    /* EC tracking vars */
+    static MapLocation closestECLoc;
+    static int[] seenECs = new int[12];
+    static int numSeenECs = 0;
+
 
     public static void init(RobotController rc) throws GameActionException {
         Robot.firstTurn = rc.getRoundNum();
@@ -60,6 +65,7 @@ abstract public class Robot {
             centerLoc = initLoc;
             centerID = rc.getID();
         }
+        closestECLoc = centerLoc;
 
         Nav.init();
     }
@@ -120,6 +126,29 @@ abstract public class Robot {
                         break;
                     nearbyBufferLoc = null;
                 }
+            }
+        }
+    }
+
+    static void noteNearbyECs() throws GameActionException {
+        for (RobotInfo info : nearby) {
+            if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+
+            if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
+                    seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||
+                    seenECs[8] == info.ID || seenECs[9] == info.ID || seenECs[10] == info.ID || seenECs[11] == info.ID) {
+                continue; // we don't want to note it again
+            }
+            seenECs[(numSeenECs++) % 12] = info.getID();
+
+            MapLocation loc = info.getLocation();
+            int log = (int) (Math.log(info.getConviction()) / Math.log(2)) + 1;
+            if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
+                flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
+            } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
+                flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
+            } else {
+                flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
             }
         }
     }

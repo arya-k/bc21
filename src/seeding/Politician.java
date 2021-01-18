@@ -7,8 +7,6 @@ import static seeding.Communication.decode;
 public class Politician extends Robot {
     static State state = null;
 
-    /* Scout vars */
-    static Direction scoutDir;
 
     /* Defense vars */
     static Direction defendDir;
@@ -18,11 +16,6 @@ public class Politician extends Robot {
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
-
-    /* EC tracking vars */
-    static MapLocation closestECLoc = centerLoc;
-    static int[] seenECs = new int[12];
-    static int numSeenECs = 0;
 
     @Override
     void onAwake() throws GameActionException {
@@ -34,11 +27,6 @@ public class Politician extends Robot {
         if (assignment == null) return;
 
         switch (assignment.label) {
-            case SCOUT:
-                state = State.Scout;
-                scoutDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(scoutDir);
-                break;
 
             case ATTACK_LOC:
                 state = State.AttackLoc;
@@ -82,12 +70,6 @@ public class Politician extends Robot {
 
     void transition() throws GameActionException {
 
-        // Scout -> Explore
-        if (state == State.Scout && Nav.currentGoal == Nav.NavGoal.Nothing) {
-            state = State.Explore;
-            Nav.doExplore();
-        }
-
         // Explore -> Explode
         if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
             state = State.FinalFrontier; // TODO: we should do something more intelligent here probably.
@@ -124,21 +106,6 @@ public class Politician extends Robot {
     }
 
     private enum State {
-        Scout {
-            @Override
-            public void act() throws GameActionException {
-                noteNearbyECs();
-
-                if (!rc.isReady()) return;
-
-                int radius = getBestEmpowerRadius(0.3);
-                if (radius != -1 && rc.isReady())
-                    rc.empower(radius);
-
-                Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
-            }
-        },
         Explore {
             @Override
             public void act() throws GameActionException {
@@ -346,29 +313,6 @@ public class Politician extends Robot {
             return getTargetLoc();
         }
         return targetLoc;
-    }
-
-    static void noteNearbyECs() throws GameActionException {
-        for (RobotInfo info : nearby) {
-            if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
-
-            if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
-                    seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||
-                    seenECs[8] == info.ID || seenECs[9] == info.ID || seenECs[10] == info.ID || seenECs[11] == info.ID) {
-                continue; // we don't want to note it again
-            }
-            seenECs[(numSeenECs++) % 12] = info.getID();
-
-            MapLocation loc = info.getLocation();
-            int log = (int) (Math.log(info.getConviction()) / Math.log(2)) + 1;
-            if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
-                flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
-            } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
-                flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
-            } else {
-                flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
-            }
-        }
     }
 
     /**

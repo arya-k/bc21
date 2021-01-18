@@ -38,6 +38,11 @@ public class QueueController {
         queuedInfluence[level] += influence;
     }
 
+    public static UnitBuild peek() {
+        if (pq.isEmpty()) return null;
+        return pq.peek();
+    }
+
     public static void pushMany(RobotType type, int influence, Communication.Message message, int level, int count) {
         for (int i = count; --i >= 0; )
             pq.push(new UnitBuild(type, influence, message), level);
@@ -104,7 +109,7 @@ public class QueueController {
             // Exit conditions
             if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby()) {
                 pq.pop();
-                return false;
+                return tryUnitBuild();
             }
             if (buildDir == null || nextUnitInfluence < 0) return false;
 

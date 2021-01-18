@@ -9,6 +9,7 @@ public class Slanderer extends Robot {
 
     /* hide vars */
     static final int HIDE_RAD = 4;
+    static int lastUpdate = -1;
     static Direction safeDir;
 
     /* flee vars */
@@ -45,7 +46,8 @@ public class Slanderer extends Robot {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
-                if (msg.label == Communication.Label.SAFE_DIR) {
+                if (msg.label == Communication.Label.SAFE_DIR && rc.getRoundNum() - lastUpdate > 3) {
+                    lastUpdate = rc.getRoundNum();
                     safeDir = fromOrdinal(msg.data[0]);
                     Nav.doGoTo(getTargetLoc());
                     state = State.Hide;
@@ -77,7 +79,14 @@ public class Slanderer extends Robot {
             @Override
             public void act() throws GameActionException {
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move))
+                    takeMove(move);
+                if (move == Direction.CENTER
+                        && centerLoc.isWithinDistanceSquared(rc.getLocation(), 4)) {
+                    System.out.println("rotating to the left from " + safeDir);
+                    safeDir = safeDir.rotateLeft();
+                    Nav.doGoTo(getTargetLoc());
+                }
                 if (move == null) {
                     Nav.doGoTo(getTargetLoc());
                 }
