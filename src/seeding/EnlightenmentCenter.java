@@ -127,7 +127,7 @@ public class EnlightenmentCenter extends Robot {
 
         // * -> Defense
         underAttack = getUnderAttack();
-        if (!enemyECNearby && (underAttack || bestDangerDir() != null)) {
+        if (underAttack || bestDangerDir() != null) {
             if (state != State.Defend) {
                 state = State.Defend;
             }
