@@ -56,8 +56,10 @@ public class EnlightenmentCenter extends Robot {
             if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
             addOrUpdateEC(bot.getLocation(), bot.getTeam(), bot.getInfluence());
 
-            if (bot.getTeam() == rc.getTeam().opponent())
+            if (bot.getTeam() == rc.getTeam().opponent()) {
+                state = State.AttackEnemy;
                 enemyECNearby = true;
+            }
         }
 
         // initialize priority queue
@@ -87,6 +89,7 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
+        System.out.println(state);
         super.onUpdate();
         boolean tracked = qc.trackLastBuiltUnit();
 
@@ -120,9 +123,11 @@ public class EnlightenmentCenter extends Robot {
     /* Production and Stimulus Logic */
 
     static void transition() throws GameActionException {
+        if (checkEnemyEC()) return;
+
         // * -> Defense
         underAttack = getUnderAttack();
-        if (underAttack || bestDangerDir() != null) {
+        if (!enemyECNearby && (underAttack || bestDangerDir() != null)) {
             if (state != State.Defend) {
                 state = State.Defend;
             }
@@ -153,7 +158,7 @@ public class EnlightenmentCenter extends Robot {
 
         // AttackEnemy -> Defense
         if (state == State.AttackEnemy) {
-            if (targetEnemyEC == -1 || rc.getInfluence() - ECInfluence[targetEnemyEC] < 500) {
+            if (targetEnemyEC == -1 || (rc.getInfluence() - ECInfluence[targetEnemyEC] < 500)) {
                 state = State.Defend;
             }
             return;
@@ -236,8 +241,10 @@ public class EnlightenmentCenter extends Robot {
 
                 int influence = ECInfluence[bestEnemyEC];
                 MapLocation best = ECLocs[bestEnemyEC];
+                int priority = MED;
+                if (enemyECNearby) priority = ULTRA_HIGH;
                 qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), MED);
+                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), priority);
 
             }
         };
@@ -361,6 +368,20 @@ public class EnlightenmentCenter extends Robot {
         ECInfluence[idx] = influence;
     }
 
+    static boolean checkEnemyEC() throws GameActionException {
+        Team enemy = rc.getTeam().opponent();
+        enemyECNearby = false;
+        for (int i = 0; i < ECFound; i++) {
+            if (rc.canDetectLocation(ECLocs[i])) {
+                RobotInfo ec = rc.senseRobotAtLocation(ECLocs[i]);
+                ECInfluence[i] = ec.getInfluence();
+                if (ec.getTeam() == enemy)
+                    enemyECNearby = true;
+                ECTeam[i] = ec.getTeam();
+            }
+        }
+        return enemyECNearby;
+    }
 
     static int getWeakestEnemyEC() {
         Team enemy = rc.getTeam().opponent();
