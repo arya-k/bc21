@@ -59,12 +59,9 @@ public class EnlightenmentCenter extends Robot {
         }
 
         // initialize priority queue
-        qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), ULTRA_HIGH); // Econ slanderer
-        for (Direction dir : Robot.directions) {
-            qc.push(RobotType.POLITICIAN, 1,
-                    makeMessage(Label.SCOUT, dir.ordinal()), HIGH); // Scout politician
-        }
-
+        qc.push(RobotType.SLANDERER, 41, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), HIGH); // Econ slanderer
+        for (Direction dir : Robot.directions) // Scout politician
+            qc.push(RobotType.POLITICIAN, 1, makeMessage(Label.SCOUT, dir.ordinal()), MED);
         qc.pushMany(RobotType.MUCKRAKER, 1, makeMessage(Label.EXPLORE), LOW, 5); // Exploring muckrakers
     }
 

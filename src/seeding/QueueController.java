@@ -17,7 +17,6 @@ public class QueueController {
     public static final int ULTRA_HIGH = 0, HIGH = 1, MED = 2, LOW = 3;
 
     // tracking builds
-//    private static UnitBuild nextUnit = null;
     private static UnitBuild prevUnit = null;
     private static Direction prevDir = null;
 
@@ -93,8 +92,12 @@ public class QueueController {
             if (nextUnit.message.label == Communication.Label.FINAL_FRONTIER)
                 EnlightenmentCenter.addedFinalDefender = false; // NOTE: Shared with EnlightenmentCenter
 
-            if (buildDir == null || nextUnit.type == RobotType.SLANDERER && muckrakerNearby() || nextUnit.influence < 0)
+            // Exit conditions
+            if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby()) {
+                pq.pop();
                 return false;
+            }
+            if (buildDir == null || nextUnit.influence < 0) return false;
 
             rc.setFlag(encode(nextUnit.message)); // Do the build!
             rc.buildRobot(nextUnit.type, buildDir, nextUnit.influence);
