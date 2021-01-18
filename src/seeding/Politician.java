@@ -15,7 +15,6 @@ public class Politician extends Robot {
     static MapLocation defendLocation;
     static int defendRadius = 4;
     static int followingTurns = 0;
-    static int failedToMoveTurns = 0;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -242,10 +241,6 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                if (failedToMoveTurns > 20) {
-                    defendDir = defendDir.rotateLeft();
-                    defendLocation = getTargetLoc();
-                }
 
                 if (Nav.currentGoal == Nav.NavGoal.Nothing) {
                     int numAlliesCloser = 0;
@@ -318,12 +313,9 @@ public class Politician extends Robot {
                 // Consider moving
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) {
-                    failedToMoveTurns = 0;
                     if (Nav.currentGoal == Nav.NavGoal.Follow)
                         followingTurns++;
                     takeMove(move);
-                } else {
-                    failedToMoveTurns++;
                 }
             }
         },
