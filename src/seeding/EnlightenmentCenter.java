@@ -89,7 +89,6 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onUpdate() throws GameActionException {
-        System.out.println(state);
         super.onUpdate();
         boolean tracked = qc.trackLastBuiltUnit();
 
