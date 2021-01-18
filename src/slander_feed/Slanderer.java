@@ -1,8 +1,8 @@
-package seeding;
+package slander_feed;
 
 import battlecode.common.*;
 
-import static seeding.Communication.decode;
+import static slander_feed.Communication.decode;
 
 public class Slanderer extends Robot {
     static State state = null;
@@ -22,7 +22,7 @@ public class Slanderer extends Robot {
     @Override
     void onAwake() throws GameActionException {
         state = State.Hide; // Slanderers always initialize to hiding!
-        safeDir = fromOrdinal(assignment.data[0]);
+        safeDir = fromOrdinal(assignment.data[0]).opposite();
         Nav.doGoTo(getTargetLoc());
     }
 
@@ -46,30 +46,30 @@ public class Slanderer extends Robot {
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
                 if (msg.label == Communication.Label.SAFE_DIR) {
-                    safeDir = fromOrdinal(msg.data[0]);
+                    safeDir = fromOrdinal(msg.data[0]).opposite();
                     Nav.doGoTo(getTargetLoc());
                     state = State.Hide;
                 }
             }
         }
-
-        // track when we last saw enemies
-        enemyLastSeen++;
-        int numEnemies = 0;
-
-        for (RobotInfo bot : enemies) {
-            if (bot.getType() == RobotType.MUCKRAKER)
-                numEnemies++;
-        }
-
-
-        // Hide -> Flee
-        if (numEnemies > 0) {
-            enemyLastSeen = 0;
-            state = State.Flee;
-        } else {
-            state = State.Hide;
-        }
+//
+//        // track when we last saw enemies
+//        enemyLastSeen++;
+//        int numEnemies = 0;
+//
+//        for (RobotInfo bot : enemies) {
+//            if (bot.getType() == RobotType.MUCKRAKER)
+//                numEnemies++;
+//        }
+//
+//
+//        // Hide -> Flee
+//        if (numEnemies > 0) {
+//            enemyLastSeen = 0;
+//            state = State.Flee;
+//        } else {
+//            state = State.Hide;
+//        }
     }
 
     private enum State {
@@ -77,7 +77,7 @@ public class Slanderer extends Robot {
             @Override
             public void act() throws GameActionException {
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
                 if (move == null) {
                     Nav.doGoTo(getTargetLoc());
                 }
@@ -129,7 +129,7 @@ public class Slanderer extends Robot {
                     }
 
                     // Move in direction of max safety
-                    if (dir != -1) takeMove(fromOrdinal(dir));
+                    if (dir != -1) rc.move(fromOrdinal(dir));
                 }
 
 

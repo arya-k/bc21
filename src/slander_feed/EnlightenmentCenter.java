@@ -1,21 +1,19 @@
-package seeding;
+package slander_feed;
 
 import battlecode.common.*;
-import seeding.Communication.Label;
-import seeding.Communication.Message;
-import seeding.utils.IterableIdSet;
+import slander_feed.Communication.Label;
+import slander_feed.Communication.Message;
+import slander_feed.utils.IterableIdSet;
 
-import static seeding.Communication.decode;
-import static seeding.QueueController.*;
+import static slander_feed.Communication.decode;
+import static slander_feed.QueueController.*;
 
 public class EnlightenmentCenter extends Robot {
 
     // set of ids for tracking robot messages
     static IterableIdSet trackedIds = new IterableIdSet(); // NOTE: Shared with QueueController
     static boolean addedFinalDefender = false;  // NOTE: Shared with QueueController
-    static int finalDefenderID = -1; // NOTE: Shared with QueueController
-    static boolean addedBuffer = false;
-    static int bufferID = -1; // NOTE: Shared with QueueController
+    static int lastDefender = -1; // NOTE: Shared with QueueController
 
     // build priority queue
     static QueueController qc = new QueueController();
@@ -93,14 +91,11 @@ public class EnlightenmentCenter extends Robot {
         processFlags();
         invalidateOldDangerousness();
         transition();
-        urgentQueueing();
+        immediateDefense();
 
         // queue the next unit to build
-        boolean built = false;
-        if (qc.isEmpty())
-            state.refillQueue();
-        if (bufferID == -1) // dont build anything while a buffer is out!
-            built = qc.tryUnitBuild();
+        if (qc.isEmpty()) state.refillQueue();
+        boolean built = qc.tryUnitBuild();
 
         // Consider bidding
         bidController.update();
@@ -247,31 +242,11 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void urgentQueueing() {
-        // final defender business
+    void immediateDefense() {
         if (addedFinalDefender) return;
-        if (finalDefenderID == -1 || !rc.canGetFlag(finalDefenderID)) {
-            qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), HIGH);
+        if (lastDefender == -1 || !rc.canGetFlag(lastDefender)) {
+            qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), ULTRA_HIGH);
             addedFinalDefender = true;
-        }
-
-        // buffer business
-        if (!underAttack && !addedBuffer) {
-            int turnsUntilEmpower = (int) (RobotType.POLITICIAN.initialCooldown + (int) rc.getCooldownTurns());
-            double factor = rc.getEmpowerFactor(rc.getTeam(), turnsUntilEmpower);
-            int influence = rc.getInfluence() - influenceMinimum();
-            if (factor > 3) {
-                System.out.println("I COULD HAVE " + (factor * influence - GameConstants.EMPOWER_TAX) + "INFLUENCE!");
-            }
-            if (factor * influence - GameConstants.EMPOWER_TAX > 1.2 * rc.getInfluence()) {
-                System.out.println("BUFFING THE HELL OUT OF MYSELF!");
-                qc.push(RobotType.POLITICIAN, influence, makeMessage(Label.BUFF), ULTRA_HIGH);
-                addedBuffer = true;
-            }
-        }
-        if (bufferID != -1 && !rc.canGetFlag(bufferID)) {
-            addedBuffer = false;
-            bufferID = -1;
         }
     }
 
@@ -410,20 +385,21 @@ public class EnlightenmentCenter extends Robot {
 
     static int[] requiredInAllDirections() {
         int[] defendersIn = {0, 0, 0, 0, 0, 0, 0, 0};
-        nearby = rc.senseNearbyRobots();
-        for (RobotInfo bot : nearby) {
-            if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN && bot.getInfluence() > GameConstants.EMPOWER_TAX) {
-                defendersIn[rc.getLocation().directionTo(bot.getLocation()).ordinal()]++;
-            }
-        }
-        int[] requiredIn = {0, 0, 0, 0, 0, 0, 0, 0};
-        for (int i = 0; i < 8; i++) {
-            boolean isDangerous = enemyECDirs[i] || dangerousness[i] > 0.75;
-            int required = isDangerous ? (int) ((rc.getRoundNum() / 125 + 1) * dangerousness[i])
-                    : (int) ((rc.getRoundNum() / 250) * dangerousness[i]);
-            requiredIn[i] = Math.min(6, required) - defendersIn[i];
-        }
-        return requiredIn;
+        return defendersIn;
+//        nearby = rc.senseNearbyRobots();
+//        for (RobotInfo bot : nearby) {
+//            if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN && bot.getInfluence() > GameConstants.EMPOWER_TAX) {
+//                defendersIn[rc.getLocation().directionTo(bot.getLocation()).ordinal()]++;
+//            }
+//        }
+//        int[] requiredIn = {0, 0, 0, 0, 0, 0, 0, 0};
+//        for (int i = 0; i < 8; i++) {
+//            boolean isDangerous = enemyECDirs[i] || dangerousness[i] > 0.75;
+//            int required = isDangerous ? (int) ((rc.getRoundNum() / 125 + 1) * dangerousness[i])
+//                    : (int) ((rc.getRoundNum() / 250) * dangerousness[i]);
+//            requiredIn[i] = Math.min(6, required) - defendersIn[i];
+//        }
+//        return requiredIn;
     }
 
     /**

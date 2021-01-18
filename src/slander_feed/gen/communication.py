@@ -25,7 +25,6 @@ commands = [
     Command("ATTACKING", [8, 1]),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
     Command("DANGER_INFO", [7, 7, 4, 1, 1]),
-    Command("BUFF", [])
 ]
 
 #########################################
@@ -110,7 +109,7 @@ encode = "\n".join(encode_blocks)
 encode = "\n".join(s for s in encode.splitlines() if s.strip())
 decode = " else ".join(decode_blocks)
 
-code = f"""package seeding;
+code = f"""package slander_feed;
 public class Communication {{
     public enum Label {{
         {", ".join(c.name for c in commands)}

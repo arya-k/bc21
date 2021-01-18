@@ -1,9 +1,9 @@
-package seeding;
+package slander_feed;
 
 import battlecode.common.*;
 
-import static seeding.Communication.Label.*;
-import static seeding.Communication.decode;
+import static slander_feed.Communication.Label.*;
+import static slander_feed.Communication.decode;
 
 public class Muckraker extends Robot {
     static final int CLOG_BEHAVIOR_THRESHOLD = 9; // If we are within this r^2, we manually path instead of using Nav
@@ -122,7 +122,7 @@ public class Muckraker extends Robot {
                     for (int rot : new int[]{6, 2, 7, 1, 0}) { // ideally we move perpendicular.
                         Direction targetDir = fromOrdinal((awayDir + rot) % 8);
                         if (rc.canMove(targetDir)) {
-                            takeMove(targetDir);
+                            rc.move(targetDir);
                             return;
                         }
                     }
@@ -133,7 +133,7 @@ public class Muckraker extends Robot {
                 // Just move in the direction of the enemyEC.
                 if (currentLocation.distanceSquaredTo(enemyECLoc) > CLOG_BEHAVIOR_THRESHOLD) {
                     Direction move = Nav.tick();
-                    if (move != null && rc.canMove(move)) takeMove(move);
+                    if (move != null && rc.canMove(move)) rc.move(move);
                     return;
                 }
 
@@ -147,7 +147,7 @@ public class Muckraker extends Robot {
                         Nav.doGoTo(target);
                         Direction move = Nav.tick();
                         if (move != null && rc.canMove(move)) {
-                            takeMove(move);
+                            rc.move(move);
                             break;
                         }
                     }
@@ -160,7 +160,7 @@ public class Muckraker extends Robot {
             public void act() throws GameActionException {
                 if (trySlandererKill()) return;
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
 
                 // Inform about nearby ECs
                 for (RobotInfo info : rc.senseNearbyRobots()) {
@@ -196,7 +196,7 @@ public class Muckraker extends Robot {
 
                 Nav.doGoInDir(randomDirection());
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         },
 
@@ -206,7 +206,7 @@ public class Muckraker extends Robot {
                 if (trySlandererKill()) return;
 
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         };
 

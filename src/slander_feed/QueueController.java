@@ -1,10 +1,10 @@
-package seeding;
+package slander_feed;
 
 import battlecode.common.*;
-import seeding.utils.UnitBuild;
-import seeding.utils.UnitBuildDPQueue;
+import slander_feed.utils.UnitBuild;
+import slander_feed.utils.UnitBuildDPQueue;
 
-import static seeding.Communication.encode;
+import static slander_feed.Communication.encode;
 
 /**
  * Helps enlightenment center with spawning units optimally, keeping track of who
@@ -61,10 +61,7 @@ public class QueueController {
                     case CAPTURE_NEUTRAL_EC:
                         break;
                     case FINAL_FRONTIER:
-                        EnlightenmentCenter.finalDefenderID = info.getID(); // NOTE: Shared with EnlightenmentCenter
-                        break;
-                    case BUFF:
-                        EnlightenmentCenter.bufferID = info.getID(); // NOTE: Shared with EnlightenmentCenter
+                        EnlightenmentCenter.lastDefender = info.getID(); // NOTE: Shared with EnlightenmentCenter
                         break;
                 }
             }
@@ -96,10 +93,10 @@ public class QueueController {
                 EnlightenmentCenter.addedFinalDefender = false; // NOTE: Shared with EnlightenmentCenter
 
             // Exit conditions
-            if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby()) {
-                pq.pop();
-                return false;
-            }
+//            if (nextUnit.type == RobotType.SLANDERER && muckrakerNearby()) {
+//                pq.pop();
+//                return false;
+//            }
             if (buildDir == null || nextUnit.influence < 0) return false;
 
             rc.setFlag(encode(nextUnit.message)); // Do the build!
@@ -141,7 +138,7 @@ public class QueueController {
     }
 
     public static int getPoliticianInfluence() {
-        return Math.max(18, rc.getInfluence() / 30);
+        return 10;
     }
 
     static int influenceMinimum() {

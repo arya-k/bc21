@@ -1,8 +1,8 @@
-package seeding;
+package slander_feed;
 
 import battlecode.common.*;
 
-import static seeding.Communication.decode;
+import static slander_feed.Communication.decode;
 
 public class Politician extends Robot {
     static State state = null;
@@ -56,16 +56,11 @@ public class Politician extends Robot {
             case FINAL_FRONTIER:
                 state = State.FinalFrontier;
                 break;
-
             case DEFEND:
                 state = State.Defend;
                 defendDir = fromOrdinal(assignment.data[0]);
                 defendLocation = getTargetLoc();
                 Nav.doGoTo(defendLocation);
-                break;
-
-            case BUFF:
-                state = State.Buffer;
                 break;
         }
     }
@@ -127,7 +122,7 @@ public class Politician extends Robot {
     private enum State {
         Scout {
             @Override
-            public void act() throws GameActionException {
+            public void act() throws GameActionException { // TODO: Our EC should not remove explorers until they explode!
                 noteNearbyECs();
 
                 if (!rc.isReady()) return;
@@ -137,7 +132,7 @@ public class Politician extends Robot {
                     rc.empower(radius);
 
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         },
         Explore {
@@ -155,7 +150,7 @@ public class Politician extends Robot {
 
                 // otherwise move
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
             }
         },
         CaptureNeutralEC {
@@ -165,7 +160,7 @@ public class Politician extends Robot {
 
                 Direction move = Nav.tick();
                 if (move != null) {
-                    if (rc.canMove(move)) takeMove(move);
+                    if (rc.canMove(move)) rc.move(move);
                     return;
                 } else if (rc.getLocation().distanceSquaredTo(targetECLoc) > 2) {
                     Nav.doGoTo(targetECLoc); // Nav not allowed to quit
@@ -189,7 +184,7 @@ public class Politician extends Robot {
                 if (!rc.isReady()) return;
 
                 Direction move = Nav.tick();
-                if (move != null && rc.canMove(move)) takeMove(move);
+                if (move != null && rc.canMove(move)) rc.move(move);
 
                 if (move == null) {
                     int radius = getBestEmpowerRadius(0.6);
@@ -321,18 +316,9 @@ public class Politician extends Robot {
                     failedToMoveTurns = 0;
                     if (Nav.currentGoal == Nav.NavGoal.Follow)
                         followingTurns++;
-                    takeMove(move);
+                    rc.move(move);
                 } else {
                     failedToMoveTurns++;
-                }
-            }
-        },
-        Buffer {
-            public void act() throws GameActionException {
-                if (!rc.isReady()) return;
-                int dist = currentLocation.distanceSquaredTo(centerLoc);
-                if (rc.senseNearbyRobots(dist).length == 1) {
-                    rc.empower(dist);
                 }
             }
         };
