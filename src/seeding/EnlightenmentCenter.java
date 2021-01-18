@@ -59,8 +59,10 @@ public class EnlightenmentCenter extends Robot {
             if (!enemyECNearby && bot.getTeam() == rc.getTeam().opponent()) {
                 enemyECNearby = true;
                 MapLocation best = bot.getLocation();
-                qc.push(RobotType.POLITICIAN, (int) (bot.getInfluence()*0.8) + GameConstants.EMPOWER_TAX,
-                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), ULTRA_HIGH);
+                for (int i = 0; i < 15; i++) {
+                    qc.push(RobotType.MUCKRAKER, 1,
+                            makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), ULTRA_HIGH);
+                }
             }
         }
 
