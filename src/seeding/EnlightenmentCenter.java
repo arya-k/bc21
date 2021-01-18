@@ -247,12 +247,13 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void urgentQueueing() {
+    void urgentQueueing() throws GameActionException {
         // final defender business
-        if (addedFinalDefender) return;
-        if (finalDefenderID == -1 || !rc.canGetFlag(finalDefenderID)) {
-            qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), HIGH);
-            addedFinalDefender = true;
+        if (!addedFinalDefender) {
+            if (finalDefenderID == -1 || !rc.canGetFlag(finalDefenderID)) {
+                qc.push(RobotType.POLITICIAN, getPoliticianInfluence(), makeMessage(Label.FINAL_FRONTIER), HIGH);
+                addedFinalDefender = true;
+            }
         }
 
         // buffer business
@@ -260,11 +261,8 @@ public class EnlightenmentCenter extends Robot {
             int turnsUntilEmpower = (int) (RobotType.POLITICIAN.initialCooldown + (int) rc.getCooldownTurns());
             double factor = rc.getEmpowerFactor(rc.getTeam(), turnsUntilEmpower);
             int influence = rc.getInfluence() - influenceMinimum();
-            if (factor > 3) {
-                System.out.println("I COULD HAVE " + (factor * influence - GameConstants.EMPOWER_TAX) + "INFLUENCE!");
-            }
-            if (factor * influence - GameConstants.EMPOWER_TAX > 1.2 * rc.getInfluence()) {
-                System.out.println("BUFFING THE HELL OUT OF MYSELF!");
+            if (factor * influence - GameConstants.EMPOWER_TAX > 2 * rc.getInfluence()) {
+                System.out.println("BUFFING MYSELF!");
                 qc.push(RobotType.POLITICIAN, influence, makeMessage(Label.BUFF), ULTRA_HIGH);
                 addedBuffer = true;
             }
