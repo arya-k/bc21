@@ -56,9 +56,11 @@ public class EnlightenmentCenter extends Robot {
             if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
             addOrUpdateEC(bot.getLocation(), bot.getTeam(), bot.getInfluence());
 
-            if (bot.getTeam() == rc.getTeam().opponent()) {
-                state = State.AttackEnemy;
+            if (!enemyECNearby && bot.getTeam() == rc.getTeam().opponent()) {
                 enemyECNearby = true;
+                MapLocation best = bot.getLocation();
+                qc.push(RobotType.POLITICIAN, (int) (bot.getInfluence()*0.8) + GameConstants.EMPOWER_TAX,
+                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), ULTRA_HIGH);
             }
         }
 
@@ -92,6 +94,7 @@ public class EnlightenmentCenter extends Robot {
         super.onUpdate();
         boolean tracked = qc.trackLastBuiltUnit();
 
+        updateNearbyEC();
         processFlags();
         invalidateOldDangerousness();
         transition();
@@ -122,8 +125,6 @@ public class EnlightenmentCenter extends Robot {
     /* Production and Stimulus Logic */
 
     static void transition() throws GameActionException {
-        if (checkEnemyEC()) return;
-
         // * -> Defense
         underAttack = getUnderAttack();
         if (underAttack || bestDangerDir() != null) {
@@ -240,10 +241,8 @@ public class EnlightenmentCenter extends Robot {
 
                 int influence = ECInfluence[bestEnemyEC];
                 MapLocation best = ECLocs[bestEnemyEC];
-                int priority = MED;
-                if (enemyECNearby) priority = ULTRA_HIGH;
                 qc.push(RobotType.POLITICIAN, influence + GameConstants.EMPOWER_TAX,
-                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), priority);
+                        makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), MED);
 
             }
         };
@@ -367,7 +366,7 @@ public class EnlightenmentCenter extends Robot {
         ECInfluence[idx] = influence;
     }
 
-    static boolean checkEnemyEC() throws GameActionException {
+    static void updateNearbyEC() throws GameActionException {
         Team enemy = rc.getTeam().opponent();
         enemyECNearby = false;
         for (int i = 0; i < ECFound; i++) {
@@ -379,7 +378,6 @@ public class EnlightenmentCenter extends Robot {
                 ECTeam[i] = ec.getTeam();
             }
         }
-        return enemyECNearby;
     }
 
     static int getWeakestEnemyEC() {
