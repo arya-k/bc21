@@ -51,7 +51,7 @@ public class BidController {
                 return;
         }
 
-        if (lostInARow >= 5 && proportionNeeded < 0.6) {
+        if (lostInARow >= 5 && proportionNeeded < 0.6 && rc.getRoundNum() < 1350) {
             // take a break
             bidlessBreak = 25;
             state = State.OnABreak;
