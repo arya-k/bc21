@@ -244,7 +244,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="""
-        A Bidding Simulator for MIT Battlecode 2021. See constant_bid.py for an example strategy implementation.
+        A Bidding Simulator for MIT Battlecode 2021. See constant.py for an example strategy implementation.
         """
     )
     parser.add_argument(
