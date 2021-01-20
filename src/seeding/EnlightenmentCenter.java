@@ -4,7 +4,6 @@ import battlecode.common.*;
 import seeding.Communication.Label;
 import seeding.Communication.Message;
 import seeding.utils.IterableIdSet;
-import seeding.utils.UnitBuild;
 
 import static seeding.Communication.decode;
 import static seeding.QueueController.*;
@@ -286,13 +285,13 @@ public class EnlightenmentCenter extends Robot {
             bufferID = -1;
         }
 
-        int influence = getSlandererInfluence();
-        UnitBuild nextUnit = qc.peek();
-        if (nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC) {
-            if (influence > 0 && rc.getInfluence() < nextUnit.influence) {
-                qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), HIGH);
-            }
-        }
+//        int influence = getSlandererInfluence();
+//        UnitBuild nextUnit = qc.peek();
+//        if (nextUnit != null && nextUnit.message.label == Label.CAPTURE_NEUTRAL_EC) {
+//            if (influence > 0 && rc.getInfluence() < nextUnit.influence) {
+//                qc.push(RobotType.SLANDERER, influence, makeMessage(Label.SAFE_DIR, safestDir().ordinal()), HIGH);
+//            }
+//        }
     }
 
     void updateDangerousness(MapLocation updateLoc, int num_enemies, int sawHeavy, boolean sawMuckraker) {
