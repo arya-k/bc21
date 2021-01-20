@@ -453,7 +453,7 @@ public class EnlightenmentCenter extends Robot {
             boolean isDangerous = enemyECDirs[i] || dangerousness[i] > 0.75;
             int required = isDangerous ? (int) ((rc.getRoundNum() / 125 + 1) * dangerousness[i])
                     : (int) ((rc.getRoundNum() / 250) * dangerousness[i]);
-            requiredIn[i] = Math.min(3, required) - defendersIn[i];
+            requiredIn[i] = Math.min(4, required) - defendersIn[i];
         }
         return requiredIn;
     }

@@ -83,7 +83,7 @@ public class Slanderer extends Robot {
                     takeMove(move);
                 if (move == Direction.CENTER
                         && centerLoc.isWithinDistanceSquared(rc.getLocation(), 4)) {
-                    System.out.println("rotating to the left from " + safeDir);
+//                    System.out.println("rotating to the left from " + safeDir);
                     safeDir = safeDir.rotateLeft();
                     Nav.doGoTo(getTargetLoc());
                 }
