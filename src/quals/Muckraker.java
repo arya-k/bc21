@@ -226,34 +226,10 @@ public class Muckraker extends Robot {
         Explore {
             @Override
             public void act() throws GameActionException {
-                noteNearbyECs();
                 if (trySlandererKill()) return;
                 Direction move = Nav.tick();
                 followingCooldown--;
                 if (move != null && rc.canMove(move)) takeMove(move);
-
-                // Inform about nearby ECs
-                for (RobotInfo info : rc.senseNearbyRobots()) {
-                    if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
-
-                    if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
-                            seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||
-                            seenECs[8] == info.ID || seenECs[9] == info.ID || seenECs[10] == info.ID || seenECs[11] == info.ID) {
-                        continue; // we don't want to note it again
-                    }
-                    seenECs[(numSeenECs++) % 12] = info.getID();
-
-                    MapLocation loc = info.getLocation();
-                    int log = (int) (Math.log(info.getConviction()) / Math.log(2)) + 1;
-                    if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
-                        flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
-                    } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
-                        flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
-                    } else {
-                        flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
-                    }
-                    return;
-                }
             }
         },
 

@@ -24,7 +24,7 @@ public class QueueController {
     static Direction[] spawnDirs = new Direction[8];
 
     // good influences to build slanderers at
-    static final int[] slandererInfluences = {41, 63, 107, 130, 154, 178, 203, 229, 255, 282, 339, 399, 431, 498, 569, 605, 683, 724, 949};
+    static final int[] slandererInfluences = {85, 107, 130, 154, 178, 203, 229, 255, 282, 339, 399, 431, 498, 569, 605, 683, 724, 949};
 
     public static void init() throws GameActionException {
         rc = Robot.rc;
@@ -34,6 +34,10 @@ public class QueueController {
     /* Managing the Queue */
     public static void push(RobotType type, Communication.Message message, double significance, int level) {
         pq.push(new UnitBuild(type, message, significance), level);
+    }
+
+    public static void push(RobotType type, Communication.Message message, int influence, int level) {
+        pq.push(new UnitBuild(type, message, influence), level);
     }
 
     public static UnitBuild peek() {
@@ -96,6 +100,8 @@ public class QueueController {
                 nextUnitInfluence = Math.max(unitCap, 14);
                 break;
         }
+        // override influence
+        if (nextUnit.influence != -1) nextUnitInfluence = nextUnit.influence;
 
         if (nextUnitInfluence <= 0 || myInfluence - nextUnitInfluence < influenceMinimum()) {
             return false;
@@ -152,7 +158,7 @@ public class QueueController {
     }
 
     public static int influenceMinimum() {
-        return 20 + (int) (rc.getRoundNum() * 0.1);
+        return 5 + (int) (rc.getRoundNum() * 0.1);
     }
 
     private static void calcBestSpawnDirs() throws GameActionException {

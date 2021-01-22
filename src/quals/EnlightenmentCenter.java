@@ -25,6 +25,7 @@ public class EnlightenmentCenter extends Robot {
     static int[] muckrakerLastUpdate = new int[8];
     static int[] muckrakersInDir = new int[8];
     static Direction currentSafestDir = null;
+    static boolean newSafeDir = false;
 
 
     // Non-self ECs that have been found so far
@@ -54,7 +55,7 @@ public class EnlightenmentCenter extends Robot {
                 MapLocation best = bot.getLocation();
                 for (int i = 0; i < 15; i++) {
                     QueueController.push(RobotType.MUCKRAKER,
-                            makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), 0, ULTRA_HIGH);
+                            makeMessage(Label.ATTACK_LOC, best.x % 128, best.y % 128), 0.0, ULTRA_HIGH);
                 }
             }
         }
@@ -62,7 +63,7 @@ public class EnlightenmentCenter extends Robot {
         // initialize priority queue
         QueueController.push(RobotType.SLANDERER, makeMessage(Label.HIDE), 0.9, HIGH); // Econ slanderer
         for (Direction dir : Robot.directions) // Scout politician
-            QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.SCOUT, dir.ordinal()), 0, MED);
+            QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.SCOUT, dir.ordinal()), 0.0, MED);
     }
 
     void lowPriorityLogging() {
@@ -96,7 +97,7 @@ public class EnlightenmentCenter extends Robot {
         boolean built = false;
         if (QueueController.isEmpty())
             state.refillQueue();
-        if (bufferID == -1) // dont build anything while a buffer is out!
+        if (bufferID == -1 && !newSafeDir) // dont build anything while a buffer is out!
             built = QueueController.tryUnitBuild();
 
         // Consider bidding
@@ -105,13 +106,8 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
 
         if (!tracked && !built) {
-            Direction safeDir = safestDir();
-            if (!safeDir.equals(currentSafestDir)) {
-                currentSafestDir = safeDir;
-                flagMessage(Label.SAFE_DIR, safeDir.ordinal());
-            } else {
-                rc.setFlag(0);
-            }
+            flagMessage(Label.SAFE_DIR, safestDir().ordinal());
+            newSafeDir = false;
         }
 
         // End turn.
@@ -126,8 +122,8 @@ public class EnlightenmentCenter extends Robot {
         int bestIdx = getBestEC();
         state = State.AttackLoc;
         if (bestIdx == -1
-                || ECInfluence[bestIdx] > rc.getInfluence() * 2
-                || ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100) state = State.SlandererEconomy;
+                || (ECTeam[bestIdx] == Team.NEUTRAL && ECInfluence[bestIdx] > rc.getInfluence() * 2)
+                || (ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100)) state = State.SlandererEconomy;
     }
 
     private enum State {
@@ -135,9 +131,9 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() {
                 Message msg = makeMessage(Label.SAFE_DIR, safestDir().ordinal());
-                QueueController.push(RobotType.SLANDERER, msg, 0.7, MED);
-                QueueController.pushMany(RobotType.POLITICIAN, msg, 0.05, MED, 3);
-                QueueController.push(RobotType.SLANDERER, msg, 0.7, MED);
+                QueueController.push(RobotType.SLANDERER, msg, 0.9, MED);
+                QueueController.pushMany(RobotType.POLITICIAN, msg, 0.05, MED, 2);
+                QueueController.push(RobotType.SLANDERER, msg, 0.9, MED);
             }
         },
         AttackLoc {
@@ -146,9 +142,13 @@ public class EnlightenmentCenter extends Robot {
                 int bestIdx = getBestEC();
                 MapLocation ecLoc = ECLocs[bestIdx];
                 Message msg = makeMessage(Label.ATTACK_LOC, ecLoc.x % 128, ecLoc.y % 128);
-                QueueController.pushMany(RobotType.POLITICIAN, msg, rc.getInfluence() > 1000 ? 0.8 : 0.5, MED, rc.getRoundNum() / 200 + 1);
-                QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0, MED, rc.getRoundNum() / 100 + 1);
-                QueueController.pushMany(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.05, MED, rc.getInfluence() / 750);
+                if (ECTeam[bestIdx] == Team.NEUTRAL)
+                    QueueController.push(RobotType.POLITICIAN, msg, ECInfluence[bestIdx], MED);
+                else {
+                    QueueController.pushMany(RobotType.POLITICIAN, msg, rc.getInfluence() > 1000 ? 0.8 : 0.5, MED, rc.getRoundNum() / 200 + 1);
+                    QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, MED, rc.getRoundNum() / 100 + 1);
+                    QueueController.pushMany(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.05, MED, rc.getInfluence() / 750);
+                }
             }
         };
 
@@ -230,6 +230,7 @@ public class EnlightenmentCenter extends Robot {
                     int num_muckrakers = message.data[2];
                     if (num_muckrakers > muckrakersInDir[relevant]
                             || rc.getRoundNum() - muckrakerLastUpdate[relevant] > 20) {
+                        newSafeDir = true;
                         muckrakerLastUpdate[relevant] = rc.getRoundNum();
                         muckrakersInDir[relevant] = num_muckrakers;
                     }
