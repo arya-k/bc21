@@ -126,8 +126,8 @@ public class EnlightenmentCenter extends Robot {
         int bestIdx = getBestEC();
         state = State.AttackLoc;
         if (bestIdx == -1
-                || ECInfluence[bestIdx] > rc.getInfluence() * 2) state = State.SlandererEconomy;
-        if (ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100) state = State.SlandererEconomy;
+                || ECInfluence[bestIdx] > rc.getInfluence() * 2
+                || ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100) state = State.SlandererEconomy;
     }
 
     private enum State {
