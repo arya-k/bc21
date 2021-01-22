@@ -40,6 +40,10 @@ abstract public class Robot {
     static int[] seenECs = new int[12];
     static int numSeenECs = 0;
 
+    /* Attack Location vars */
+    static MapLocation[] attackLocs = new MapLocation[12];
+    static int numAttackLocs = 0;
+
 
     public static void init(RobotController rc) throws GameActionException {
         Robot.firstTurn = rc.getRoundNum();
@@ -81,25 +85,30 @@ abstract public class Robot {
         if (rc.getType() != RobotType.ENLIGHTENMENT_CENTER) {
             // send back information about danger to your EC
             if (assignment == null || assignment.label != Label.BUFF) {
-                int num_enemies = 0;
-                boolean sawMuckraker = false;
-                boolean sawHeavy = false;
+                int num_muckrakers = 0;
                 MapLocation locationToSend = currentLocation;
                 for (RobotInfo bot : nearby) {
                     if (bot.getTeam() == rc.getTeam()) continue;
-                    if (bot.getType() == RobotType.ENLIGHTENMENT_CENTER || bot.getType() == RobotType.SLANDERER)
-                        continue;
-                    if (bot.getType() == RobotType.POLITICIAN && bot.getInfluence() < GameConstants.EMPOWER_TAX)
-                        continue;
-                    if (bot.getType() == RobotType.MUCKRAKER) sawMuckraker = true;
-                    if (bot.getInfluence() > Math.max(40, rc.getRoundNum() / 4)) sawHeavy = true;
+                    if (bot.getType() != RobotType.MUCKRAKER) continue;
                     if (locationToSend.equals(currentLocation)) locationToSend = bot.getLocation();
                     if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
                         locationToSend = bot.getLocation();
-                    num_enemies++;
+                    num_muckrakers++;
                 }
                 flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
-                        Math.min(num_enemies, 15), sawMuckraker ? 1 : 0, sawHeavy ? 1 : 0);
+                        Math.min(num_muckrakers, 31));
+            }
+
+            // inform ECs of nearby enlightenment centers
+            noteNearbyECs();
+
+            if (rc.getID() != centerID && rc.canGetFlag(centerID)) {
+                int flag = rc.getFlag(centerID);
+                if (flag != 0) {
+                    Message msg = decode(flag);
+                    if (msg.label == Label.ATTACK_LOC)
+                        addAttackLoc(getLocFromMessage(msg.data[0], msg.data[1]));
+                }
             }
 
 
@@ -130,9 +139,68 @@ abstract public class Robot {
         }
     }
 
+    static void addAttackLoc(MapLocation loc) {
+        int idx = numAttackLocs;
+        for (int i = 0; i < numAttackLocs; i++)
+            if (attackLocs[i].isWithinDistanceSquared(loc, 0))
+                idx = i;
+        if (idx == numAttackLocs) numAttackLocs++;
+        attackLocs[idx] = loc;
+    }
+
+    static void removeAttackLoc(MapLocation loc) {
+        int idx = numAttackLocs;
+        for (int i = 0; i < numAttackLocs; i++)
+            if (attackLocs[i].isWithinDistanceSquared(loc, 0))
+                idx = i;
+        if (idx == numAttackLocs) return;
+        numAttackLocs--;
+        attackLocs[idx] = attackLocs[numAttackLocs];
+    }
+
+    static MapLocation getClosestAttackLoc() {
+        for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
+            if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+            addAttackLoc(bot.getLocation());
+        }
+        MapLocation closest = null;
+        for (int i = 0; i < numAttackLocs; i++) {
+            if (closest == null
+                    || rc.getLocation().distanceSquaredTo(closest) > rc.getLocation().distanceSquaredTo(attackLocs[i]))
+                closest = attackLocs[i];
+        }
+
+        return closest;
+    }
+
+
+    static MapLocation getNearbyEnemyEC() {
+        MapLocation closest = null;
+        for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
+            if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+            if (closest == null
+                    || rc.getLocation().distanceSquaredTo(closest) > rc.getLocation().distanceSquaredTo(bot.getLocation()))
+                closest = bot.getLocation();
+        }
+        return closest;
+    }
+
+
     static void noteNearbyECs() throws GameActionException {
         for (RobotInfo info : nearby) {
             if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
+
+            if (info.getTeam() == rc.getTeam()) {
+                if (centerLoc == null) centerLoc = info.getLocation();
+                if (centerID == rc.getID()) {
+                    centerID = info.getID();
+                    centerLoc = info.getLocation();
+                }
+                if (centerLoc.distanceSquaredTo(rc.getLocation()) > info.getLocation().distanceSquaredTo(rc.getLocation())) {
+                    centerLoc = info.getLocation();
+                    centerID = info.getID();
+                }
+            }
 
             if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
                     seenECs[4] == info.ID || seenECs[5] == info.ID || seenECs[6] == info.ID || seenECs[7] == info.ID ||

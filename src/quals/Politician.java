@@ -10,8 +10,6 @@ public class Politician extends Robot {
 
     /* Defense vars */
     static Direction defendDir;
-    static MapLocation defendLocation;
-    static int defendRadius = 4;
     static int followingTurns = 0;
 
     /* Attack & Neutral EC vars */
@@ -34,21 +32,9 @@ public class Politician extends Robot {
                 Nav.doGoTo(targetECLoc);
                 break;
 
-            case CAPTURE_NEUTRAL_EC:
-                state = State.CaptureNeutralEC;
-                targetECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
-                Nav.doGoTo(targetECLoc);
-                break;
-
-            case FINAL_FRONTIER:
-                state = State.FinalFrontier;
-                break;
-
-            case DEFEND:
+            case SAFE_DIR:
                 state = State.Defend;
                 defendDir = fromOrdinal(assignment.data[0]);
-                defendLocation = getTargetLoc();
-                Nav.doGoTo(defendLocation);
                 break;
 
             case BUFF:
@@ -61,8 +47,6 @@ public class Politician extends Robot {
     void onUpdate() throws GameActionException {
         super.onUpdate();
 
-        calculateClosestEC();
-
         transition();
         state.act();
         Clock.yield();
@@ -70,38 +54,78 @@ public class Politician extends Robot {
 
     void transition() throws GameActionException {
 
-        // Explore -> Explode
-        if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
-            state = State.FinalFrontier; // TODO: we should do something more intelligent here probably.
-        }
-
-        // Explore -> AttackLoc
-        if (state == State.Explore && rc.getInfluence() > GameConstants.EMPOWER_TAX && rc.canGetFlag(centerID)) {
-            int flag = rc.getFlag(centerID);
-            if (flag != 0) {
-                Communication.Message msg = decode(flag);
-                if (msg.label == Communication.Label.ATTACK_LOC) {
-                    state = State.AttackLoc;
-                    targetECLoc = getLocFromMessage(msg.data[0], msg.data[1]);
-                    Nav.doGoTo(targetECLoc);
+        // update defend direction
+        if (state == State.Defend && (Nav.currentGoal == Nav.NavGoal.Nothing || Nav.currentGoal == Nav.NavGoal.GoInDir)) {
+            if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
+                int flag = rc.getFlag(centerID);
+                if (flag != 0) {
+                    Communication.Message msg = decode(flag);
+                    if (msg.label == Communication.Label.SAFE_DIR) {
+                        defendDir = fromOrdinal(msg.data[0]);
+                        Nav.doGoInDir(defendDir);
+                    }
                 }
             }
         }
 
-        // CaptureNeutralEC -> Explore 
-        if (state == State.CaptureNeutralEC && rc.canSenseLocation(targetECLoc) &&
-                rc.senseRobotAtLocation(targetECLoc).getTeam() != Team.NEUTRAL) {
+        // Explore -> AttackLoc
+        if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
+            state = State.AttackLoc;
+        }
+
+        // Explore -> AttackLoc
+        MapLocation closestAttackLoc = getClosestAttackLoc();
+        if (state == State.Explore && closestAttackLoc != null && closestAttackLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
+            state = State.AttackLoc;
+        }
+
+        // Remove attack location that has been converted
+        if (state == State.AttackLoc && rc.canSenseLocation(closestAttackLoc) &&
+                rc.senseRobotAtLocation(closestAttackLoc).getTeam() == rc.getTeam()) {
+            removeAttackLoc(closestAttackLoc);
+        }
+        closestAttackLoc = getClosestAttackLoc();
+
+        // AttackLoc -> Explore
+        if (state == State.AttackLoc && closestAttackLoc == null) {
             state = State.Explore;
             Nav.doExplore();
         }
 
-        // AttackLoc -> Explore if the EC is on our team!
-        if (state == State.AttackLoc) {
-            if (Nav.currentGoal == Nav.NavGoal.Nothing
-                    || (rc.canSenseLocation(targetECLoc) && rc.senseRobotAtLocation(targetECLoc).getTeam() == rc.getTeam())) {
-                state = State.Explore;
-                Nav.doExplore();
+        // * -> AttackLocation
+        if (getNearbyEnemyEC() != null) {
+            state = State.AttackLoc;
+        }
+
+        // Defend -> Explore
+        if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.GoInDir) {
+            MapLocation checkLoc = rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2);
+            if (!rc.onTheMap(checkLoc)) {
+                System.out.println("reached edge of map, switching to location");
+                Direction newDir = defendDir.rotateRight().rotateRight();
+                MapLocation target = rc.getLocation().translate(newDir.dx * 3, newDir.dy * 3);
+                Nav.doGoTo(target);
+                System.out.println("TARGET: " + target);
             }
+        }
+
+        // Explore -> Defend
+        boolean canSeeMuckraker = false;
+        for (RobotInfo bot : nearby) {
+            if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
+                canSeeMuckraker = true;
+                break;
+            }
+        }
+        if (state == State.Explore && canSeeMuckraker) {
+            state = State.Defend;
+            defendDir = randomDirection();
+        }
+
+        // update current attack location
+        if (state == State.AttackLoc) {
+            targetECLoc = closestAttackLoc;
+            Nav.doGoTo(closestAttackLoc);
         }
     }
 
@@ -109,7 +133,6 @@ public class Politician extends Robot {
         Explore {
             @Override
             public void act() throws GameActionException {
-                noteNearbyECs();
                 if (!rc.isReady()) return;
 
                 // See if offensive speech is possible.
@@ -122,26 +145,6 @@ public class Politician extends Robot {
                 // otherwise move
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) takeMove(move);
-            }
-        },
-        CaptureNeutralEC {
-            @Override
-            public void act() throws GameActionException {
-                if (!rc.isReady()) return;
-
-                Direction move = Nav.tick();
-                if (move != null) {
-                    if (rc.canMove(move)) takeMove(move);
-                    return;
-                } else if (rc.getLocation().distanceSquaredTo(targetECLoc) > 2) {
-                    Nav.doGoTo(targetECLoc); // Nav not allowed to quit
-                }
-
-                if (!rc.getLocation().isWithinDistanceSquared(targetECLoc, rc.getType().actionRadiusSquared)) return;
-
-                // should be able to convert the EC
-                int radius = getBestEmpowerRadius(1);
-                if (radius != -1) rc.empower(radius);
             }
         },
         AttackLoc {
@@ -157,82 +160,26 @@ public class Politician extends Robot {
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) takeMove(move);
 
-                if (move == null) {
-                    int radius = getBestEmpowerRadius(0.6);
+                if (rc.getLocation().isWithinDistanceSquared(targetECLoc, 36)) {
+                    int radius = getBestEmpowerRadius(0.5);
                     if (radius != -1 && rc.canEmpower(radius))
                         rc.empower(radius);
-                    else
-                        Nav.doGoTo(targetECLoc);
                 }
-            }
-        },
-        FinalFrontier {
-            public void act() throws GameActionException {
-                if (!rc.isReady()) return;
-                RobotInfo[] enemiesNearby;
-
-                // Figure out which radius maximizes our kills
-                int maxKills = 0, maxKillRadius = 0;
-                for (int radius = 1; radius <= 9; radius++) {
-                    enemiesNearby = rc.senseNearbyRobots(radius, rc.getTeam().opponent());
-                    if (enemiesNearby.length == 0) continue;
-                    int attackPower = (int) (
-                            (rc.getInfluence() * rc.getEmpowerFactor(rc.getTeam(), 0)
-                                    - GameConstants.EMPOWER_TAX) / enemiesNearby.length
-                    );
-
-                    int currentKills = 0;
-                    for (RobotInfo enemy : enemiesNearby)
-                        if (attackPower > enemy.getConviction())
-                            currentKills++;
-
-                    if (currentKills > maxKills) {
-                        maxKills = currentKills;
-                        maxKillRadius = radius;
-                    }
-                }
-                if (maxKills > 0) rc.empower(maxKillRadius);
-
-                // We can't kill anybody- but if we could be converted, or can hit three enemies, then we attack anyways.
-                enemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-                if (enemiesNearby.length >= 3 || canBeConverted()) {
-                    int radius = getBestEmpowerRadius(0.1);
-                    if (radius == -1) radius = 9; // default to 9.
-                    rc.empower(radius);
-                    return;
-                }
-
+                if (move == null) // don't give up
+                    Nav.doGoTo(targetECLoc);
             }
         },
         Defend {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-
-                if (Nav.currentGoal == Nav.NavGoal.Nothing) {
-                    int numAlliesCloser = 0;
-                    int myDist = centerLoc.distanceSquaredTo(currentLocation);
-                    for (RobotInfo bot : nearby) {
-                        if (bot.getTeam() == rc.getTeam() && myDist > bot.getLocation().distanceSquaredTo(centerLoc)) {
-                            numAlliesCloser++;
-                        }
-                    }
-                    if (numAlliesCloser > 12) {
-                        defendRadius++;
-                        defendLocation = getTargetLoc();
-                    }
-                    Nav.doGoTo(defendLocation); // Don't allow Nav to quit
-                }
-
                 RobotInfo closestEnemy = null;
                 for (RobotInfo enemy : nearby) {
-                    if ((enemy.getType() == RobotType.MUCKRAKER || enemy.getType() == RobotType.POLITICIAN) &&
-                            enemy.getTeam() != rc.getTeam()) { // Enemy <Muckraker | Politician>
+                    if (enemy.getType() == RobotType.MUCKRAKER &&
+                            enemy.getTeam() != rc.getTeam()) { // Enemy Muckraker
                         if (closestEnemy == null ||
                                 enemy.getLocation().distanceSquaredTo(currentLocation)
                                         < closestEnemy.getLocation().distanceSquaredTo(currentLocation)) {
-                            if (enemy.getType() == RobotType.POLITICIAN && enemy.getInfluence() < GameConstants.EMPOWER_TAX)
-                                continue;
                             Nav.doFollow(enemy.getID());
                             closestEnemy = enemy;
                         }
@@ -240,31 +187,28 @@ public class Politician extends Robot {
                 }
 
                 if (closestEnemy != null) {
-                    if (closestEnemy.getType() == RobotType.MUCKRAKER) {
-                        // See if another defending robot can get to the enemy first
-                        for (RobotInfo bot : nearby) {
-                            if (bot.getType() == RobotType.POLITICIAN
-                                    && bot.getTeam() == rc.getTeam()
-                                    && bot.getLocation().isWithinDistanceSquared(closestEnemy.getLocation(), 2)
-                            ) {
-                                int flag = rc.getFlag(bot.getID());
-                                if (flag != 0 && decode(flag).label == Communication.Label.CURRENTLY_DEFENDING) {
-                                    closestEnemy = null;
-                                    break;
-                                }
+                    // See if another defending robot can get to the enemy first
+                    for (RobotInfo bot : nearby) {
+                        if (bot.getType() == RobotType.POLITICIAN
+                                && bot.getTeam() == rc.getTeam()
+                                && bot.getLocation().isWithinDistanceSquared(closestEnemy.getLocation(), 2)
+                        ) {
+                            int flag = rc.getFlag(bot.getID());
+                            if (flag != 0 && decode(flag).label == Communication.Label.CURRENTLY_DEFENDING) {
+                                closestEnemy = null;
+                                break;
                             }
                         }
-                        if (closestEnemy != null // Note that we are the one to defend against this robot!
-                                && closestEnemy.getLocation().isWithinDistanceSquared(currentLocation, 2)) {
-                            flagMessage(Communication.Label.CURRENTLY_DEFENDING);
-                        }
+                    }
+                    if (closestEnemy != null // Note that we are the one to defend against this robot!
+                            && closestEnemy.getLocation().isWithinDistanceSquared(currentLocation, 2)) {
+                        flagMessage(Communication.Label.CURRENTLY_DEFENDING);
                     }
                 }
 
-                if (closestEnemy == null) { // Generic defense.
+                if (closestEnemy == null && (Nav.currentGoal == Nav.NavGoal.Nothing || Nav.currentGoal == Nav.NavGoal.Follow)) { // Generic defense.
                     followingTurns = 0;
-                    Nav.doGoTo(defendLocation);
-                    flagMessage(Communication.Label.DEFEND, defendDir.ordinal());
+                    Nav.doGoInDir(defendDir);
                 }
 
                 // Consider exploding
@@ -273,15 +217,15 @@ public class Politician extends Robot {
                     if (bot.getTeam() == rc.getTeam() && bot.getType() == RobotType.POLITICIAN)
                         alliesNearby++;
                 }
-                double threshold = followingTurns > 6 || alliesNearby > 15 ? 0.1 : 0.6;
+                double threshold = alliesNearby > 15 ? 0.1 : 0.6;
                 int radius = getBestEmpowerRadius(threshold);
                 if (radius != -1) rc.empower(radius);
 
                 // Consider moving
                 Direction move = Nav.tick();
+                if (Nav.currentGoal == Nav.NavGoal.Follow)
+                    followingTurns++;
                 if (move != null && rc.canMove(move)) {
-                    if (Nav.currentGoal == Nav.NavGoal.Follow)
-                        followingTurns++;
                     takeMove(move);
                 }
             }
@@ -300,20 +244,6 @@ public class Politician extends Robot {
 
     }
 
-    static MapLocation getTargetLoc() throws GameActionException {
-        int radius = defendRadius;
-        MapLocation targetLoc = centerLoc.translate(defendDir.dx * radius, defendDir.dy * radius);
-        targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
-        if ((targetLoc.x + targetLoc.y) % 2 != 0) {
-            targetLoc = targetLoc.translate(defendDir.dx, 0);
-        }
-        if (radius > 4 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
-            defendDir = randomDirection();
-            defendRadius = 4;
-            return getTargetLoc();
-        }
-        return targetLoc;
-    }
 
     /**
      * Whether we can be converted by enemy forces, if they focus solely on us.
@@ -347,30 +277,32 @@ public class Politician extends Robot {
 
         double usefulInfluence = 0;
         int enemies = 0;
+        int num_conversions = 0;
 
         for (int i = 0; i < nearbyRobots.length; i++) {
             RobotInfo info = nearbyRobots[i];
             if (info.getTeam() == rc.getTeam().opponent()) {
                 // opponent unit
                 enemies++;
-                if (info.getType() == RobotType.MUCKRAKER &&
-                        !info.getLocation().isWithinDistanceSquared(closestECLoc, 65)) {
+                if (info.getType() == RobotType.MUCKRAKER) {
                     // killing muckrakers far away from our EC is a waste
                     // 65 ~= (4.5 + sqrt(12))^2
                     usefulInfluence += info.getConviction();
+                    if (followingTurns > 4) return 1;
                 } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER
                         && range <= 2 && shouldAttackEC(info)) {
                     // test if enemy EC is surrounded and we have backup
                     return 1;
                 } else if (info.getType() != RobotType.POLITICIAN || info.getInfluence() > GameConstants.EMPOWER_TAX) {
                     usefulInfluence += perUnit;
+                    if (info.getType() == RobotType.POLITICIAN && info.getConviction() < perUnit)
+                        num_conversions++;
                 }
             } else {
                 // friendly / neutral unit
                 if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
-                    if (info.getTeam() == Team.NEUTRAL && perUnit > info.getConviction())
+                    if (info.getTeam() == Team.NEUTRAL && rc.getLocation().isWithinDistanceSquared(info.getLocation(), 2))
                         return 100;
-                    usefulInfluence += perUnit;
                 } else {
                     usefulInfluence += info.getInfluence() - info.getConviction();
                 }
@@ -379,12 +311,10 @@ public class Politician extends Robot {
 
         // calculate efficiency out of non-buff influence
         double efficiency = usefulInfluence / baseInfluence;
-        if (enemies == 0 && efficiency < 10) {
-            // only do a friendly explosion with a large buff
-            return 0;
-        }
 
-        return efficiency;
+        // if we can convert two politicians, it is worth it to get 2 more turns
+        // also, if we can be converted, exploding is better (avoids getting lightninged)
+        return num_conversions > 1 || canBeConverted() ? 1 : efficiency;
     }
 
     /**
@@ -398,9 +328,11 @@ public class Politician extends Robot {
         int bestRad = -1;
         double bestEff = threshold;
 
+        System.out.println("Checking for threshold: " + threshold);
         for (int i = 1; i <= RobotType.POLITICIAN.actionRadiusSquared; i++) {
             double efficiency = empowerEfficiency(i);
-            if (efficiency > bestEff) {
+            System.out.println("Efficiency at radius " + i + ": " + efficiency);
+            if (efficiency >= bestEff) {
                 bestEff = efficiency;
                 bestRad = i;
             }
@@ -437,20 +369,5 @@ public class Politician extends Robot {
 
         }
         return false;
-    }
-
-    static void calculateClosestEC() {
-        int closestECDist = rc.getLocation().distanceSquaredTo(closestECLoc);
-        for (RobotInfo n : nearby) {
-            if (n.getType() == RobotType.ENLIGHTENMENT_CENTER
-                    && n.getTeam() == rc.getTeam()) {
-                MapLocation curLoc = n.getLocation();
-                int curDist = rc.getLocation().distanceSquaredTo(curLoc);
-                if (curDist < closestECDist) {
-                    closestECLoc = curLoc;
-                    closestECDist = curDist;
-                }
-            }
-        }
     }
 }

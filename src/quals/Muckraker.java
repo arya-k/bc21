@@ -2,7 +2,7 @@ package quals;
 
 import battlecode.common.*;
 
-import static quals.Communication.Label.*;
+import static quals.Communication.Label.ATTACKING;
 import static quals.Communication.decode;
 
 public class Muckraker extends Robot {
@@ -18,6 +18,11 @@ public class Muckraker extends Robot {
     static MapLocation[] cloggedEnemies = new MapLocation[12];
     static int numCloggedEnemies = 0;
 
+    /* defend vars */
+    static Direction defendDir;
+    static int followingTurns;
+    static int followingCooldown = 5;
+
     @Override
     void onAwake() {
         seenECs[numSeenECs++] = centerID;
@@ -32,6 +37,10 @@ public class Muckraker extends Robot {
             case EXPLORE:
                 state = State.Explore;
                 Nav.doExplore();
+                break;
+            case SAFE_DIR:
+                state = State.Defend;
+                Nav.doGoInDir(fromOrdinal(assignment.data[0]));
                 break;
             case ATTACK_LOC:
                 state = State.Clog;
@@ -67,6 +76,52 @@ public class Muckraker extends Robot {
             Nav.doFollow(slandererNearby);
         }
 
+        // update defend direction
+        if (state == State.Defend) {
+            if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
+                int flag = rc.getFlag(centerID);
+                if (flag != 0) {
+                    Communication.Message msg = decode(flag);
+                    if (msg.label == Communication.Label.SAFE_DIR) {
+                        defendDir = fromOrdinal(msg.data[0]);
+                        Nav.doGoInDir(defendDir);
+                    }
+                }
+            }
+        }
+
+        // Defend -> Explore
+        if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.GoInDir) {
+            MapLocation checkLoc = rc.getLocation().translate(defendDir.dx * 3, defendDir.dy * 3);
+            if (!rc.onTheMap(checkLoc)) {
+                followingTurns = 0;
+                followingCooldown = 5;
+                state = State.Explore;
+                Nav.doExplore();
+            }
+        }
+
+        // Explore -> Defend
+        boolean canSeeMuckraker = false;
+        for (RobotInfo bot : nearby) {
+            if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
+                canSeeMuckraker = true;
+                break;
+            }
+        }
+        if (state == State.Explore && followingCooldown <= 0 && canSeeMuckraker) {
+            followingCooldown = 5;
+            state = State.Defend;
+            defendDir = randomDirection();
+        }
+
+        if (state == State.Defend && followingTurns > 5) {
+            followingTurns = 0;
+            followingCooldown = 5;
+            state = State.Explore;
+            Nav.doExplore();
+        }
+
         // Clog -> Explore (when the enemy EC we wanted to attack has been converted or clogged)
         if (state == State.Clog && (rc.canSenseLocation(enemyECLoc) &&
                 rc.senseRobotAtLocation(enemyECLoc).getTeam() != rc.getTeam().opponent()) || isKnownClogged(enemyECLoc)) {
@@ -77,40 +132,30 @@ public class Muckraker extends Robot {
         // Explore -> Clog
         if (state == State.Explore) {
             // If we see a nearby enemy EC we should clog it:
-            for (RobotInfo info : nearby) {
-                if (info.getType() != RobotType.ENLIGHTENMENT_CENTER || info.getTeam() == rc.getTeam()) continue;
-
-                MapLocation loc = info.getLocation();
-                int log = (int) (Math.log(info.getInfluence()) / Math.log(2) + 1);
-                if (info.getTeam() == Team.NEUTRAL) {
-                    flagMessage(NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
-                } else {
-                    flagMessage(ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(15, log));
-                    enemyECLoc = info.getLocation();
-
-                    if (!isKnownClogged(enemyECLoc)) { // We have seen an enemy EC: we should clog it:
-                        Nav.doGoTo(enemyECLoc);
-                        state = State.Clog;
-                        break;
-                    }
-                }
-            }
-
-            // If creating EC says attack location, then switch to Clog
-            if (rc.canGetFlag(centerID)) {
-                int flag = rc.getFlag(centerID);
-                if (flag != 0) {
-                    Communication.Message msg = decode(flag);
-                    if (msg.label == Communication.Label.ATTACK_LOC) {
-                        enemyECLoc = getLocFromMessage(msg.data[0], msg.data[1]);
-                        if (!isKnownClogged(enemyECLoc)) {
-                            state = State.Clog;
-                            Nav.doGoTo(enemyECLoc);
-                        }
-                    }
-                }
+            MapLocation closestEnemy = getNearbyEnemyEC();
+            if (closestEnemy != null) {
+                state = State.Clog;
             }
         }
+
+        // update clogging locations
+        if (state == State.Clog) {
+            MapLocation closestAttackLoc = getClosestAttackLoc();
+            if (closestAttackLoc != null && isKnownClogged(closestAttackLoc)) {
+                removeAttackLoc(closestAttackLoc);
+            }
+        }
+
+        // Clog -> Defend
+        MapLocation closestAttackLoc = getClosestAttackLoc();
+        if (state == State.Clog && closestAttackLoc == null) {
+            state = State.Defend;
+            defendDir = randomDirection();
+            Nav.doGoInDir(defendDir);
+        } else if (state == State.Clog) {
+            Nav.doGoTo(closestAttackLoc);
+        }
+
 
         // Explore -> ChillAroundEC
         if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing)
@@ -184,6 +229,7 @@ public class Muckraker extends Robot {
                 noteNearbyECs();
                 if (trySlandererKill()) return;
                 Direction move = Nav.tick();
+                followingCooldown--;
                 if (move != null && rc.canMove(move)) takeMove(move);
 
                 // Inform about nearby ECs
@@ -229,6 +275,34 @@ public class Muckraker extends Robot {
 
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) takeMove(move);
+            }
+        },
+        Defend {
+            @Override
+            public void act() throws GameActionException {
+                if (trySlandererKill()) return;
+
+                RobotInfo closestEnemy = null;
+                for (RobotInfo enemy : nearby) {
+                    if (enemy.getType() == RobotType.MUCKRAKER &&
+                            enemy.getTeam() != rc.getTeam()) { // Enemy Muckraker
+                        if (closestEnemy == null ||
+                                enemy.getLocation().distanceSquaredTo(currentLocation)
+                                        < closestEnemy.getLocation().distanceSquaredTo(currentLocation)) {
+                            Nav.doFollow(enemy.getID());
+                            closestEnemy = enemy;
+                        }
+                    }
+                }
+                if (closestEnemy == null) { // Generic defense.
+                    Nav.doGoInDir(defendDir);
+                }
+                if (Nav.currentGoal == Nav.NavGoal.Follow)
+                    followingTurns++;
+                Direction move = Nav.tick();
+                if (move != null && rc.canMove(move)) {
+                    takeMove(move);
+                }
             }
         };
 

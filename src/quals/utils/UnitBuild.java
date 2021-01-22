@@ -5,13 +5,13 @@ import quals.Communication;
 
 public class UnitBuild {
     public RobotType type;
-    public int influence;
+    public double significance;
     public int priority = 0;
     public Communication.Message message;
 
-    public UnitBuild(RobotType type, int influence, Communication.Message message) {
+    public UnitBuild(RobotType type, Communication.Message message, double significance) {
         this.type = type;
-        this.influence = influence;
+        this.significance = significance;
         this.message = message;
     }
 }

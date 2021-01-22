@@ -9,7 +9,6 @@ public class Slanderer extends Robot {
 
     /* hide vars */
     static final int HIDE_RAD = 4;
-    static int lastUpdate = -1;
     static Direction safeDir;
 
     /* flee vars */
@@ -17,14 +16,18 @@ public class Slanderer extends Robot {
     static double[] safetyByDir = new double[8];
     static boolean[] viableLoc = new boolean[8];
     static final double SAFETY_DECAY = 0.9;
-    static final int MAX_DIST_FROM_EC = 50;
+    static final int MAX_DIST_FROM_EC = 100;
     static int enemyLastSeen = 0;
 
     @Override
-    void onAwake() throws GameActionException {
+    void onAwake() {
         state = State.Hide; // Slanderers always initialize to hiding!
-        safeDir = fromOrdinal(assignment.data[0]);
-        Nav.doGoTo(getTargetLoc());
+        if (assignment != null && assignment.label == Communication.Label.SAFE_DIR) {
+            safeDir = fromOrdinal(assignment.data[0]);
+            Nav.doGoInDir(safeDir);
+        } else {
+            Nav.doGoTo(randomHoverLocation(HIDE_RAD));
+        }
     }
 
     @Override
@@ -43,16 +46,17 @@ public class Slanderer extends Robot {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
 
         if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
+            state = State.Hide;
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
-                if (msg.label == Communication.Label.SAFE_DIR && rc.getRoundNum() - lastUpdate > 3) {
-                    lastUpdate = rc.getRoundNum();
+                if (msg.label == Communication.Label.SAFE_DIR) {
                     safeDir = fromOrdinal(msg.data[0]);
-                    Nav.doGoTo(getTargetLoc());
-                    state = State.Hide;
+                    Nav.doGoInDir(safeDir);
                 }
             }
+        } else {
+            state = State.Flee;
         }
 
         // track when we last saw enemies
@@ -63,15 +67,9 @@ public class Slanderer extends Robot {
             if (bot.getType() == RobotType.MUCKRAKER)
                 numEnemies++;
         }
-
-
-        // Hide -> Flee
-        if (numEnemies > 0) {
+        if (numEnemies > 0)
             enemyLastSeen = 0;
-            state = State.Flee;
-        } else {
-            state = State.Hide;
-        }
+
     }
 
     private enum State {
@@ -81,14 +79,12 @@ public class Slanderer extends Robot {
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move))
                     takeMove(move);
-                if (move == Direction.CENTER
-                        && centerLoc.isWithinDistanceSquared(rc.getLocation(), 4)) {
-//                    System.out.println("rotating to the left from " + safeDir);
-                    safeDir = safeDir.rotateLeft();
-                    Nav.doGoTo(getTargetLoc());
-                }
                 if (move == null) {
-                    Nav.doGoTo(getTargetLoc());
+                    if (safeDir == null)
+                        Nav.doGoTo(randomHoverLocation(HIDE_RAD));
+                    else {
+                        Nav.doGoInDir(safeDir);
+                    }
                 }
             }
         },
@@ -153,14 +149,5 @@ public class Slanderer extends Robot {
         int x = (int) (radius * Math.cos(angle));
         int y = (int) (radius * Math.sin(angle));
         return centerLoc.translate(x, y);
-    }
-
-    static MapLocation getTargetLoc() throws GameActionException {
-        MapLocation targetLoc = centerLoc.translate(safeDir.dx * HIDE_RAD, safeDir.dy * HIDE_RAD);
-        targetLoc = targetLoc.translate(safeDir.dx * (int) (Math.random() * (HIDE_RAD / 2)), safeDir.dy * (int) (Math.random() * (HIDE_RAD / 2)));
-        if ((targetLoc.x + targetLoc.y) % 2 != 0) {
-            targetLoc = targetLoc.translate(safeDir.dx, 0);
-        }
-        return targetLoc;
     }
 }
