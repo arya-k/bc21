@@ -11,6 +11,7 @@ public class Politician extends Robot {
     /* Defense vars */
     static Direction defendDir;
     static int followingTurns = 0;
+    static int defendRadius = 5;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -35,6 +36,7 @@ public class Politician extends Robot {
             case SAFE_DIR:
                 state = State.Defend;
                 defendDir = fromOrdinal(assignment.data[0]);
+                Nav.doGoInDir(defendDir);
                 break;
 
             case BUFF:
@@ -101,11 +103,8 @@ public class Politician extends Robot {
         if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.GoInDir) {
             MapLocation checkLoc = rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2);
             if (!rc.onTheMap(checkLoc)) {
-                System.out.println("reached edge of map, switching to location");
-                Direction newDir = defendDir.rotateRight().rotateRight();
-                MapLocation target = rc.getLocation().translate(newDir.dx * 3, newDir.dy * 3);
-                Nav.doGoTo(target);
-                System.out.println("TARGET: " + target);
+                defendDir = defendDir.rotateRight();
+                Nav.doGoTo(getTargetLoc());
             }
         }
 
@@ -244,6 +243,21 @@ public class Politician extends Robot {
 
     }
 
+    static MapLocation getTargetLoc() throws GameActionException {
+        int radius = defendRadius;
+        MapLocation targetLoc = centerLoc.translate(defendDir.dx * radius, defendDir.dy * radius);
+        targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
+        if ((targetLoc.x + targetLoc.y) % 2 != 0) {
+            targetLoc = targetLoc.translate(defendDir.dx, 0);
+        }
+        if (radius > 4 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
+            defendDir = randomDirection();
+            defendRadius = 4;
+            return getTargetLoc();
+        }
+        return targetLoc;
+    }
+
 
     /**
      * Whether we can be converted by enemy forces, if they focus solely on us.
@@ -288,7 +302,7 @@ public class Politician extends Robot {
                     // killing muckrakers far away from our EC is a waste
                     // 65 ~= (4.5 + sqrt(12))^2
                     usefulInfluence += info.getConviction();
-                    if (followingTurns > 4) return 1;
+                    if (followingTurns > 4) return 1 * range;
                 } else if (info.getType() == RobotType.ENLIGHTENMENT_CENTER
                         && range <= 2 && shouldAttackEC(info)) {
                     // test if enemy EC is surrounded and we have backup
@@ -332,12 +346,13 @@ public class Politician extends Robot {
         for (int i = 1; i <= RobotType.POLITICIAN.actionRadiusSquared; i++) {
             double efficiency = empowerEfficiency(i);
             System.out.println("Efficiency at radius " + i + ": " + efficiency);
-            if (efficiency >= bestEff) {
+            if (efficiency > bestEff) {
                 bestEff = efficiency;
                 bestRad = i;
             }
         }
 
+        System.out.println("best: " + bestRad);
         return bestRad;
     }
 

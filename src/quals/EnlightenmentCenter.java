@@ -32,6 +32,7 @@ public class EnlightenmentCenter extends Robot {
     static MapLocation[] ECLocs = new MapLocation[11];
     static Team[] ECTeam = new Team[11];
     static int[] ECInfluence = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    static int[] ECLastQueued = {-100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100};
     static int ECFound = 0;
 
     // TODO: we need to do something with this info!
@@ -134,6 +135,7 @@ public class EnlightenmentCenter extends Robot {
                 QueueController.push(RobotType.SLANDERER, msg, 0.9, MED);
                 QueueController.pushMany(RobotType.POLITICIAN, msg, 0.05, MED, 2);
                 QueueController.push(RobotType.SLANDERER, msg, 0.9, MED);
+                QueueController.pushMany(RobotType.MUCKRAKER, msg, 0.0, MED, rc.getRoundNum() / 50);
             }
         },
         AttackLoc {
@@ -142,9 +144,10 @@ public class EnlightenmentCenter extends Robot {
                 int bestIdx = getBestEC();
                 MapLocation ecLoc = ECLocs[bestIdx];
                 Message msg = makeMessage(Label.ATTACK_LOC, ecLoc.x % 128, ecLoc.y % 128);
-                if (ECTeam[bestIdx] == Team.NEUTRAL)
+                if (ECTeam[bestIdx] == Team.NEUTRAL) {
+                    ECLastQueued[bestIdx] = rc.getRoundNum();
                     QueueController.push(RobotType.POLITICIAN, msg, ECInfluence[bestIdx], MED);
-                else {
+                } else {
                     QueueController.pushMany(RobotType.POLITICIAN, msg, rc.getInfluence() > 1000 ? 0.8 : 0.5, MED, rc.getRoundNum() / 200 + 1);
                     QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, MED, rc.getRoundNum() / 100 + 1);
                     QueueController.pushMany(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.05, MED, rc.getInfluence() / 750);
@@ -160,6 +163,7 @@ public class EnlightenmentCenter extends Robot {
         int best = -1;
         for (int i = 0; i < ECFound; i++) {
             if (ECTeam[i] == rc.getTeam()) continue;
+            if (rc.getRoundNum() - ECLastQueued[i] < 100) continue;
             MapLocation ecLoc = ECLocs[i];
             int ecInfluence = ECInfluence[i];
             if (best == -1
