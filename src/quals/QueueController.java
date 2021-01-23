@@ -32,12 +32,9 @@ public class QueueController {
     }
 
     /* Managing the Queue */
-    public static void push(RobotType type, Communication.Message message, double significance, int level) {
-        pq.push(new UnitBuild(type, message, significance), level);
-    }
-
-    public static void push(RobotType type, Communication.Message message, int influence, int level) {
-        pq.push(new UnitBuild(type, message, influence), level);
+    public static void push(RobotType type, Communication.Message message, double significance, int minInfluence, int level) {
+        EnlightenmentCenter.numQueued[type.ordinal()]++;
+        pq.push(new UnitBuild(type, message, significance, minInfluence), level);
     }
 
     public static UnitBuild peek() {
@@ -45,9 +42,9 @@ public class QueueController {
         return pq.peek();
     }
 
-    public static void pushMany(RobotType type, Communication.Message message, double significance, int level, int count) {
+    public static void pushMany(RobotType type, Communication.Message message, double significance, int minInfluence, int level, int count) {
         for (int i = count; --i >= 0; )
-            pq.push(new UnitBuild(type, message, significance), level);
+            push(type, message, significance, minInfluence, level);
     }
 
     public static boolean isEmpty() {
@@ -86,22 +83,25 @@ public class QueueController {
         int myInfluence = rc.getInfluence();
 
         // dynamically chose next units influence
-        int usableInfluence = rc.getInfluence() - influenceMinimum();
+        int usableInfluence = rc.getInfluence();
         int unitCap = (int) (usableInfluence * nextUnit.significance);
         int nextUnitInfluence = -1;
         switch (nextUnit.type) {
             case SLANDERER:
                 nextUnitInfluence = getSlandererInfluence(unitCap);
+                if (nextUnitInfluence < nextUnit.minInfluence) {
+                    nextUnitInfluence = getSlandererInfluence(nextUnit.minInfluence * 2);
+                }
                 break;
             case MUCKRAKER:
                 nextUnitInfluence = nextUnit.significance > 0.5 ? unitCap : 1;
                 break;
             case POLITICIAN:
-                nextUnitInfluence = Math.max(unitCap, 14);
+                nextUnitInfluence = unitCap;
                 break;
         }
         // override influence
-        if (nextUnit.influence != -1) nextUnitInfluence = nextUnit.influence;
+        if (nextUnit.minInfluence != -1) nextUnitInfluence = Math.max(nextUnit.minInfluence, nextUnitInfluence);
 
         if (nextUnitInfluence <= 0 || myInfluence - nextUnitInfluence < influenceMinimum()) {
             return false;

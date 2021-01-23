@@ -11,7 +11,8 @@ public class Politician extends Robot {
     /* Defense vars */
     static Direction defendDir;
     static int followingTurns = 0;
-    static int defendRadius = 5;
+    static int defendRadius = 4;
+    static int lag = 0;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -63,8 +64,13 @@ public class Politician extends Robot {
                 if (flag != 0) {
                     Communication.Message msg = decode(flag);
                     if (msg.label == Communication.Label.SAFE_DIR) {
-                        defendDir = fromOrdinal(msg.data[0]);
-                        Nav.doGoInDir(defendDir);
+                        Direction newDir = fromOrdinal(msg.data[0]);
+                        if (!newDir.equals(defendDir)) {
+                            lag = 5;
+                            defendDir = newDir;
+                        }
+                        if (lag <= 0)
+                            Nav.doGoInDir(defendDir);
                     }
                 }
             }
@@ -171,6 +177,7 @@ public class Politician extends Robot {
         Defend {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
+                lag--;
 
                 RobotInfo closestEnemy = null;
                 for (RobotInfo enemy : nearby) {
@@ -245,14 +252,14 @@ public class Politician extends Robot {
 
     static MapLocation getTargetLoc() throws GameActionException {
         int radius = defendRadius;
-        MapLocation targetLoc = centerLoc.translate(defendDir.dx * radius, defendDir.dy * radius);
+        MapLocation targetLoc = rc.getLocation().translate(defendDir.opposite().dx * radius, defendDir.opposite().dy * radius);
         targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
         if ((targetLoc.x + targetLoc.y) % 2 != 0) {
             targetLoc = targetLoc.translate(defendDir.dx, 0);
         }
-        if (radius > 4 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
+        if (radius > 3 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
             defendDir = randomDirection();
-            defendRadius = 4;
+            defendRadius = 3;
             return getTargetLoc();
         }
         return targetLoc;
