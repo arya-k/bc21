@@ -83,7 +83,7 @@ public class QueueController {
         int myInfluence = rc.getInfluence();
 
         // dynamically chose next units influence
-        int usableInfluence = rc.getInfluence();
+        int usableInfluence = rc.getInfluence() - influenceMinimum();
         int unitCap = (int) (usableInfluence * nextUnit.significance);
         int nextUnitInfluence = -1;
         switch (nextUnit.type) {

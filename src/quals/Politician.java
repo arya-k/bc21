@@ -38,29 +38,10 @@ public class Politician extends Robot {
     void transition() throws GameActionException {
         if (state == State.Buffer) return; // Buffers should NEVER change state.
 
-        // TODO: move this?
-        // update defend direction
-        if (state == State.Defend && (Nav.currentGoal == Nav.NavGoal.Nothing || Nav.currentGoal == Nav.NavGoal.GoInDir)) {
-            if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
-                int flag = rc.getFlag(centerID);
-                if (flag != 0) {
-                    Communication.Message msg = decode(flag);
-                    if (msg.label == Communication.Label.EC_UPDATE) {
-                        Direction newDir = fromOrdinal(msg.data[2]);
-                        if (!newDir.equals(defendDir)) {
-                            lag = 5;
-                            defendDir = newDir;
-                        }
-                        if (lag <= 0)
-                            Nav.doGoInDir(defendDir);
-                    }
-                }
-            }
-        }
 
         // TODO: we need to tune this so that we always have SOME politicians around our ECs & slanderers?å
         // consider defense
-        if (rc.getRoundNum() < DEFEND_ROUND) {
+        if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
             state = State.Defend;
             return;
         }
@@ -133,6 +114,28 @@ public class Politician extends Robot {
         },
         Defend {
             public void act() throws GameActionException {
+                // update defend direction
+                if (Nav.currentGoal == Nav.NavGoal.Nothing || Nav.currentGoal == Nav.NavGoal.GoInDir) {
+                    if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
+                        int flag = rc.getFlag(centerID);
+                        if (flag != 0) {
+                            Communication.Message msg = decode(flag);
+                            if (msg.label == Communication.Label.EC_UPDATE) {
+                                Direction newDir = fromOrdinal(msg.data[2]);
+                                if (!newDir.equals(defendDir)) {
+                                    lag = 5;
+                                    defendDir = newDir;
+                                }
+                                if (lag <= 0)
+                                    Nav.doGoInDir(defendDir);
+                            }
+                        }
+                    }
+                }
+                if (defendDir == null) {
+                    defendDir = randomDirection();
+                }
+
                 if (!rc.isReady()) return;
                 lag--;
 
