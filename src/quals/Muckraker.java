@@ -12,6 +12,7 @@ public class Muckraker extends Robot {
     static MapLocation enemyLoc;
     static Direction shoulderingDirection;
 
+    static final int CENTER_DEFEND_RADIUS = 100; // shoulder within 10 blocks of our own EC
     static int[] OFFSETS = {0, 1, 7, 2, 6};
 
     @Override
@@ -148,28 +149,29 @@ public class Muckraker extends Robot {
         if (enemyLoc == null) return false;
 
         // Find our slanderer & EC closest to the enemy
-        RobotInfo nearestEC = null, nearestSlanderer = null;
-        for (
-                RobotInfo info : nearby) {
+        MapLocation nearestEC = null, nearestSlanderer = null;
+        if (centerID != rc.getID() && rc.getLocation().isWithinDistanceSquared(centerLoc, CENTER_DEFEND_RADIUS))
+            nearestEC = centerLoc;
+        for (RobotInfo info : nearby) {
             if (info.getTeam() != rc.getTeam()) continue;
             if (info.getType() == RobotType.SLANDERER) {
                 if (nearestSlanderer == null || enemyLoc.distanceSquaredTo(info.getLocation()) <
-                        enemyLoc.distanceSquaredTo(nearestSlanderer.getLocation()))
-                    nearestSlanderer = info;
+                        enemyLoc.distanceSquaredTo(nearestSlanderer))
+                    nearestSlanderer = info.getLocation();
             }
 
             if (info.getType() == RobotType.ENLIGHTENMENT_CENTER) {
                 if (nearestEC == null || enemyLoc.distanceSquaredTo(info.getLocation()) <
-                        enemyLoc.distanceSquaredTo(nearestEC.getLocation()))
-                    nearestEC = info;
+                        enemyLoc.distanceSquaredTo(nearestEC))
+                    nearestEC = info.getLocation();
             }
         }
 
         if (nearestSlanderer != null) {
-            shoulderingDirection = enemyLoc.directionTo(nearestSlanderer.getLocation());
+            shoulderingDirection = enemyLoc.directionTo(nearestSlanderer);
             return true;
         } else if (nearestEC != null) {
-            shoulderingDirection = enemyLoc.directionTo(nearestEC.getLocation());
+            shoulderingDirection = enemyLoc.directionTo(nearestEC);
             return true;
         }
         return false; // there is nothing to really protect.

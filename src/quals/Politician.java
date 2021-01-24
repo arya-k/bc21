@@ -10,7 +10,6 @@ public class Politician extends Robot {
     /* Defense vars */
     static Direction defendDir;
     static int followingTurns = 0;
-    static int defendRadius = 4;
     static int lag = 0;
     static final int DEFEND_ROUND = 50;
 
@@ -21,7 +20,7 @@ public class Politician extends Robot {
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we explore!
         Nav.doExplore();
-            
+
         if (assignment != null && assignment.label == Communication.Label.BUFF) {
             state = State.Buffer; // Buffers are a special case...
         }
@@ -38,38 +37,22 @@ public class Politician extends Robot {
     void transition() throws GameActionException {
         if (state == State.Buffer) return; // Buffers should NEVER change state.
 
-
-        // TODO: we need to tune this so that we always have SOME politicians around our ECs & slanderers?å
         // consider defense
         if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
             state = State.Defend;
             return;
         }
 
-        // consider attack
+        // consider attack loc
         if (numAttackLocs > 0) {
             state = State.AttackLoc;
             targetECLoc = getClosestAttackLoc();
             Nav.doGoTo(targetECLoc);
-            System.out.println("ATTACKING " + targetECLoc);
             return;
         }
 
-        // Defend if you see an enemy muckraker- explore otherwise.
-        boolean canSeeMuckraker = false;
-        for (RobotInfo bot : nearby) {
-            if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
-                canSeeMuckraker = true;
-                break;
-            }
-        }
-
-        if (canSeeMuckraker) {
-            state = State.Defend;
-        } else {
-            state = State.Explore;
-            Nav.doExplore();
-        }
+        state = State.Explore;
+        Nav.doExplore();
     }
 
     private enum State {
@@ -78,12 +61,13 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                // See if offensive speech is possible.
-                int radius = getBestEmpowerRadius(0.7);
-                if (radius != -1) {
-                    rc.empower(radius);
-                    return;
-                }
+                // TODO: consider whether to explode....
+
+//                int radius = getBestEmpowerRadius(0.7);
+//                if (radius != -1) {
+//                    rc.empower(radius);
+//                    return;
+//                }
 
                 // otherwise move
                 Direction move = Nav.tick();
