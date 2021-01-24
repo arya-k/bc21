@@ -96,6 +96,7 @@ abstract public class Robot {
         // inform ECs of nearby enlightenment centers
         noteNearbyECs();
 
+        // gather locations to attack
         if (rc.getID() != centerID && rc.canGetFlag(centerID)) {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
