@@ -38,7 +38,7 @@ public class BidController {
         int bid = Math.min(rc.getInfluence(), state.suggestBid());
         prevBid = bid;
         prevTeamVotes = rc.getTeamVotes();
-        if (bid != 0) {
+        if (bid != 0 && rc.getRoundNum() > 150) {
             rc.bid(bid);
         }
     }

@@ -24,7 +24,7 @@ public class QueueController {
     static Direction[] spawnDirs = new Direction[8];
 
     // good influences to build slanderers at
-    static final int[] slandererInfluences = {41, 63, 107, 130, 154, 178, 203, 229, 255, 282, 339, 399, 431, 498, 569, 605, 683, 724, 949};
+    static final int[] slandererInfluences = {85, 107, 130, 154, 178, 203, 229, 255, 282, 339, 399, 431, 498, 569, 605, 683, 724, 949};
 
     public static void init() throws GameActionException {
         rc = Robot.rc;
@@ -32,8 +32,9 @@ public class QueueController {
     }
 
     /* Managing the Queue */
-    public static void push(RobotType type, Communication.Message message, double significance, int level) {
-        pq.push(new UnitBuild(type, message, significance), level);
+    public static void push(RobotType type, Communication.Message message, double significance, int minInfluence, int level) {
+        EnlightenmentCenter.numQueued[type.ordinal()]++;
+        pq.push(new UnitBuild(type, message, significance, minInfluence), level);
     }
 
     public static UnitBuild peek() {
@@ -41,9 +42,9 @@ public class QueueController {
         return pq.peek();
     }
 
-    public static void pushMany(RobotType type, Communication.Message message, double significance, int level, int count) {
+    public static void pushMany(RobotType type, Communication.Message message, double significance, int minInfluence, int level, int count) {
         for (int i = count; --i >= 0; )
-            pq.push(new UnitBuild(type, message, significance), level);
+            push(type, message, significance, minInfluence, level);
     }
 
     public static boolean isEmpty() {
@@ -82,20 +83,25 @@ public class QueueController {
         int myInfluence = rc.getInfluence();
 
         // dynamically chose next units influence
-        int usableInfluence = rc.getInfluence() - influenceMinimum();
+        int usableInfluence = rc.getInfluence();
         int unitCap = (int) (usableInfluence * nextUnit.significance);
         int nextUnitInfluence = -1;
         switch (nextUnit.type) {
             case SLANDERER:
                 nextUnitInfluence = getSlandererInfluence(unitCap);
+                if (nextUnitInfluence < nextUnit.minInfluence) {
+                    nextUnitInfluence = getSlandererInfluence(nextUnit.minInfluence * 2);
+                }
                 break;
             case MUCKRAKER:
                 nextUnitInfluence = nextUnit.significance > 0.5 ? unitCap : 1;
                 break;
             case POLITICIAN:
-                nextUnitInfluence = Math.max(unitCap, 14);
+                nextUnitInfluence = unitCap;
                 break;
         }
+        // override influence
+        if (nextUnit.minInfluence != -1) nextUnitInfluence = Math.max(nextUnit.minInfluence, nextUnitInfluence);
 
         if (nextUnitInfluence <= 0 || myInfluence - nextUnitInfluence < influenceMinimum()) {
             return false;
@@ -152,7 +158,7 @@ public class QueueController {
     }
 
     public static int influenceMinimum() {
-        return 20 + (int) (rc.getRoundNum() * 0.1);
+        return 5 + (int) (rc.getRoundNum() * 0.1);
     }
 
     private static void calcBestSpawnDirs() throws GameActionException {
