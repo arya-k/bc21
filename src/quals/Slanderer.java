@@ -67,9 +67,12 @@ public class Slanderer extends Robot {
             if (bot.getType() == RobotType.MUCKRAKER)
                 numEnemies++;
         }
-        if (numEnemies > 0)
+        // flee if enemy muckraker detected
+        if (numEnemies > 0) {
             enemyLastSeen = 0;
-
+            state = State.Flee;
+        }
+        System.out.println(state);
     }
 
     private enum State {
