@@ -122,7 +122,6 @@ public class EnlightenmentCenter extends Robot {
         } else {
             state = State.LateGame;
         }
-        System.out.println(state);
     }
 
     private enum State {

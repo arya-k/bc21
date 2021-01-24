@@ -72,7 +72,6 @@ public class Slanderer extends Robot {
             enemyLastSeen = 0;
             state = State.Flee;
         }
-        System.out.println(state);
     }
 
     private enum State {
