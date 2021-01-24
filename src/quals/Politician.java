@@ -7,42 +7,23 @@ import static quals.Communication.decode;
 public class Politician extends Robot {
     static State state = null;
 
-
     /* Defense vars */
     static Direction defendDir;
     static int followingTurns = 0;
     static int defendRadius = 4;
     static int lag = 0;
+    static final int DEFEND_ROUND = 50;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
 
     @Override
     void onAwake() throws GameActionException {
-        seenECs[numSeenECs++] = centerID;
-
-        state = State.Explore; // By default, we just explore!
+        state = State.Explore; // By default, we explore!
         Nav.doExplore();
 
-        if (assignment == null) return;
-
-        switch (assignment.label) {
-
-            case ATTACK_LOC:
-                state = State.AttackLoc;
-                targetECLoc = getLocFromMessage(assignment.data[0], assignment.data[1]);
-                Nav.doGoTo(targetECLoc);
-                break;
-
-            case SAFE_DIR:
-                state = State.Defend;
-                defendDir = fromOrdinal(assignment.data[0]);
-                Nav.doGoInDir(defendDir);
-                break;
-
-            case BUFF:
-                state = State.Buffer;
-                break;
+        if (assignment != null && assignment.label == Communication.Label.BUFF) {
+            state = State.Buffer; // Buffers are a special case...
         }
     }
 
@@ -55,15 +36,17 @@ public class Politician extends Robot {
     }
 
     void transition() throws GameActionException {
+        if (state == State.Buffer) return; // Buffers should NEVER change state.
 
+        // TODO: move this?
         // update defend direction
         if (state == State.Defend && (Nav.currentGoal == Nav.NavGoal.Nothing || Nav.currentGoal == Nav.NavGoal.GoInDir)) {
             if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
                 int flag = rc.getFlag(centerID);
                 if (flag != 0) {
                     Communication.Message msg = decode(flag);
-                    if (msg.label == Communication.Label.SAFE_DIR) {
-                        Direction newDir = fromOrdinal(msg.data[0]);
+                    if (msg.label == Communication.Label.EC_UPDATE) {
+                        Direction newDir = fromOrdinal(msg.data[2]);
                         if (!newDir.equals(defendDir)) {
                             lag = 5;
                             defendDir = newDir;
@@ -75,38 +58,23 @@ public class Politician extends Robot {
             }
         }
 
-        // Explore -> AttackLoc
-        if (state == State.Explore && Nav.currentGoal == Nav.NavGoal.Nothing) {
+        // TODO: we need to tune this so that we always have SOME politicians around our ECs & slanderers?å
+        // consider defense
+        if (rc.getRoundNum() < DEFEND_ROUND) {
+            state = State.Defend;
+            return;
+        }
+
+        // consider attack
+        if (numAttackLocs > 0) {
             state = State.AttackLoc;
+            targetECLoc = getClosestAttackLoc();
+            Nav.doGoTo(targetECLoc);
+            System.out.println("ATTACKING " + targetECLoc);
+            return;
         }
 
-        // Explore -> AttackLoc
-        MapLocation closestAttackLoc = getClosestAttackLoc();
-        if (state == State.Explore && closestAttackLoc != null && closestAttackLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
-            state = State.AttackLoc;
-        }
-
-        // AttackLoc -> Explore
-        if (state == State.AttackLoc && closestAttackLoc == null) {
-            state = State.Explore;
-            Nav.doExplore();
-        }
-
-        // * -> AttackLocation
-        if (getNearbyEnemyEC() != null) {
-            state = State.AttackLoc;
-        }
-
-        // Defend -> Explore
-        if (state == State.Defend && Nav.currentGoal == Nav.NavGoal.GoInDir) {
-            MapLocation checkLoc = rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2);
-            if (!rc.onTheMap(checkLoc)) {
-                defendDir = defendDir.rotateRight();
-                Nav.doGoTo(getTargetLoc());
-            }
-        }
-
-        // Explore -> Defend
+        // Defend if you see an enemy muckraker- explore otherwise.
         boolean canSeeMuckraker = false;
         for (RobotInfo bot : nearby) {
             if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER) {
@@ -114,15 +82,12 @@ public class Politician extends Robot {
                 break;
             }
         }
-        if (state == State.Explore && canSeeMuckraker) {
-            state = State.Defend;
-            defendDir = randomDirection();
-        }
 
-        // update current attack location
-        if (state == State.AttackLoc) {
-            targetECLoc = closestAttackLoc;
-            Nav.doGoTo(closestAttackLoc);
+        if (canSeeMuckraker) {
+            state = State.Defend;
+        } else {
+            state = State.Explore;
+            Nav.doExplore();
         }
     }
 
@@ -242,22 +207,6 @@ public class Politician extends Robot {
 
     }
 
-    static MapLocation getTargetLoc() throws GameActionException {
-        int radius = defendRadius;
-        MapLocation targetLoc = rc.getLocation().translate(defendDir.opposite().dx * radius, defendDir.opposite().dy * radius);
-        targetLoc = targetLoc.translate(defendDir.dx * (int) (Math.random() * (radius / 2)), defendDir.dy * (int) (Math.random() * (radius / 2)));
-        if ((targetLoc.x + targetLoc.y) % 2 != 0) {
-            targetLoc = targetLoc.translate(defendDir.dx, 0);
-        }
-        if (radius > 3 && !rc.onTheMap(rc.getLocation().translate(defendDir.dx * 2, defendDir.dy * 2))) {
-            defendDir = randomDirection();
-            defendRadius = 3;
-            return getTargetLoc();
-        }
-        return targetLoc;
-    }
-
-
     /**
      * Whether we can be converted by enemy forces, if they focus solely on us.
      *
@@ -341,17 +290,14 @@ public class Politician extends Robot {
         int bestRad = -1;
         double bestEff = threshold;
 
-        System.out.println("Checking for threshold: " + threshold);
         for (int i = 1; i <= RobotType.POLITICIAN.actionRadiusSquared; i++) {
             double efficiency = empowerEfficiency(i);
-            System.out.println("Efficiency at radius " + i + ": " + efficiency);
             if (efficiency > bestEff) {
                 bestEff = efficiency;
                 bestRad = i;
             }
         }
 
-        System.out.println("best: " + bestRad);
         return bestRad;
     }
 

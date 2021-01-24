@@ -9,7 +9,7 @@ import quals.Robot;
  * Should only be used by the Nav class.
  */
 public class NavHistory {
-    private static final StringBuilder keys = new StringBuilder();
+    private static StringBuilder keys = new StringBuilder();
     private static int SIGHT_RANGE;
 
     private static int northEdge = 100; // sentinels
@@ -616,7 +616,9 @@ public class NavHistory {
         if (!visited(cx + CHUNKS[32][(3 + RAND) % 4][0], cy + CHUNKS[32][(3 + RAND) % 4][1]))
             return m.translate(4 * CHUNKS[32][(3 + RAND) % 4][0], 4 * CHUNKS[32][(3 + RAND) % 4][1]);
 
-        return null;
+        // We have no more chunks to visit- wipe and try again:
+        keys = new StringBuilder();
+        return nearestUnexploredLocation();
     }
 
     private static final int[][][] CHUNKS = {{{-1, 0}, {0, -1}, {0, 1}, {1, 0}}, {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}},

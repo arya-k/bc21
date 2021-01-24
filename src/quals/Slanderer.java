@@ -22,8 +22,8 @@ public class Slanderer extends Robot {
     @Override
     void onAwake() {
         state = State.Hide; // Slanderers always initialize to hiding!
-        if (assignment != null && assignment.label == Communication.Label.SAFE_DIR) {
-            safeDir = fromOrdinal(assignment.data[0]);
+        if (assignment != null && assignment.label == Communication.Label.EC_UPDATE) {
+            safeDir = fromOrdinal(assignment.data[2]);
             Nav.doGoInDir(safeDir);
         } else {
             Nav.doGoTo(randomHoverLocation(HIDE_RAD));
@@ -50,8 +50,8 @@ public class Slanderer extends Robot {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Communication.Message msg = decode(flag);
-                if (msg.label == Communication.Label.SAFE_DIR) {
-                    safeDir = fromOrdinal(msg.data[0]);
+                if (msg.label == Communication.Label.EC_UPDATE) {
+                    safeDir = fromOrdinal(msg.data[2]);
                     Nav.doGoInDir(safeDir);
                 }
             }

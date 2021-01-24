@@ -34,7 +34,6 @@ public strictfp class RobotPlayer {
                         Robot.init(rc);
                         Robot.centerID = currCenterId;
                         robot = getRobot(currType);
-                        Robot.assignment = Robot.makeMessage(Communication.Label.SAFE_DIR, Robot.randomDirection().ordinal());
                         robot.onAwake();
                         myType = currType;
                     }

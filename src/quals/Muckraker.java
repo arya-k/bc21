@@ -47,13 +47,7 @@ public class Muckraker extends Robot {
             }
         }
 
-        // If we should be Shouldering, shoulder + return:
-        if (shouldShoulder()) {
-            state = State.Shoulder;
-            return;
-        }
-
-        // Explore -> ChaseSlanderer
+        // * -> ChaseSlanderer
         int nearestSlandererID = closestSlanderer();
         if (nearestSlandererID != -1) {
             state = State.ChaseSlanderer;
@@ -61,7 +55,13 @@ public class Muckraker extends Robot {
             return;
         }
 
-        // ChaseSlanderer, Clog -> Explore
+        // * -> Shoulder
+        if (shouldShoulder()) {
+            state = State.Shoulder;
+            return;
+        }
+
+        // * -> Explore
         if (state != State.Explore) {
             state = State.Explore;
             Nav.doExplore();

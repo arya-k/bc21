@@ -101,8 +101,10 @@ abstract public class Robot {
             int flag = rc.getFlag(centerID);
             if (flag != 0) {
                 Message msg = decode(flag);
-                if (msg.label == Label.ATTACK_LOC)
-                    addAttackLoc(getLocFromMessage(msg.data[0], msg.data[1]));
+                if (msg.label == Label.EC_UPDATE) {
+                    MapLocation loc = getLocFromMessage(msg.data[0], msg.data[1]);
+                    if (!loc.isWithinDistanceSquared(centerLoc, 0)) addAttackLoc(loc);
+                }
             }
         }
 
@@ -161,20 +163,14 @@ abstract public class Robot {
         return closest;
     }
 
-
-    static MapLocation getNearbyEnemyEC() {
-        MapLocation closest = null;
-        for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
-            if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
-            if (closest == null
-                    || rc.getLocation().distanceSquaredTo(closest) > rc.getLocation().distanceSquaredTo(bot.getLocation()))
-                closest = bot.getLocation();
-        }
-        return closest;
-    }
-
-
     static void noteNearbyECs() throws GameActionException {
+        if (centerID != rc.getID()) {
+            if (!rc.canGetFlag(centerID)) {
+                centerID = rc.getID();
+                addAttackLoc(centerLoc); // The enemy has converted it- we want it back
+            }
+        }
+
         for (RobotInfo info : nearby) {
             if (info.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
 

@@ -159,9 +159,6 @@ public class Nav {
                     minDistToGoal = Integer.MAX_VALUE;
                 }
 
-                if (goalPos == null) // there are no more unexplored locations to visit :(
-                    currentGoal = NavGoal.Nothing;
-
                 return currentGoal == NavGoal.Nothing ? null : goTo(goalPos, dangerDirs);
         }
         return null; // should never get here!
