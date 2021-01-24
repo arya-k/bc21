@@ -46,7 +46,6 @@ public class Politician extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
-
         transition();
         state.act();
         Clock.yield();
@@ -78,13 +77,6 @@ public class Politician extends Robot {
         if (state == State.Explore && closestAttackLoc != null && closestAttackLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
             state = State.AttackLoc;
         }
-
-        // Remove attack location that has been converted
-        if (state == State.AttackLoc && rc.canSenseLocation(closestAttackLoc) &&
-                rc.senseRobotAtLocation(closestAttackLoc).getTeam() == rc.getTeam()) {
-            removeAttackLoc(closestAttackLoc);
-        }
-        closestAttackLoc = getClosestAttackLoc();
 
         // AttackLoc -> Explore
         if (state == State.AttackLoc && closestAttackLoc == null) {
@@ -151,7 +143,7 @@ public class Politician extends Robot {
             @Override
             public void act() throws GameActionException {
                 // if we are in range of our attacking location, switch to attacking message
-                if (currentLocation.isWithinDistanceSquared(targetECLoc, 36)) {
+                if (rc.getLocation().isWithinDistanceSquared(targetECLoc, 36)) {
                     int readyToGo = (rc.getCooldownTurns() <= 1) ? 1 : 0;
                     flagMessage(Communication.Label.ATTACKING, firstTurn / 6, readyToGo);
                 }
@@ -178,8 +170,8 @@ public class Politician extends Robot {
                     if (enemy.getType() == RobotType.MUCKRAKER &&
                             enemy.getTeam() != rc.getTeam()) { // Enemy Muckraker
                         if (closestEnemy == null ||
-                                enemy.getLocation().distanceSquaredTo(currentLocation)
-                                        < closestEnemy.getLocation().distanceSquaredTo(currentLocation)) {
+                                enemy.getLocation().distanceSquaredTo(rc.getLocation())
+                                        < closestEnemy.getLocation().distanceSquaredTo(rc.getLocation())) {
                             Nav.doFollow(enemy.getID());
                             closestEnemy = enemy;
                         }
@@ -201,7 +193,7 @@ public class Politician extends Robot {
                         }
                     }
                     if (closestEnemy != null // Note that we are the one to defend against this robot!
-                            && closestEnemy.getLocation().isWithinDistanceSquared(currentLocation, 2)) {
+                            && closestEnemy.getLocation().isWithinDistanceSquared(rc.getLocation(), 2)) {
                         flagMessage(Communication.Label.CURRENTLY_DEFENDING);
                     }
                 }
@@ -233,7 +225,7 @@ public class Politician extends Robot {
         Buffer {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
-                int dist = currentLocation.distanceSquaredTo(centerLoc);
+                int dist = rc.getLocation().distanceSquaredTo(centerLoc);
                 if (rc.senseNearbyRobots(dist).length == 1) {
                     rc.empower(dist);
                 }
@@ -268,11 +260,11 @@ public class Politician extends Robot {
             return 0;
         }
 
-        double effectiveInfluence = myInfluence * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
+        double effectiveInfluence = rc.getInfluence() * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
         if (effectiveInfluence < 0) {
             return 0;
         }
-        double baseInfluence = myInfluence - 10;
+        double baseInfluence = rc.getInfluence() - 10;
         double perUnit = effectiveInfluence / nearbyRobots.length;
 
         double usefulInfluence = 0;
@@ -342,7 +334,7 @@ public class Politician extends Robot {
     }
 
     static boolean shouldAttackEC(RobotInfo ec) throws GameActionException {
-        if (!(currentLocation.distanceSquaredTo(ec.getLocation()) <= 2))
+        if (!(rc.getLocation().distanceSquaredTo(ec.getLocation()) <= 2))
             return false;
         MapLocation ecLoc = ec.getLocation();
         for (Direction dir : directions) {
@@ -350,14 +342,14 @@ public class Politician extends Robot {
             if (rc.onTheMap(adjLoc) && rc.senseRobotAtLocation(adjLoc) == null)
                 return false;
         }
-        int reverseDir = ecLoc.directionTo(currentLocation).ordinal();
+        int reverseDir = ecLoc.directionTo(rc.getLocation()).ordinal();
         Direction[] backupDirs = {
                 directions[reverseDir],
                 directions[(reverseDir + 1) % 8],
                 directions[(reverseDir + 7) % 8]
         };
         for (Direction dir : backupDirs) {
-            RobotInfo info = rc.senseRobotAtLocation(currentLocation.add(dir));
+            RobotInfo info = rc.senseRobotAtLocation(rc.getLocation().add(dir));
             if (info == null || info.getTeam() != rc.getTeam()) continue;
             Communication.Message message = decode(rc.getFlag(info.getID()));
             if (message.label == Communication.Label.ATTACKING

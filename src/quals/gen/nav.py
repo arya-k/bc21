@@ -6,7 +6,6 @@ Generates a GOTO with unrolled loops, of a specified size...
 
 import math
 
-# TODO: see if iteratively adding directions is better
 # 20, 25, 30
 R_SQUARED = 30
 NAV_ITERATIONS = 4

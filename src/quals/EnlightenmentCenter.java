@@ -26,14 +26,12 @@ public class EnlightenmentCenter extends Robot {
     static int[] muckrakersInDir = new int[8];
     static Direction currentSafestDir = null;
 
-
     // Non-self ECs that have been found so far
     static MapLocation[] ECLocs = new MapLocation[11];
     static Team[] ECTeam = new Team[11];
     static int[] ECInfluence = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     static int ECFound = 0;
 
-    // TODO: we need to do something with this info!
     static boolean enemyECNearby = false;
     static boolean underAttack = false;
 
@@ -42,7 +40,6 @@ public class EnlightenmentCenter extends Robot {
 
     @Override
     void onAwake() throws GameActionException {
-        if (rc.getRoundNum() > 5) wasANeutralEC = true;
         QueueController.init(); // Initialize the queue controller!
 
         for (RobotInfo bot : rc.senseNearbyRobots()) { // Find nearby enlightenment centers
@@ -59,6 +56,11 @@ public class EnlightenmentCenter extends Robot {
             }
         }
 
+        if (rc.getRoundNum() > 5) {
+            wasANeutralEC = true;
+            return;
+        }
+
         // initialize priority queue
         QueueController.push(RobotType.SLANDERER, makeMessage(Label.HIDE), 0.9, HIGH); // Econ slanderer
         for (Direction dir : Robot.directions) // Scout politician
@@ -67,7 +69,7 @@ public class EnlightenmentCenter extends Robot {
 
     void lowPriorityLogging() {
         System.out.println(wasANeutralEC ? "Neutral EC" : "Starter EC");
-        System.out.println("Influence: " + myInfluence);
+        System.out.println("Influence: " + rc.getInfluence());
         System.out.println("Production state: " + state);
         System.out.println("Bidding state: " + BidController.state);
         for (int i = 0; i < 8; i++) {
@@ -115,7 +117,7 @@ public class EnlightenmentCenter extends Robot {
         }
 
         // End turn.
-        if (currentRound % 25 == 0) lowPriorityLogging();
+        if (rc.getRoundNum() % 25 == 0) lowPriorityLogging();
         Clock.yield();
 
     }
@@ -125,9 +127,10 @@ public class EnlightenmentCenter extends Robot {
     static void transition() {
         int bestIdx = getBestEC();
         state = State.AttackLoc;
-        if (bestIdx == -1
-                || ECInfluence[bestIdx] > rc.getInfluence() * 2) state = State.SlandererEconomy;
-        if (ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100) state = State.SlandererEconomy;
+        if (bestIdx == -1 || ECInfluence[bestIdx] > rc.getInfluence() * 2)
+            state = State.SlandererEconomy; // don't attack if there's nothing to attack or there's not enough influence
+        else if (ECTeam[bestIdx] != Team.NEUTRAL && rc.getRoundNum() < 100)
+            state = State.SlandererEconomy; // don't attack enemies in the first 100 turns
     }
 
     private enum State {

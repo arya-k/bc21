@@ -125,7 +125,7 @@ public class Slanderer extends Robot {
                     double dirPassability = 0.0;
                     for (int i = 0; i < 8; i++) {
                         if (viableLoc[i] && Math.abs(safetyByDir[i] - maxSafety) < 0.5) {
-                            double passability = rc.sensePassability(currentLocation.add(fromOrdinal(i)));
+                            double passability = rc.sensePassability(rc.getLocation().add(fromOrdinal(i)));
                             if (passability > dirPassability) {
                                 dirPassability = passability;
                                 dir = i;
@@ -136,8 +136,6 @@ public class Slanderer extends Robot {
                     // Move in direction of max safety
                     if (dir != -1) takeMove(fromOrdinal(dir));
                 }
-
-
             }
         };
 

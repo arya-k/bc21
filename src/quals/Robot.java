@@ -12,10 +12,7 @@ abstract public class Robot {
     public static int firstTurn;
     public static MapLocation initLoc;
 
-    public static MapLocation currentLocation;
     public static RobotInfo[] nearby;
-    public static int myInfluence;
-    public static int currentRound;
 
     public static MapLocation nearbyBufferLoc = null;
 
@@ -49,7 +46,6 @@ abstract public class Robot {
         Robot.firstTurn = rc.getRoundNum();
         Robot.rc = rc;
         Robot.initLoc = rc.getLocation();
-        myInfluence = rc.getInfluence();
 
         if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return; // Everything below here is for non-buildings:
 
@@ -77,64 +73,60 @@ abstract public class Robot {
     abstract void onAwake() throws GameActionException;
 
     void onUpdate() throws GameActionException {
-        myInfluence = rc.getInfluence();
-        currentLocation = rc.getLocation();
         nearby = rc.senseNearbyRobots();
-        currentRound = rc.getRoundNum();
 
-        if (rc.getType() != RobotType.ENLIGHTENMENT_CENTER) {
-            // send back information about danger to your EC
-            if (assignment == null || assignment.label != Label.BUFF) {
-                int num_muckrakers = 0;
-                MapLocation locationToSend = currentLocation;
-                for (RobotInfo bot : nearby) {
-                    if (bot.getTeam() == rc.getTeam()) continue;
-                    if (bot.getType() != RobotType.MUCKRAKER) continue;
-                    if (locationToSend.equals(currentLocation)) locationToSend = bot.getLocation();
-                    if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
-                        locationToSend = bot.getLocation();
-                    num_muckrakers++;
-                }
-                flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
-                        Math.min(num_muckrakers, 31));
+        if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return;
+
+        // send back information about danger to your EC
+        if (assignment == null || assignment.label != Label.BUFF) {
+            int num_muckrakers = 0;
+            MapLocation locationToSend = rc.getLocation();
+            for (RobotInfo bot : nearby) {
+                if (bot.getTeam() == rc.getTeam()) continue;
+                if (bot.getType() != RobotType.MUCKRAKER) continue;
+                if (locationToSend.equals(rc.getLocation())) locationToSend = bot.getLocation();
+                if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
+                    locationToSend = bot.getLocation();
+                num_muckrakers++;
             }
+            flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
+                    Math.min(num_muckrakers, 31));
+        }
 
-            // inform ECs of nearby enlightenment centers
-            noteNearbyECs();
+        // inform ECs of nearby enlightenment centers
+        noteNearbyECs();
 
-            if (rc.getID() != centerID && rc.canGetFlag(centerID)) {
-                int flag = rc.getFlag(centerID);
-                if (flag != 0) {
-                    Message msg = decode(flag);
-                    if (msg.label == Label.ATTACK_LOC)
-                        addAttackLoc(getLocFromMessage(msg.data[0], msg.data[1]));
-                }
+        if (rc.getID() != centerID && rc.canGetFlag(centerID)) {
+            int flag = rc.getFlag(centerID);
+            if (flag != 0) {
+                Message msg = decode(flag);
+                if (msg.label == Label.ATTACK_LOC)
+                    addAttackLoc(getLocFromMessage(msg.data[0], msg.data[1]));
             }
+        }
 
-
-            // move away from a buffing politician ASAP
-            if (rc.isReady()) {
-                for (RobotInfo info : rc.senseNearbyRobots(8, rc.getTeam())) {
-                    if (info.getType() != RobotType.POLITICIAN) continue;
-                    int flag = rc.getFlag(info.getID());
-                    if (flag != 0 && decode(flag).label == Label.BUFF) {
-                        nearbyBufferLoc = info.getLocation();
-                        if (nearbyBufferLoc.distanceSquaredTo(currentLocation) > 2)
+        // move away from a buffing politician ASAP
+        if (rc.isReady()) {
+            for (RobotInfo info : rc.senseNearbyRobots(8, rc.getTeam())) {
+                if (info.getType() != RobotType.POLITICIAN) continue;
+                int flag = rc.getFlag(info.getID());
+                if (flag != 0 && decode(flag).label == Label.BUFF) {
+                    nearbyBufferLoc = info.getLocation();
+                    if (nearbyBufferLoc.distanceSquaredTo(rc.getLocation()) > 2)
+                        break;
+                    int runDir = nearbyBufferLoc.directionTo(rc.getLocation()).ordinal();
+                    boolean diagonal = (runDir % 2) == 1;
+                    for (int i = (diagonal ? 6 : 7); i <= (diagonal ? 10 : 9); i++) {
+                        Direction moveDir = fromOrdinal((i + runDir) % 8);
+                        if (rc.canMove(moveDir)) {
+                            rc.move(moveDir);
                             break;
-                        int runDir = nearbyBufferLoc.directionTo(currentLocation).ordinal();
-                        boolean diagonal = (runDir % 2) == 1;
-                        for (int i = (diagonal ? 6 : 7); i <= (diagonal ? 10 : 9); i++) {
-                            Direction moveDir = fromOrdinal((i + runDir) % 8);
-                            if (rc.canMove(moveDir)) {
-                                rc.move(moveDir);
-                                break;
-                            }
                         }
                     }
-                    if (nearbyBufferLoc != null)
-                        break;
-                    nearbyBufferLoc = null;
                 }
+                if (nearbyBufferLoc != null)
+                    break;
+                nearbyBufferLoc = null;
             }
         }
     }
@@ -159,17 +151,12 @@ abstract public class Robot {
     }
 
     static MapLocation getClosestAttackLoc() {
-        for (RobotInfo bot : rc.senseNearbyRobots(-1, rc.getTeam().opponent())) {
-            if (bot.getType() != RobotType.ENLIGHTENMENT_CENTER) continue;
-            addAttackLoc(bot.getLocation());
-        }
         MapLocation closest = null;
         for (int i = 0; i < numAttackLocs; i++) {
             if (closest == null
                     || rc.getLocation().distanceSquaredTo(closest) > rc.getLocation().distanceSquaredTo(attackLocs[i]))
                 closest = attackLocs[i];
         }
-
         return closest;
     }
 
@@ -200,6 +187,9 @@ abstract public class Robot {
                     centerLoc = info.getLocation();
                     centerID = info.getID();
                 }
+
+                // Consider removing it as an attack location:
+                removeAttackLoc(info.getLocation());
             }
 
             if (seenECs[0] == info.ID || seenECs[1] == info.ID || seenECs[2] == info.ID || seenECs[3] == info.ID ||
@@ -212,10 +202,12 @@ abstract public class Robot {
             MapLocation loc = info.getLocation();
             int log = (int) (Math.log(info.getConviction()) / Math.log(2)) + 1;
             if (info.getTeam() == rc.getTeam().opponent()) { // Enemy EC message...
+                addAttackLoc(loc); // this is now a target
                 flagMessage(Communication.Label.ENEMY_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
             } else if (info.getTeam() == Team.NEUTRAL) { // Neutral EC message...
                 flagMessage(Communication.Label.NEUTRAL_EC, loc.x % 128, loc.y % 128, Math.min(log, 15));
             } else {
+                removeAttackLoc(loc); // could have flipped enemy -> us
                 flagMessage(Communication.Label.OUR_EC, loc.x % 128, loc.y % 128);
             }
         }
@@ -225,7 +217,7 @@ abstract public class Robot {
 
     static void takeMove(Direction dir) throws GameActionException {
         if (nearbyBufferLoc != null) {
-            MapLocation newLoc = currentLocation.add(dir);
+            MapLocation newLoc = rc.getLocation().add(dir);
             if (newLoc.distanceSquaredTo(nearbyBufferLoc) <= 2)
                 return;
         }
@@ -241,7 +233,7 @@ abstract public class Robot {
     }
 
     static MapLocation getLocFromMessage(int xMod, int yMod) {
-        currentLocation = rc.getLocation();
+        MapLocation currentLocation = rc.getLocation();
         int x = currentLocation.x % 128;
         int y = currentLocation.y % 128;
         int xOff = xMod - x;
@@ -258,12 +250,12 @@ abstract public class Robot {
     }
 
     static Direction randomDirection() {
-        return directions[(currentRound + rc.getID()) % 8];
+        return directions[(rc.getRoundNum() + rc.getID()) % 8];
     }
 
     static void logBytecodeUse(int startRound, int startBC) {
         int limit = rc.getType().bytecodeLimit;
-        int byteCount = (limit - startBC) + (currentRound - startRound - 1) * limit + Clock.getBytecodeNum();
+        int byteCount = (limit - startBC) + (rc.getRoundNum() - startRound - 1) * limit + Clock.getBytecodeNum();
         System.out.println("@@@Bytecodes used: " + byteCount);
     }
 }
