@@ -61,13 +61,11 @@ public class Politician extends Robot {
             public void act() throws GameActionException {
                 if (!rc.isReady()) return;
 
-                // TODO: consider whether to explode....
-
-//                int radius = getBestEmpowerRadius(0.7);
-//                if (radius != -1) {
-//                    rc.empower(radius);
-//                    return;
-//                }
+                int radius = getBestEmpowerRadius(0.7);
+                if (radius != -1) {
+                    rc.empower(radius);
+                    return;
+                }
 
                 // otherwise move
                 Direction move = Nav.tick();
@@ -116,6 +114,7 @@ public class Politician extends Robot {
                         }
                     }
                 }
+
                 if (defendDir == null) {
                     defendDir = randomDirection();
                 }
