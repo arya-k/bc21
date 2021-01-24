@@ -3,7 +3,7 @@ import random
 
 
 class Stages(Strategy):
-    def __init__(self):
+    def __init__(self, panic_factor, panic_frac):
         self.prevTeamVotes = 0
         self.prevBid = 2
         self.lostInARow = 0
@@ -19,6 +19,11 @@ class Stages(Strategy):
             "KeepUp": self.keepUpBid,
             "Endgame": self.endgameBid,
         }
+
+        self.scale_up_factor = 2
+        self.scale_down_factor = 2
+        self.panic_factor = panic_factor
+        self.panic_frac = panic_frac
 
     def bid(self, rnd, influence, votes):
         self.update(rnd, influence, votes)
@@ -57,7 +62,10 @@ class Stages(Strategy):
             self.state = "GiveUp"
         elif rnd > 1350:
             self.state = "Endgame"
-        elif influence > 6 * self.influenceMinimum(rnd) or self.proportionNeeded > 0.8:
+        elif (
+            influence > self.panic_factor * self.influenceMinimum(rnd)
+            or self.proportionNeeded > self.panic_frac
+        ):
             self.state = "ScaleUp"
         else:
             self.state = "KeepUp"
@@ -70,15 +78,15 @@ class Stages(Strategy):
         if self.lostLast:
             bid += int(random.random() * 2) + 1
         elif self.wonInARow >= 4 and self.proportionNeeded < 0.55:
-            bid = bid // 2
+            bid = min(int(bid / self.scale_down_factor), bid - 1)
         return min(bid, self.maxBid(rnd, influence, votes))
 
     def scaleUpBid(self, rnd, influence, votes):
         bid = max(self.prevBid, 2)
         if self.lostLast:
-            bid = (bid * 3) // 2
+            bid = max(int(bid * self.scale_up_factor), bid + 1)
         elif self.wonInARow >= 4 and self.proportionNeeded < 0.55:
-            bid = bid // 2
+            bid = min(int(bid / self.scale_down_factor), bid - 1)
         return min(bid, self.maxBid(rnd, influence, votes))
 
     def endgameBid(self, rnd, influence, votes):
@@ -102,5 +110,5 @@ class Stages(Strategy):
         return 20 + int(rnd * 0.1)
 
 
-DEFAULT = []
-PARAMS = []
+DEFAULT = [6, 0.8]
+PARAMS = [[4, 6, 8], [0.7, 0.8, 0.9]]

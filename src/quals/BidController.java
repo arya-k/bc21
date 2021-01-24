@@ -63,7 +63,7 @@ public class BidController {
             state = State.GiveUp;
         else if (rc.getRoundNum() > 1350)
             state = State.Endgame;
-        else if (rc.getInfluence() > 6 * influenceMinimum() || proportionNeeded > 0.8)
+        else if (rc.getInfluence() > 6 * influenceMinimum() || proportionNeeded > 0.7)
             state = State.ScaleUp;
         else
             state = State.KeepUp;
@@ -86,7 +86,7 @@ public class BidController {
             int suggestBid() {
                 int bid = Math.max(prevBid, 2);
                 if (lostLast)
-                    bid = (Math.max(bid, 2) * 3) / 2;
+                    bid *= 2;
                 else if (wonInARow >= 4 && proportionNeeded < 0.55)
                     bid /= 2;
                 return Math.min(bid, maxBid());
