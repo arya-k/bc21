@@ -57,7 +57,7 @@ public class EnlightenmentCenter extends Robot {
         // initialize priority queue
         if (!wasANeutralEC)
             QueueController.push(RobotType.SLANDERER, makeMessage(Label.HIDE), 0.9, 130, HIGH); // Econ slanderer
-        for (Direction dir : Robot.directions) // Scout politician
+        for (Direction dir : Robot.directions) // Scout Muckraker
             QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.SCOUT, dir.ordinal()), 0.0, 1, MED);
     }
 
@@ -117,9 +117,12 @@ public class EnlightenmentCenter extends Robot {
     static void transition() {
         if (!wasANeutralEC && numQueued[RobotType.SLANDERER.ordinal()] < 15) {
             state = State.EarlyGame;
-        } else {
+        } else if (numQueued[RobotType.SLANDERER.ordinal()] < 50) {
             state = State.MidGame;
+        } else {
+            state = State.LateGame;
         }
+        System.out.println(state);
     }
 
     private enum State {
@@ -127,17 +130,27 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() {
                 Message msg = makeUpdateMessage();
-                QueueController.push(RobotType.SLANDERER, msg, 0.9, 100, MED);
-                QueueController.push(RobotType.POLITICIAN, msg, 0.05, 20, MED);
+                QueueController.push(RobotType.SLANDERER, msg, 0.9, 85, MED);
+                QueueController.push(RobotType.POLITICIAN, msg, 0.05, 17, MED);
             }
         },
         MidGame {
             @Override
             void refillQueue() {
-                QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED, 2);
-                QueueController.push(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 100, MED);
+                QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED);
                 QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), rc.getInfluence() > 1000 ? 0.8 : 0.3, 20, MED);
-                QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED, 2);
+                QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED);
+                QueueController.push(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 130, MED);
+
+            }
+        },
+        LateGame {
+            @Override
+            void refillQueue() throws GameActionException {
+                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), rc.getInfluence() > 1000 ? 0.8 : 0.5, 20, MED);
+                QueueController.push(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 130, MED);
+                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.1, 20, MED);
+                QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED);
             }
         };
 

@@ -21,7 +21,7 @@ public class Politician extends Robot {
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we explore!
         Nav.doExplore();
-
+            
         if (assignment != null && assignment.label == Communication.Label.BUFF) {
             state = State.Buffer; // Buffers are a special case...
         }
@@ -234,7 +234,7 @@ public class Politician extends Robot {
         }
 
         double effectiveInfluence = rc.getInfluence() * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
-        if (effectiveInfluence < 0) {
+        if (effectiveInfluence <= 0) {
             return 0;
         }
         double baseInfluence = rc.getInfluence() - 10;

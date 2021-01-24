@@ -90,7 +90,7 @@ public class QueueController {
             case SLANDERER:
                 nextUnitInfluence = getSlandererInfluence(unitCap);
                 if (nextUnitInfluence < nextUnit.minInfluence) {
-                    nextUnitInfluence = getSlandererInfluence(nextUnit.minInfluence * 2);
+                    nextUnitInfluence = getSlandererInfluence(getNextSlandererInfluence(nextUnit.minInfluence));
                 }
                 break;
             case MUCKRAKER:
@@ -155,6 +155,15 @@ public class QueueController {
             if (useInfluence < slandererInfluences[i + 1])
                 return slandererInfluences[i];
         return slandererInfluences[slandererInfluences.length - 1];
+    }
+
+    public static int getNextSlandererInfluence(int floorInfluence) {
+        for (int i = 0; i < slandererInfluences.length; i++) {
+            int candidate = slandererInfluences[i];
+            if (floorInfluence < candidate)
+                return candidate;
+        }
+        return slandererInfluences[slandererInfluences.length-1];
     }
 
     public static int influenceMinimum() {
