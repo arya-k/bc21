@@ -12,6 +12,7 @@ public class Politician extends Robot {
     static Direction prevSafeDir;
     static int followingTurns = 0;
     static final int DEFEND_ROUND = 50;
+    static int lag = 10;
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -111,6 +112,9 @@ public class Politician extends Robot {
 
                 if (prevSafeDir != null && centerLoc.directionTo(rc.getLocation()).equals(defendDir)) {
                     Nav.doGoInDir(prevSafeDir);
+                } else if (prevSafeDir != null && !centerLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
+                    defendDir = rc.getLocation().add(prevSafeDir).directionTo(rc.getLocation().add(defendDir));
+                    Nav.doGoInDir(defendDir);
                 }
 
                 if (centerLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
