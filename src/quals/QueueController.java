@@ -65,9 +65,6 @@ public class QueueController {
                     case EXPLORE:
                         EnlightenmentCenter.trackedIds.add(info.getID()); // NOTE: Shared with EnlightenmentCenter
                         break;
-                    case BUFF:
-                        EnlightenmentCenter.bufferID = info.getID(); // NOTE: Shared with EnlightenmentCenter
-                        break;
                 }
             }
             prevUnit = null;
