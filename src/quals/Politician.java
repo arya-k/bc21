@@ -11,7 +11,7 @@ public class Politician extends Robot {
     static Direction defendDir;
     static Direction prevSafeDir;
     static int followingTurns = 0;
-    static final int DEFEND_ROUND = 50;
+    static final int DEFEND_ROUNDS = 50;
     static int lag = 10;
 
     /* Attack & Neutral EC vars */
@@ -20,7 +20,7 @@ public class Politician extends Robot {
     @Override
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we explore!
-        if (assignment.label == Label.UNCLOG) {
+        if (assignment != null && assignment.label == Label.UNCLOG) {
             state = State.Unclog;
             rc.setFlag(encode(makeMessage(Label.UNCLOG)));
         }
@@ -40,7 +40,7 @@ public class Politician extends Robot {
 
         // consider defense
         // TODO: make DEFEND_ROUND depend on politician influence
-        if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
+        if (rc.getRoundNum() < firstTurn + (DEFEND_ROUNDS * 2 - rc.getInfluence())) {
             if (rc.getID() % 2 == 0) {
                 state = State.DefendSlanderer;
             } else {
@@ -118,7 +118,7 @@ public class Politician extends Robot {
                     Nav.doGoInDir(defendDir);
                 }
 
-                if (centerLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
+                if (Nav.currentGoal == Nav.NavGoal.Nothing && centerLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
                     Nav.doGoTo(getTargetLoc());
                 }
 
@@ -144,9 +144,9 @@ public class Politician extends Robot {
                 for (int radius = 1; radius <= RobotType.POLITICIAN.actionRadiusSquared; radius++) {
                     RobotInfo[] neighbors = rc.senseNearbyRobots(radius);
                     if (neighbors.length == 0) continue;
-                    int attackConviction = (rc.getConviction()-GameConstants.EMPOWER_TAX)/neighbors.length;
+                    int attackConviction = (rc.getConviction() - GameConstants.EMPOWER_TAX) / neighbors.length;
                     int kills = 0;
-                    for (RobotInfo neighbor: neighbors) {
+                    for (RobotInfo neighbor : neighbors) {
                         if (neighbor.getTeam() == opponent && neighbor.getConviction() <= attackConviction)
                             kills++;
                     }
