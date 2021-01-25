@@ -52,7 +52,7 @@ public class Slanderer extends Robot {
                 Communication.Message msg = decode(flag);
                 if (msg.label == Communication.Label.EC_UPDATE) {
                     safeDir = fromOrdinal(msg.data[2]);
-                    Nav.doGoInDir(safeDir);
+                    setNavFromSafeDir(safeDir);
                 }
             }
         } else {
@@ -82,11 +82,7 @@ public class Slanderer extends Robot {
                 if (move != null && rc.canMove(move))
                     takeMove(move);
                 if (move == null) {
-                    if (safeDir == null)
-                        Nav.doGoTo(randomHoverLocation(HIDE_RAD));
-                    else {
-                        Nav.doGoInDir(safeDir);
-                    }
+                    setNavFromSafeDir(safeDir);
                 }
             }
         },
@@ -149,5 +145,13 @@ public class Slanderer extends Robot {
         int x = (int) (radius * Math.cos(angle));
         int y = (int) (radius * Math.sin(angle));
         return centerLoc.translate(x, y);
+    }
+
+    static void setNavFromSafeDir(Direction safeDir) {
+        if (safeDir == null || safeDir == Direction.CENTER)
+            Nav.doGoTo(randomHoverLocation(HIDE_RAD));
+        else {
+            Nav.doGoInDir(safeDir);
+        }
     }
 }

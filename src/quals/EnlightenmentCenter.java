@@ -14,8 +14,6 @@ public class EnlightenmentCenter extends Robot {
 
     // set of ids for tracking robot messages
     static IterableIdSet trackedIds = new IterableIdSet(); // NOTE: Shared with QueueController
-    static boolean addedBuffer = false;
-    static int bufferID = -1; // NOTE: Shared with QueueController
 
     // production state
     static State state = State.EarlyGame;
@@ -67,6 +65,7 @@ public class EnlightenmentCenter extends Robot {
         System.out.println("Influence: " + rc.getInfluence());
         System.out.println("Production state: " + state);
         System.out.println("Bidding state: " + BidController.state);
+        System.out.println("Safest Dir: " + safestDir());
         for (int i = 0; i < 8; i++) {
             if (muckrakersInDir[i] < 1) continue;
             System.out.println("MUCKRAKER DIRECTION: " + fromOrdinal(i));

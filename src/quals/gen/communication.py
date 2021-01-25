@@ -13,13 +13,13 @@ commands = [
     Command("SCOUT", [3]),
     Command("EXPLORE", []),
     Command("HIDE", []),
-    Command("EC_UPDATE", [7, 7, 3]),  # (enemy ec loc, safe_dir)
+    Command("EC_UPDATE", [7, 7, 4]),  # (enemy ec loc, safe_dir)
     Command("CURRENTLY_DEFENDING", []),
     Command("ENEMY_EC", [7, 7, 4]),
     Command("NEUTRAL_EC", [7, 7, 4]),
     Command("OUR_EC", [7, 7]),
     Command("ATTACKING", [8, 1]),
-    Command("DANGER_INFO", [7, 7, 5])
+    Command("DANGER_INFO", [7, 7, 5]),
 ]
 
 #########################################

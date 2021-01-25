@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 3834070;
+        flag ^= 2406342;
         flag--;
         int[] data = new int[3];
         Label label;
@@ -39,16 +39,8 @@ public class Communication {
             data[0] = acc % 128;
             acc = acc / 128;
             data[1] = acc % 128;
-        } else if (flag % 128 == 64) {
-            label = Label.EC_UPDATE;
-            acc = flag / 128;
-            data[0] = acc % 128;
-            acc = acc / 128;
-            data[1] = acc % 128;
-            acc = acc / 128;
-            data[2] = acc % 8;
         } else if (flag % 64 == 32) {
-            label = Label.ENEMY_EC;
+            label = Label.EC_UPDATE;
             acc = flag / 64;
             data[0] = acc % 128;
             acc = acc / 128;
@@ -56,6 +48,14 @@ public class Communication {
             acc = acc / 128;
             data[2] = acc % 16;
         } else if (flag % 64 == 16) {
+            label = Label.ENEMY_EC;
+            acc = flag / 64;
+            data[0] = acc % 128;
+            acc = acc / 128;
+            data[1] = acc % 128;
+            acc = acc / 128;
+            data[2] = acc % 16;
+        } else if (flag % 64 == 48) {
             label = Label.NEUTRAL_EC;
             acc = flag / 64;
             data[0] = acc % 128;
@@ -79,25 +79,25 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 3834070 ^ (1 + (0) * 16777216 + 0);
+                return 2406342 ^ (1 + (0) * 16777216 + 0);
             case HIDE:
-                return 3834070 ^ (1 + (0) * 16777216 + 8388608);
+                return 2406342 ^ (1 + (0) * 16777216 + 8388608);
             case CURRENTLY_DEFENDING:
-                return 3834070 ^ (1 + (0) * 16777216 + 4194304);
+                return 2406342 ^ (1 + (0) * 16777216 + 4194304);
             case SCOUT:
-                return 3834070 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 2406342 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case ATTACKING:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 256) * 32768 + 16384);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 256) * 32768 + 16384);
             case OUR_EC:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
             case EC_UPDATE:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 128 + 64);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case ENEMY_EC:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
             case NEUTRAL_EC:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 48);
             case DANGER_INFO:
-                return 3834070 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 32 + 8);
+                return 2406342 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 32 + 8);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }

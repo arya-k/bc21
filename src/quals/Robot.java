@@ -32,6 +32,18 @@ abstract public class Robot {
             Direction.NORTHWEST,
     };
 
+    static final Direction[] allDirections = {
+            Direction.NORTH,
+            Direction.NORTHEAST,
+            Direction.EAST,
+            Direction.SOUTHEAST,
+            Direction.SOUTH,
+            Direction.SOUTHWEST,
+            Direction.WEST,
+            Direction.NORTHWEST,
+            Direction.CENTER
+    };
+
     /* EC tracking vars */
     static MapLocation closestECLoc;
     static int[] seenECs = new int[12];
@@ -213,7 +225,7 @@ abstract public class Robot {
     }
 
     static Direction fromOrdinal(int i) {
-        return directions[i];
+        return allDirections[i];
     }
 
     static Direction randomDirection() {
