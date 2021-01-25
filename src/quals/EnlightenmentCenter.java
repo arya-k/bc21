@@ -161,7 +161,7 @@ public class EnlightenmentCenter extends Robot {
 
                 QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0, 20, MED);
                 QueueController.pushMany(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED, 2);
-                QueueController.push(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 130, MED);
+                QueueController.pushMany(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 130, MED, 2);
 
             }
         },

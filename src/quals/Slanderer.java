@@ -2,7 +2,7 @@ package quals;
 
 import battlecode.common.*;
 
-import static quals.Communication.decode;
+import static quals.Communication.*;
 
 public class Slanderer extends Robot {
     static State state = null;
@@ -33,6 +33,9 @@ public class Slanderer extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
+        if ((rc.getRoundNum()-rc.getID()) % 5 == 0) {
+           rc.setFlag(encode(makeMessage(Label.SLANDERER)));
+        }
         transition(); // Consider state switches
         state.act(); // Take action based on current state
         Clock.yield();

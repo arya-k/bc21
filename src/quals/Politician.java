@@ -1,6 +1,7 @@
 package quals;
 
 import battlecode.common.*;
+import quals.utils.IterableIdSet;
 
 import static quals.Communication.*;
 
@@ -13,6 +14,9 @@ public class Politician extends Robot {
     static int followingTurns = 0;
     static final int DEFEND_ROUNDS = 50;
     static int lag = 10;
+    static int lastMessage = 0;
+    // set of ids for tracking slanderers
+    static IterableIdSet trackedIds = new IterableIdSet();
 
     /* Attack & Neutral EC vars */
     static MapLocation targetECLoc;
@@ -30,6 +34,7 @@ public class Politician extends Robot {
     @Override
     void onUpdate() throws GameActionException {
         super.onUpdate();
+        updateLastMessage();
         transition();
         state.act();
         Clock.yield();
@@ -48,6 +53,10 @@ public class Politician extends Robot {
                 if (defendDir == null) defendDir = randomDirection();
                 Nav.doGoTo(getTargetLoc());
             }
+            return;
+        }
+
+        if (state == State.DefendSlanderer && lastMessage < 10) {
             return;
         }
 
@@ -155,8 +164,10 @@ public class Politician extends Robot {
                         bestRadius = radius;
                     }
                 }
-                if (bestKills >= 4 && rc.canEmpower(bestRadius))
+                if (bestKills >= 4 && rc.canEmpower(bestRadius)) {
                     rc.empower(bestRadius);
+                    return;
+                }
             }
         };
 
@@ -178,6 +189,24 @@ public class Politician extends Robot {
             }
         }
         return maximumPossibleAttack >= rc.getConviction();
+    }
+
+    static void updateLastMessage() throws GameActionException {
+        lastMessage++;
+        RobotInfo[] friendly = rc.senseNearbyRobots(-1, rc.getTeam());
+        for (RobotInfo robot: friendly) {
+            int id = robot.getID();
+            if (rc.canGetFlag(id)) {
+                int flag = rc.getFlag(id);
+                if (flag != 0) {
+                    Message message = decode(flag);
+                    if (message != null && message.label == Label.SLANDERER) {
+                        lastMessage = 0;
+                        trackedIds.add(id);
+                    }
+                }
+            }
+        }
     }
 
     static void updateDefendDir() throws GameActionException {
@@ -248,7 +277,12 @@ public class Politician extends Robot {
         }
 
         // Consider exploding
-        int radius = getBestEmpowerRadius(0.6);
+        double threshold = 0.6;
+        if (!ecDefense) {
+            // defend slanders aggressively
+            threshold = 0.1;
+        }
+        int radius = getBestEmpowerRadius(threshold);
         if (radius != -1) rc.empower(radius);
 
         // Consider moving

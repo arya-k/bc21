@@ -1,7 +1,7 @@
 package quals;
 public class Communication {
     public enum Label {
-        EXPLORE, HIDE, CURRENTLY_DEFENDING, UNCLOG, SCOUT, ATTACKING, OUR_EC, EC_UPDATE, ENEMY_EC, NEUTRAL_EC, DANGER_INFO
+        EXPLORE, HIDE, CURRENTLY_DEFENDING, UNCLOG, SLANDERER, SCOUT, ATTACKING, OUR_EC, EC_UPDATE, ENEMY_EC, NEUTRAL_EC, DANGER_INFO
     }
     public static class Message {
         Label label;
@@ -12,7 +12,7 @@ public class Communication {
         }
     }
     public static Message decode(int flag) {
-        flag ^= 9766529;
+        flag ^= 1713348;
         flag--;
         int[] data = new int[3];
         Label label;
@@ -25,6 +25,8 @@ public class Communication {
             label = Label.CURRENTLY_DEFENDING;
         } else if (flag % 16777216 == 12582912) {
             label = Label.UNCLOG;
+        } else if (flag % 16777216 == 2097152) {
+            label = Label.SLANDERER;
         } else if (flag % 2097152 == 1048576) {
             label = Label.SCOUT;
             acc = flag / 2097152;
@@ -81,27 +83,29 @@ public class Communication {
     public static int encode(Message message) {
         switch (message.label) {
             case EXPLORE:
-                return 9766529 ^ (1 + (0) * 16777216 + 0);
+                return 1713348 ^ (1 + (0) * 16777216 + 0);
             case HIDE:
-                return 9766529 ^ (1 + (0) * 16777216 + 8388608);
+                return 1713348 ^ (1 + (0) * 16777216 + 8388608);
             case CURRENTLY_DEFENDING:
-                return 9766529 ^ (1 + (0) * 16777216 + 4194304);
+                return 1713348 ^ (1 + (0) * 16777216 + 4194304);
             case UNCLOG:
-                return 9766529 ^ (1 + (0) * 16777216 + 12582912);
+                return 1713348 ^ (1 + (0) * 16777216 + 12582912);
+            case SLANDERER:
+                return 1713348 ^ (1 + (0) * 16777216 + 2097152);
             case SCOUT:
-                return 9766529 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
+                return 1713348 ^ (1 + (message.data[0] * 1) * 2097152 + 1048576);
             case ATTACKING:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 256) * 32768 + 16384);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 256) * 32768 + 16384);
             case OUR_EC:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 128) * 1024 + 512);
             case EC_UPDATE:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 32);
             case ENEMY_EC:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 16);
             case NEUTRAL_EC:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 48);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 64 + 48);
             case DANGER_INFO:
-                return 9766529 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 32 + 8);
+                return 1713348 ^ (1 + (message.data[0] * 1 + message.data[1] * 128 + message.data[2] * 16384) * 32 + 8);
         }
         throw new RuntimeException("Attempting to encode an invalid message");
     }
