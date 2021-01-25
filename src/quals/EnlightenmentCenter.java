@@ -131,9 +131,16 @@ public class EnlightenmentCenter extends Robot {
         EarlyGame {
             @Override
             void refillQueue() {
-                Message msg = makeUpdateMessage();
-                QueueController.push(RobotType.SLANDERER, msg, 0.9, 85, MED);
-                QueueController.push(RobotType.POLITICIAN, msg, 0.05, 17, MED);
+                QueueController.push(RobotType.SLANDERER, makeMessage(Label.EXPLORE), 0.9, 85, MED);
+                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.05, 17, MED);
+
+                int best = getBestNeutralEC();
+                if (best != -1) {
+                    int bestInfluence = ECInfluence[best] + GameConstants.EMPOWER_TAX;
+                    if (bestInfluence < rc.getInfluence()) {
+                        QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, bestInfluence, HIGH);
+                    }
+                }
             }
         },
         MidGame {
@@ -145,7 +152,7 @@ public class EnlightenmentCenter extends Robot {
                 if (best != -1) {
                     int bestInfluence = ECInfluence[best] + GameConstants.EMPOWER_TAX;
                     if (bestInfluence < rc.getInfluence()) {
-                        QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, bestInfluence, MED);
+                        QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, bestInfluence, HIGH);
                     }
                 } else if (rc.getInfluence() > 1000) {
                     QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, 20, MED);
@@ -282,13 +289,18 @@ public class EnlightenmentCenter extends Robot {
         MapLocation temp = rc.getLocation().translate(dx, dy);
         Direction optimalDir = rc.getLocation().directionTo(temp).opposite();
         if (optimalDir == Direction.CENTER) {
-            // CASE 1: OPPOSITE DIRECTIONS END UP HAVING EQUAL MUCKRAKERS
             // We choose a direction with no muckrakers
             int safest = 0;
+            boolean muckrakerSeen = false;
             for (int i = 1; i < 8; i++) {
-                if (muckrakersInDir[safest] > 0) safest = i;
+                if (muckrakersInDir[safest] > 0) {
+                    safest = i;
+                    muckrakerSeen = true;
+                }
             }
-            return fromOrdinal(safest);
+            if (muckrakerSeen)
+                return fromOrdinal(safest);
+            return Direction.CENTER;
         }
         return optimalDir;
     }

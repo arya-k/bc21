@@ -40,6 +40,7 @@ public class Politician extends Robot {
         if (state == State.Unclog) return;
 
         // consider defense
+        // TODO: make DEFEND_ROUND depend on politician influence
         if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
             if (rc.getID() % 2 == 0) {
                 state = State.DefendSlanderer;
