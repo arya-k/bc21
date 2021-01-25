@@ -21,7 +21,8 @@ commands = [
     Command("ATTACKING", [8, 1]),
     Command("DANGER_INFO", [7, 7, 5]),
     Command("UNCLOG", []),
-    Command("SLANDERER", [])
+    Command("SLANDERER", []),
+    Command("SLANDERERS_SEEN", [7,7])
 ]
 
 #########################################
