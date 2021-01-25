@@ -2,7 +2,7 @@ package quals;
 
 import battlecode.common.*;
 
-import static quals.Communication.decode;
+import static quals.Communication.*;
 
 public class Politician extends Robot {
     static State state = null;
@@ -20,6 +20,10 @@ public class Politician extends Robot {
     @Override
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we explore!
+        if (assignment.label == Label.UNCLOG) {
+            state = State.Unclog;
+            rc.setFlag(encode(makeMessage(Label.UNCLOG)));
+        }
         Nav.doExplore();
     }
 
@@ -28,10 +32,13 @@ public class Politician extends Robot {
         super.onUpdate();
         transition();
         state.act();
+        System.out.println(state);
         Clock.yield();
     }
 
     void transition() throws GameActionException {
+        if (state == State.Unclog) return;
+
         // consider defense
         if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
             if (rc.getID() % 2 == 0) {
@@ -127,6 +134,29 @@ public class Politician extends Robot {
                 if (!rc.isReady()) return;
 
                 defenseLogic(true);
+            }
+        },
+        Unclog {
+            public void act() throws GameActionException {
+                Team opponent = rc.getTeam().opponent();
+                int bestKills = 0;
+                int bestRadius = 0;
+                for (int radius = 1; radius <= RobotType.POLITICIAN.actionRadiusSquared; radius++) {
+                    RobotInfo[] neighbors = rc.senseNearbyRobots(radius);
+                    if (neighbors.length == 0) continue;
+                    int attackConviction = (rc.getConviction()-GameConstants.EMPOWER_TAX)/neighbors.length;
+                    int kills = 0;
+                    for (RobotInfo neighbor: neighbors) {
+                        if (neighbor.getTeam() == opponent && neighbor.getConviction() <= attackConviction)
+                            kills++;
+                    }
+                    if (kills > bestKills) {
+                        bestKills = kills;
+                        bestRadius = radius;
+                    }
+                }
+                if (bestKills >= 4 && rc.canEmpower(bestRadius))
+                    rc.empower(bestRadius);
             }
         };
 

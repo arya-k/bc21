@@ -39,6 +39,9 @@ public class EnlightenmentCenter extends Robot {
     // whether or not we used to be a neutral EC
     static boolean wasANeutralEC = false;
 
+    static int unclogID = -1;
+    static boolean unclogAdded = false;
+
     @Override
     void onAwake() throws GameActionException {
         QueueController.init(); // Initialize the queue controller!
@@ -170,10 +173,21 @@ public class EnlightenmentCenter extends Robot {
 
     }
 
-    void urgentQueueing() {
+    void urgentQueueing() throws GameActionException {
+        unclog();
         return;
     }
 
+    static void unclog() throws GameActionException {
+        boolean build = false;
+        if (unclogID < 0 || !rc.canGetFlag(unclogID))
+            build = true;
+        if (!unclogAdded && build) {
+            System.out.println("Building Politician to Unclog");
+            QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.3, 20, HIGH);
+            unclogAdded = true;
+        }
+    }
 
     static final int MAX_IDS_TO_PROCESS_IN_TURN = 75;
     static int cursor = 0;

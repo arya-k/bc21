@@ -65,6 +65,10 @@ public class QueueController {
                     case EXPLORE:
                         EnlightenmentCenter.trackedIds.add(info.getID()); // NOTE: Shared with EnlightenmentCenter
                         break;
+                    case UNCLOG:
+                        EnlightenmentCenter.unclogAdded = false;
+                        EnlightenmentCenter.unclogID = info.getID();
+                        break;
                 }
             }
             prevUnit = null;

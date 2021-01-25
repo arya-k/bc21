@@ -20,6 +20,7 @@ commands = [
     Command("OUR_EC", [7, 7]),
     Command("ATTACKING", [8, 1]),
     Command("DANGER_INFO", [7, 7, 5]),
+    Command("UNCLOG", [])
 ]
 
 #########################################
