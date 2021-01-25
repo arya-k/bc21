@@ -190,7 +190,7 @@ public class EnlightenmentCenter extends Robot {
         if (unclogID < 0 || !rc.canGetFlag(unclogID))
             build = true;
         if (!unclogAdded && build) {
-            QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.3, 20, HIGH);
+            QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.2, 20, HIGH);
             unclogAdded = true;
         }
     }
