@@ -190,7 +190,6 @@ public class EnlightenmentCenter extends Robot {
         if (unclogID < 0 || !rc.canGetFlag(unclogID))
             build = true;
         if (!unclogAdded && build) {
-            System.out.println("Building Politician to Unclog");
             QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.3, 20, HIGH);
             unclogAdded = true;
         }

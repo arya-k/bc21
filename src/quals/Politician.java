@@ -32,7 +32,6 @@ public class Politician extends Robot {
         super.onUpdate();
         transition();
         state.act();
-        System.out.println(state);
         Clock.yield();
     }
 
