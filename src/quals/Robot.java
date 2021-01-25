@@ -90,20 +90,18 @@ abstract public class Robot {
         if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return;
 
         // send back information about danger to your EC
-        if (assignment == null) {
-            int num_muckrakers = 0;
-            MapLocation locationToSend = rc.getLocation();
-            for (RobotInfo bot : nearby) {
-                if (bot.getTeam() == rc.getTeam()) continue;
-                if (bot.getType() != RobotType.MUCKRAKER) continue;
-                if (locationToSend.equals(rc.getLocation())) locationToSend = bot.getLocation();
-                if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
-                    locationToSend = bot.getLocation();
-                num_muckrakers++;
-            }
-            flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
-                    Math.min(num_muckrakers, 31));
+        int num_muckrakers = 0;
+        MapLocation locationToSend = rc.getLocation();
+        for (RobotInfo bot : nearby) {
+            if (bot.getTeam() == rc.getTeam()) continue;
+            if (bot.getType() != RobotType.MUCKRAKER) continue;
+            if (locationToSend.equals(rc.getLocation())) locationToSend = bot.getLocation();
+            if (locationToSend.distanceSquaredTo(centerLoc) > bot.getLocation().distanceSquaredTo(centerLoc))
+                locationToSend = bot.getLocation();
+            num_muckrakers++;
         }
+        flagMessage(Label.DANGER_INFO, locationToSend.x % 128, locationToSend.y % 128,
+                Math.min(num_muckrakers, 31));
 
         // inform ECs of nearby enlightenment centers
         noteNearbyECs();
