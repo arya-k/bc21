@@ -133,7 +133,7 @@ public class QueueController {
     public static void logNext() {
         if (!pq.isEmpty()) {
             UnitBuild next = pq.peek();
-            System.out.println("Next unit: " + next.type + " " + next.priority);
+            System.out.println("Next unit: " + next.type + " (" + next.minInfluence + ", " + next.significance + ") " + next.priority);
         } else {
             System.out.println("PQ empty");
         }
