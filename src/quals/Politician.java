@@ -112,8 +112,8 @@ public class Politician extends Robot {
 
                 if (prevSafeDir != null && centerLoc.directionTo(rc.getLocation()).equals(defendDir)) {
                     Nav.doGoInDir(prevSafeDir);
-                } else if (prevSafeDir != null && !centerLoc.isWithinDistanceSquared(rc.getLocation(), 36)) {
-                    defendDir = rc.getLocation().add(prevSafeDir).directionTo(rc.getLocation().add(defendDir));
+                } else {
+                    prevSafeDir = null;
                     Nav.doGoInDir(defendDir);
                 }
 
