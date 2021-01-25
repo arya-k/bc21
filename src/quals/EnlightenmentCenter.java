@@ -181,7 +181,8 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void urgentQueueing() throws GameActionException {
-        unclog();
+        if (state != State.EarlyGame)
+            unclog();
         return;
     }
 
@@ -190,7 +191,7 @@ public class EnlightenmentCenter extends Robot {
         if (unclogID < 0 || !rc.canGetFlag(unclogID))
             build = true;
         if (!unclogAdded && build) {
-            QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.2, 20, HIGH);
+            QueueController.push(RobotType.POLITICIAN, makeMessage(Label.UNCLOG), 0.15, 20, HIGH);
             unclogAdded = true;
         }
     }
