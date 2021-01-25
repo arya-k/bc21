@@ -41,6 +41,9 @@ public class EnlightenmentCenter extends Robot {
     static int unclogID = -1;
     static boolean unclogAdded = false;
 
+    // Where we last saw enemy slanderers:
+    MapLocation enemySlandererLocation;
+
     @Override
     void onAwake() throws GameActionException {
         QueueController.init(); // Initialize the queue controller!
@@ -104,9 +107,13 @@ public class EnlightenmentCenter extends Robot {
             bidController.bid();
 
         if (!tracked && !built) {
-            Message msg = makeUpdateMessage();
-            rc.setFlag(encode(msg));
-            newSafeDir = false;
+            if (enemySlandererLocation == null) {
+                rc.setFlag(encode(makeUpdateMessage()));
+                newSafeDir = false;
+            } else {
+                flagMessage(Label.SLANDERERS_SEEN, enemySlandererLocation.x % 128, enemySlandererLocation.y % 128);
+                enemySlandererLocation = null;
+            }
         }
 
         // End turn.
@@ -199,6 +206,10 @@ public class EnlightenmentCenter extends Robot {
     static int cursor = 0;
 
     void processFlags() throws GameActionException {
+        for (RobotInfo info : nearby) // Add new robot IDs
+            if (info.getTeam() == rc.getTeam() && info.getType() != RobotType.ENLIGHTENMENT_CENTER)
+                trackedIds.add(info.getID());
+
         if (trackedIds.getSize() == 0) return;
 
         for (int j = 0; j < Math.min(MAX_IDS_TO_PROCESS_IN_TURN, trackedIds.getSize()); j++) {
@@ -243,6 +254,11 @@ public class EnlightenmentCenter extends Robot {
                         muckrakerLastUpdate[relevant] = rc.getRoundNum();
                         muckrakersInDir[relevant] = num_muckrakers;
                     }
+                    break;
+
+                case SLANDERERS_SEEN:
+                    enemySlandererLocation = getLocFromMessage(message.data[0], message.data[1]);
+                    break;
             }
         }
         if (trackedIds.getSize() != 0)

@@ -2,6 +2,9 @@ package quals;
 
 import battlecode.common.*;
 
+import static quals.Communication.Message;
+import static quals.Communication.decode;
+
 public class Muckraker extends Robot {
     static State state = null;
 
@@ -12,7 +15,11 @@ public class Muckraker extends Robot {
     static MapLocation enemyLoc;
     static Direction shoulderingDirection;
 
+    /* attack slanderer vars */
+    static MapLocation enemySlanderLoc = null;
+
     static final int CENTER_DEFEND_RADIUS = 100; // shoulder within 10 blocks of our own EC
+    static final int BLOCKING_TURN_LIMIT = 100; // only block for the first 100 turns of existence.
     static int[] OFFSETS = {0, 1, 7, 2, 6};
 
     @Override
@@ -38,6 +45,38 @@ public class Muckraker extends Robot {
     }
 
     void transition() throws GameActionException {
+        // See if the EC has given us an enemy slanderer location...
+        if (centerID != rc.getID() && rc.canGetFlag(centerID)) {
+            int flag = rc.getFlag(centerID);
+            if (flag != 0) {
+                Message msg = decode(flag);
+                if (msg.label == Communication.Label.SLANDERERS_SEEN) {
+//                    enemySlanderLoc = getLocFromMessage(msg.data[0], msg.data[1]);
+                }
+            }
+        }
+
+        // Check if we see enough enemy slanderers:
+        int slandererCount = 0, maxSlandererInfluence = -1;
+        MapLocation maxSlandererLoc = null;
+        for (RobotInfo info : nearby) {
+            if (info.getType() == RobotType.SLANDERER && info.getTeam() != rc.getTeam()) {
+                slandererCount++;
+                if (info.getInfluence() > maxSlandererInfluence) {
+                    maxSlandererLoc = info.getLocation();
+                    maxSlandererInfluence = info.getInfluence();
+                }
+            }
+        }
+
+        if (slandererCount > 3) // Phone home that there are slanderers at a certain location
+            flagMessage(Communication.Label.SLANDERERS_SEEN, maxSlandererLoc.x % 128, maxSlandererLoc.y % 128);
+
+        // If we expect to have seen a slanderer here we need to note that they are no longer there:
+        if (slandererCount < 3 && enemySlanderLoc != null &&
+                rc.getLocation().isWithinDistanceSquared(enemySlanderLoc, 4))
+            enemySlanderLoc = null;
+
         // Scout -> Explore (or exit)
         if (state == State.Scout) {
             if (Nav.currentGoal == Nav.NavGoal.Nothing) {
@@ -48,7 +87,7 @@ public class Muckraker extends Robot {
             }
         }
 
-        // * -> ChaseSlanderer
+        // * -> ChaseSlanderer (immediately nearby)
         int nearestSlandererID = closestSlanderer();
         if (nearestSlandererID != -1) {
             state = State.ChaseSlanderer;
@@ -57,8 +96,15 @@ public class Muckraker extends Robot {
         }
 
         // * -> Shoulder
-        if (shouldShoulder()) {
+        if (shouldShoulder() && rc.getRoundNum() <= firstTurn + BLOCKING_TURN_LIMIT) {
             state = State.Shoulder;
+            return;
+        }
+        
+        // * -> ChaseSlanderer (from far away)
+        if (enemySlanderLoc != null) {
+            state = State.ChaseSlanderer;
+            Nav.doGoTo(enemySlanderLoc);
             return;
         }
 
@@ -117,6 +163,12 @@ public class Muckraker extends Robot {
                 Nav.doExplore();
                 Direction move = Nav.tick();
                 if (move != null && rc.canMove(move)) takeMove(move);
+            }
+        },
+        AttackSlanderer {
+            @Override
+            public void act() throws GameActionException {
+
             }
         };
 
