@@ -24,7 +24,8 @@ commands = [
     Command("ATTACK_LOC", [7, 7]),
     Command("ATTACKING", [8, 1]),
     Command("CAPTURE_NEUTRAL_EC", [7, 7]),
-    Command("DANGER_INFO", [7, 7, 4, 1, 1])
+    Command("DANGER_INFO", [7, 7, 4, 1, 1]),
+    Command("BUFF", []),
 ]
 
 #########################################
