@@ -78,7 +78,7 @@ abstract public class Robot {
         if (rc.getType() == RobotType.ENLIGHTENMENT_CENTER) return;
 
         // send back information about danger to your EC
-        if (assignment == null || assignment.label != Label.BUFF) {
+        if (assignment == null) {
             int num_muckrakers = 0;
             MapLocation locationToSend = rc.getLocation();
             for (RobotInfo bot : nearby) {
@@ -105,31 +105,6 @@ abstract public class Robot {
                     MapLocation loc = getLocFromMessage(msg.data[0], msg.data[1]);
                     if (!loc.isWithinDistanceSquared(centerLoc, 0)) addAttackLoc(loc);
                 }
-            }
-        }
-
-        // move away from a buffing politician ASAP
-        if (rc.isReady()) {
-            for (RobotInfo info : rc.senseNearbyRobots(8, rc.getTeam())) {
-                if (info.getType() != RobotType.POLITICIAN) continue;
-                int flag = rc.getFlag(info.getID());
-                if (flag != 0 && decode(flag).label == Label.BUFF) {
-                    nearbyBufferLoc = info.getLocation();
-                    if (nearbyBufferLoc.distanceSquaredTo(rc.getLocation()) > 2)
-                        break;
-                    int runDir = nearbyBufferLoc.directionTo(rc.getLocation()).ordinal();
-                    boolean diagonal = (runDir % 2) == 1;
-                    for (int i = (diagonal ? 6 : 7); i <= (diagonal ? 10 : 9); i++) {
-                        Direction moveDir = fromOrdinal((i + runDir) % 8);
-                        if (rc.canMove(moveDir)) {
-                            rc.move(moveDir);
-                            break;
-                        }
-                    }
-                }
-                if (nearbyBufferLoc != null)
-                    break;
-                nearbyBufferLoc = null;
             }
         }
     }
@@ -213,11 +188,6 @@ abstract public class Robot {
     /* Utility functions */
 
     static void takeMove(Direction dir) throws GameActionException {
-        if (nearbyBufferLoc != null) {
-            MapLocation newLoc = rc.getLocation().add(dir);
-            if (newLoc.distanceSquaredTo(nearbyBufferLoc) <= 2)
-                return;
-        }
         rc.move(dir);
     }
 

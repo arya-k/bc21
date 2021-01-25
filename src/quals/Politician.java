@@ -21,10 +21,6 @@ public class Politician extends Robot {
     void onAwake() throws GameActionException {
         state = State.Explore; // By default, we explore!
         Nav.doExplore();
-
-        if (assignment != null && assignment.label == Communication.Label.BUFF) {
-            state = State.Buffer; // Buffers are a special case...
-        }
     }
 
     @Override
@@ -36,8 +32,6 @@ public class Politician extends Robot {
     }
 
     void transition() throws GameActionException {
-        if (state == State.Buffer) return; // Buffers should NEVER change state.
-
         // consider defense
         if (rc.getRoundNum() < firstTurn + DEFEND_ROUND && rc.getInfluence() < 100) {
             if (rc.getID() % 2 == 0) {
@@ -51,7 +45,7 @@ public class Politician extends Robot {
         }
 
         // consider attack loc
-        if (numAttackLocs > 0) {
+        if (numAttackLocs > 0 && rc.getInfluence() > 100) {
             state = State.AttackLoc;
             targetECLoc = getClosestAttackLoc();
             Nav.doGoTo(targetECLoc);
@@ -133,15 +127,6 @@ public class Politician extends Robot {
                 if (!rc.isReady()) return;
 
                 defenseLogic(true);
-            }
-        },
-        Buffer {
-            public void act() throws GameActionException {
-                if (!rc.isReady()) return;
-                int dist = rc.getLocation().distanceSquaredTo(centerLoc);
-                if (rc.senseNearbyRobots(dist).length == 1) {
-                    rc.empower(dist);
-                }
             }
         };
 
@@ -252,11 +237,11 @@ public class Politician extends Robot {
             return 0;
         }
 
-        double effectiveInfluence = rc.getInfluence() * rc.getEmpowerFactor(rc.getTeam(), 0) - 10;
+        double effectiveInfluence = (rc.getConviction() - GameConstants.EMPOWER_TAX) * rc.getEmpowerFactor(rc.getTeam(), 0);
         if (effectiveInfluence <= 0) {
             return 0;
         }
-        double baseInfluence = rc.getInfluence() - 10;
+        double baseInfluence = rc.getConviction() - GameConstants.EMPOWER_TAX;
         double perUnit = effectiveInfluence / nearbyRobots.length;
 
         double usefulInfluence = 0;
@@ -279,8 +264,12 @@ public class Politician extends Robot {
                     return 1;
                 } else if (info.getType() != RobotType.POLITICIAN || info.getInfluence() > GameConstants.EMPOWER_TAX) {
                     usefulInfluence += perUnit;
-                    if (info.getType() == RobotType.POLITICIAN && info.getConviction() < perUnit)
+                    if (info.getType() == RobotType.POLITICIAN && info.getConviction() < perUnit) {
                         num_conversions++;
+                        usefulInfluence += Math.max(0,
+                                Math.min(perUnit - info.getConviction(), info.getInfluence())
+                                        - GameConstants.EMPOWER_TAX);
+                    }
                 }
             } else {
                 // friendly / neutral unit

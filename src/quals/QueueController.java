@@ -143,7 +143,7 @@ public class QueueController {
     }
 
     public static boolean muckrakerNearby() {
-        for (RobotInfo bot : rc.senseNearbyRobots(24))
+        for (RobotInfo bot : rc.senseNearbyRobots(-1))
             if (bot.getTeam() != rc.getTeam() && bot.getType() == RobotType.MUCKRAKER)
                 return true;
         return false;
@@ -163,7 +163,7 @@ public class QueueController {
             if (floorInfluence < candidate)
                 return candidate;
         }
-        return slandererInfluences[slandererInfluences.length-1];
+        return slandererInfluences[slandererInfluences.length - 1];
     }
 
     public static int influenceMinimum() {

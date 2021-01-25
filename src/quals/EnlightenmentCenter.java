@@ -8,6 +8,7 @@ import quals.utils.IterableIdSet;
 import static quals.Communication.decode;
 import static quals.Communication.encode;
 import static quals.QueueController.*;
+import static quals.QueueController.influenceMinimum;
 
 public class EnlightenmentCenter extends Robot {
 
@@ -93,7 +94,7 @@ public class EnlightenmentCenter extends Robot {
         if (QueueController.isEmpty()) {
             state.refillQueue();
         }
-        if (bufferID == -1 && !newSafeDir) // don't build anything while a buffer is out!
+        if (!newSafeDir)
             built = QueueController.tryUnitBuild();
 
         // Consider bidding
@@ -137,7 +138,20 @@ public class EnlightenmentCenter extends Robot {
             @Override
             void refillQueue() {
                 QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED);
-                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), rc.getInfluence() > 1000 ? 0.8 : 0.3, 20, MED);
+
+                int best = getBestNeutralEC();
+                if (best != -1) {
+                    int bestInfluence = ECInfluence[best] + GameConstants.EMPOWER_TAX;
+                    if (bestInfluence < rc.getInfluence()) {
+                        QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, bestInfluence, MED);
+                    }
+                } else if (rc.getInfluence() > 1000) {
+                    QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0.8, 20, MED);
+                } else {
+                    QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0, 20, MED);
+                }
+
+                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.EXPLORE), 0, 20, MED);
                 QueueController.push(RobotType.MUCKRAKER, makeMessage(Label.EXPLORE), 0.0, 1, MED);
                 QueueController.push(RobotType.SLANDERER, makeUpdateMessage(), 0.5, 130, MED);
 
@@ -158,21 +172,7 @@ public class EnlightenmentCenter extends Robot {
     }
 
     void urgentQueueing() {
-        // buffer business
-        if (!underAttack && !addedBuffer) {
-            int turnsUntilEmpower = (int) (RobotType.POLITICIAN.initialCooldown + (int) rc.getCooldownTurns());
-            double factor = rc.getEmpowerFactor(rc.getTeam(), turnsUntilEmpower);
-            int influence = rc.getInfluence() - influenceMinimum();
-            if (factor * influence - GameConstants.EMPOWER_TAX > 2 * rc.getInfluence()) {
-                System.out.println("BUFFING MYSELF!");
-                QueueController.push(RobotType.POLITICIAN, makeMessage(Label.BUFF), 0.9, GameConstants.EMPOWER_TAX, ULTRA_HIGH);
-                addedBuffer = true;
-            }
-        }
-        if (bufferID != -1 && !rc.canGetFlag(bufferID)) {
-            addedBuffer = false;
-            bufferID = -1;
-        }
+        return;
     }
 
 
@@ -278,5 +278,34 @@ public class EnlightenmentCenter extends Robot {
             return fromOrdinal(safest);
         }
         return optimalDir;
+    }
+
+    static int getBestNeutralEC() {
+        int best = -1;
+        for (int i = 0; i < ECFound; i++) {
+            if (ECTeam[i] != Team.NEUTRAL)
+                continue;
+
+            MapLocation location = ECLocs[i];
+            int distance = location.distanceSquaredTo(rc.getLocation());
+            int influence = ECInfluence[i];
+
+            int actingInfluence = (int) (1.7 * rc.getInfluence());
+            if (actingInfluence - influence <= influenceMinimum())
+                continue;
+
+            if (best == -1) {
+                best = i;
+                continue;
+            }
+
+            MapLocation bestLocation = ECLocs[best];
+            int bestDistance = bestLocation.distanceSquaredTo(rc.getLocation());
+            int bestInfluence = ECInfluence[best];
+
+            if (distance + influence < bestDistance + bestInfluence)
+                best = i;
+        }
+        return best;
     }
 }
